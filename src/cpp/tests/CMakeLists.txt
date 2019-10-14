@@ -11,7 +11,7 @@ include(streamline_cmake)
 
 if (EXISTS ${streamline_SOURCE_DIR}/googletest)
   set(GTEST_INCLUDE  ${streamline_SOURCE_DIR}/googletest/googletest/include)
-  set(GTEST_LIB_DIRS ${streamline_SOURCE_DIR}/build/googletest/googlemock/gtest)
+  set(GTEST_LIB_DIRS ${streamline_SOURCE_DIR}/build/lib)
   if (CMAKE_BUILD_TYPE EQUAL "Debug")
     set(GTEST_BOTH_LIBRARIES -lgtestd -lgtest_maind)
   else()
@@ -42,10 +42,10 @@ streamline_library_directories(${CUDA_LIB_DIRS} ${GTEST_LIB_DIRS})
 #==--- Tests ----------------------------------------------------------------==#
 
 streamline_add_executable(
+  array_tests ${streamline_SOURCE_DIR}/tests/array_tests.cpp
 )
 streamline_target_link_libraries(
-  # Name goes here ...
-  ${GTEST_BOTH_LIBRARIES}
+  array_tests ${GTEST_BOTH_LIBRARIES}
 )
 
 #==--------------------------------------------------------------------------==#

@@ -41,7 +41,7 @@ endfunction()
 # Adds the DEFINITIONS to the global list of definitions.
 function(streamline_add_definitions DEFINITIONS)
   set(
-    FLUID_GLOBAL_DEFINITIONS "${DEFINITIONS} ${ARGN}"
+    STREAMLINE_GLOBAL_DEFINITIONS "${DEFINITIONS} ${ARGN}"
     CACHE FORCE "streamline global definitions" FORCE
   )
 endfunction()
@@ -105,13 +105,13 @@ function(streamline_create_all_targets)
   endif()
 
   separate_arguments(STREAMLINE_TARGET_LIST)
-  foreach(STREAMLINE_TARGET ${SREAMLINE_TARGET_LIST})
+  foreach(STREAMLINE_TARGET ${STREAMLINE_TARGET_LIST})
     # Remove some whitespace ...
     string(REGEX REPLACE " " "" STREAMLINE_TARGET ${STREAMLINE_TARGET})
 
     # Compile object file for test file:
-    get_filename_component(TARGET_NAME ${${FLUID_TARGET}_FILE} NAME_WE)
-    get_filename_component(TARGET_EXT  ${${FLUID_TARGET}_FILE} EXT)
+    get_filename_component(TARGET_NAME ${${STREAMLINE_TARGET}_FILE} NAME_WE)
+    get_filename_component(TARGET_EXT  ${${STREAMLINE_TARGET}_FILE} EXT)
 
     # Check if we are trying to compile for cuda:
     string(REGEX MATCH "cu" CUDA_REGEX ${TARGET_EXT})
@@ -200,7 +200,7 @@ function(streamline_create_all_targets)
 
     # Create a target for the test:
     add_custom_target(
-      ${FLUID_TARGET} ALL
+      ${STREAMLINE_TARGET} ALL
       COMMAND ${TARGET_COMPILER}
               ${TARGET_INCLUDE_DIRS}
               ${TARGET_FLAGS}
@@ -213,7 +213,7 @@ function(streamline_create_all_targets)
     )
 
     #install(
-    #  PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/${STREAMLINE_TARGET}
+    #  PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/${STREAMLINE_TARGE`T}
     #  DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
     set(OBJECT)
     set(OBJECTS)

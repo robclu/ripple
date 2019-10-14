@@ -16,6 +16,7 @@
 #ifndef STREAMLINE_CONTAINER_ARRAY_HPP
 #define STREAMLINE_CONTAINER_ARRAY_HPP
 
+#include "array_traits.hpp"
 #include <streamline/utility/portability.hpp>
 
 namespace streamline {
@@ -26,17 +27,27 @@ namespace streamline {
 /// \tparam Impl The implementation of the array interface.
 template <typename Impl>
 struct Array {
+ private:
   // Defines the type of the implementation.
   using impl_t = Impl;
 
+ public:
   /// Returns the value at position \p i in the array.
-  streamline_host_device constexpr auto operator[](std::size_t i) {
+  /// \param[in]
+  streamline_host_device constexpr auto operator[](std::size_t i) 
+  -> typename ArrayTraits<Impl>::value_t& {
+    return impl()->operator[](i);  
+  }
+
+  /// Returns the value at position \p i in the array.
+  streamline_host_device constexpr auto operator[](std::size_t i) const 
+  -> const typename ArrayTraits<Impl>::value_t& {
     return impl()->operator[](i);  
   }
     
   /// Returns the number of elements in the array.
   streamline_host_device constexpr auto size() const -> std::size_t {
-    return impl()->size();
+    return ArrayTraits<Impl>::size;
   }
     
  private:
@@ -50,7 +61,6 @@ struct Array {
     return static_cast<const impl_t*>(this);
   }
 };
-
 
 } // namespace streamline
 

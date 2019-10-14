@@ -15,7 +15,6 @@ if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Build type not specified!")
 endif(NOT CMAKE_BUILD_TYPE)
 
-
 #==--- Compiler paths -------------------------------------------------------==#
 
 # 
@@ -85,7 +84,6 @@ endif()
 # We definitely have a cuda path if we are here,
 # so we can set the toolkit directory for cuda.
 set(CUDA_TOOLKIT_ROOT_DIR ${CUDA_PATH})
-
 
 # If not using clang, use NVCC.
 if (NOT ${USING_CLANG})
@@ -161,8 +159,8 @@ else(APPLE)
   set(FLAGS_ERRORS  "-Wpedantic -Wextra -Wall")
   set(FLAGS_PERF    "-O3 -std=c++14 -pthread -Wno-c++1z-extensions")
   set(DEBUG_FLAGS   "${FLAGS_PERF} ${FLAGS_ERRORS}")
-  set(WARN_FLAGS    "-Wgnu-string-literal-operator-template")
-  set(WARN_FLAGS    "${WARN_FLAGS} -Wno-unused-parameter -lineinfo")
+  #  set(WARN_FLAGS    "-Wgnu-string-literal-operator-template")
+  set(WARN_FLAGS    "${WARN_FLAGS} -Wno-unused-parameter")
   set(RELEASE_FLAGS "${FLAGS_PERF} ${FLAGS_ERRORS}")
   set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${RELEASE_FLAGS}")
   set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${WARN_FLAGS}")

@@ -13,10 +13,12 @@
 //
 //==------------------------------------------------------------------------==//
 
-#include <streamline/container/array.hpp>
+#include <streamline/container/vec.hpp>
 #include <gtest/gtest.h>
 
 TEST(array, can_create_array_impl) {
+  auto v = streamline::Vec<float, 3>();
+
   EXPECT_TRUE(1 == 1);
 }
 

@@ -16,6 +16,7 @@
 #ifndef STREAMLINE_UTILITY_PORTABILITY_HPP
 #define STREAMLINE_UTILITY_PORTABILITY_HPP
 
+#include <cstddef>
 #include <cuda.h>
 #include <cuda_runtime.h>
 
