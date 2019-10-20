@@ -18,6 +18,8 @@
 
 #include <type_traits>
 
+//==--- [std wrappers] -----------------------------------------------------==//
+
 namespace std {
 
 /// Wrapper around std::is_base_of for c++-14 compatibility.
@@ -35,5 +37,24 @@ static constexpr bool is_same_v =
   std::is_same<std::decay_t<T1>, std::decay_t<T2>>::value;
 
 } // namespace std
+
+//==--- [streamline traits] ------------------------------------------------==//
+
+namespace streamline {
+
+/// Defines a valid type if Size is less than `streamline_max_unroll_depth`.
+/// \tparam Size The size of the unrolling.
+template <std::size_t Size>
+using unroll_enabled_t = 
+  std::enable_if_t<(Size < streamline_max_unroll_depth), int>;
+
+/// Defines a valid type if Size is more than or equal to 
+/// `streamline_max_unroll_depth`.
+/// \tparam Size The size of the unrolling.
+template <std::size_t Size>
+using unroll_disabled_t = 
+  std::enable_if_t<(Size >= streamline_max_unroll_depth), int>;
+
+} // namespace streamline
 
 #endif // STREAMLINE_UTILITY_TYPE_TRAITS_HPP

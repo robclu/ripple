@@ -44,4 +44,10 @@
   #define streamline_syncthreads() 
 #endif
 
+#ifndef MAX_UNROLL_DEPTH
+  #define streamline_max_unroll_depth 8
+#else
+  #define streamline_max_unroll_depth MAX_UNROLL_DEPTH
+#endif
+
 #endif // STREAMLINE_UTILITY_PORTABILITY_HPP
