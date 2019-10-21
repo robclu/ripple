@@ -18,6 +18,7 @@
 #define STREAMLINE_ALGORITHM_UNROLLED_FOR_IMPL_HPP
 
 #include <streamline/utility/number.hpp>
+#include <utility>
 
 namespace streamline {
 namespace detail     {
@@ -39,7 +40,7 @@ struct Unroll : Unroll<Amount - 1> {
   /// \tparam     Functor   The type of the functor to invoke.
   /// \tparam     Args      The type of the arguments to invoke with.
   template <typename Functor, typename... Args>
-  stremaline_host_device Unroll(Functor&& functor, Args&&... args)
+  streamline_host_device Unroll(Functor&& functor, Args&&... args)
   : previous_level_t(
       std::forward<Functor>(functor), std::forward<Args>(args)... 
     ) {

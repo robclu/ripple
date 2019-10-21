@@ -42,6 +42,15 @@ streamline_library_directories(${CUDA_LIB_DIRS} ${GTEST_LIB_DIRS})
 #==--- Tests ----------------------------------------------------------------==#
 
 streamline_add_executable(
+  algorithm_tests ${streamline_SOURCE_DIR}/tests/algorithm_tests.cpp
+)
+streamline_target_link_libraries(
+  algorithm_tests ${GTEST_BOTH_LIBRARIES}
+)
+
+#==--------------------------------------------------------------------------==#
+
+streamline_add_executable(
   array_tests ${streamline_SOURCE_DIR}/tests/array_tests.cpp
 )
 streamline_target_link_libraries(
