@@ -43,9 +43,14 @@ endif()
 message("-- Clang cuda compiler option : ${CUDA_CLANG}")
 message("-- Clang cxx  compiler option : ${CXX_CLANG}")
 
+if (EXISTS ${CLANG_PATH})
+  set(CLANG_COMPILER_PATH "${CLANG_PATH}/bin/clang++")
+endif()
+
+
 # If clang for CXX then set the CXX compiler:
 if (${CXX_CLANG})
-  if (NOT EXISTS ${CLANG_COMPILER_PATH})
+  if (NOT EXISTS ${CLANG_PATH})
     message("-- CXX : Using system clang++ for cxx since CXX_CLANG=ON"     )
     message("         but CLANG_PATH is empty. Specify -DCLANG_PATH=<path>")
     message("         if a different clang is required."                   )

@@ -34,7 +34,7 @@ struct Num {
   static constexpr auto value = std::size_t{Value};
 
   /// Conversion to size_t so that the number can be used as a size type.
-  fluidity_host_device constexpr operator size_t() -> std::size_t {
+  streamline_host_device constexpr operator size_t() const {
     return Value;
   }
 };
@@ -51,7 +51,7 @@ struct Int64 {
   static constexpr auto value = int64_t{Value};
 
   /// Conversion to size_t so that the number can be used as a size type.
-  streamline_host_device constexpr operator int64_t() -> int64_t {
+  streamline_host_device constexpr operator int64_t() const {
     return Value;
   }
 };

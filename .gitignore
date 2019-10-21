@@ -1,4 +1,5 @@
 build/
 googletest/
+lib/
 *.swp
 *.swo

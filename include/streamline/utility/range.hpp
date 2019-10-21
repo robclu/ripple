@@ -74,7 +74,7 @@ class Range {
     /// Sets the value of the iterator and the step size.
     /// \param[in]  value   The value for the iterator.
     /// \param[in]  step    The size of the steps for the iterator.
-    steamline_host_device constexpr Iterator(value_t value, value_t step)
+    streamline_host_device constexpr Iterator(value_t value, value_t step)
     : _value(value), _step(step) {}
 
     //==--- [operator overloads] -------------------------------------------==//
@@ -99,7 +99,7 @@ class Range {
     }
 
     /// Returns a pointer to the value of the iterator.
-    steamline_host_device constexpr pointer_t operator->() {
+    streamline_host_device constexpr pointer_t operator->() {
       return &_value;
     }
 
@@ -172,11 +172,8 @@ class Range {
 /// \param[in]  end   The end value for the range
 /// \tparam     T     The type of the range data.
 template <typename T>
-streamline_host_device constexpr inline auto range(T end)
- -> Range<std::size_t>{
-  return Range<std::size_t>(
-    std::size_t{0}, static_cast<std::size_t>(end), std::size_t{1}
-  );
+streamline_host_device constexpr inline auto range(T end) -> Range<T> {
+  return Range<T>(T{0}, static_cast<T>(end), T{1});
 }
 
 /// Creates a range from \p start to \p end, using a step size of \p step.
