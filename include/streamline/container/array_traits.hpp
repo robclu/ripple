@@ -20,7 +20,7 @@
 
 namespace streamline {
 
-//==--- [Forward declarations] ---------------------------------------------==//
+//==--- [forward declarations] ---------------------------------------------==//
 
 /// The Array class defines an interface to which all specialized
 /// implementations must conform. The implementation is provided by
@@ -38,26 +38,19 @@ template <typename T, std::size_t S> struct Vec;
 /// \tparam Size  The size of the vector.
 template <typename T, std::size_t S> struct SoaVec;
 
-//==--- [Definitions] ------------------------------------------------------==//
-
-/// Returns true if the template parameter is an Array.
-/// \tparam T The type to determine if is an array.
-template <typename T>
-static constexpr bool is_array_v = std::is_base_of_v<Array<T>, T>;
-
-//==--- [Traits] -----------------------------------------------------------==//
+//==--- [traits] -----------------------------------------------------------==//
 
 /// The ArrayTraits structs defines traits that all classes which implement the
 /// Array interface must implement. This is the default implementation, and
 /// defines traits for a type T which does not implement the Array interface.
 template <typename T>
 struct ArrayTraits {
-  /// The underlying type for the array.
-  using raw_t     = std::decay_t<T>;
   /// The value type for the array.
-  using value_t   = raw_t;
+  using value_t   = std::decay_t<T>;
   /// The type used to store data for the array.
   using storage_t = value_t*;
+  /// Defines the type of the array.
+  using array_t   = Array<T, 1>;>
   
   /// Returns the number of elements in the array.  
   static constexpr auto size            = 1;
@@ -72,19 +65,19 @@ struct ArrayTraits {
 /// \tparam Size The size  of the vector.
 template <typename T, std::size_t Size>
 struct ArrayTraits<Vec<T, Size>> {
-  /// The underlying type stored in the vector.
-  using raw_t     = std::decay_t<T>;
-  /// The value type of the vector.
-  using value_t   = Vec<T, Size>;
+  /// The value type stored in the vector.
+  using value_t   = std::decay_t<T>;
   /// The type to use to store the vector data.
-  using storage_t = raw_t;
+  using storage_t = value_t;
+  /// The array type.
+  using array_t   = Vec<T, Size>;
 
   /// Returns the number of elements in the array.  
   static constexpr auto size            = Size;
   /// Returns that the array data cannot be stored as SOA.
   static constexpr auto is_soa          = false;
   /// Returns the number of bytes required to allocate a Vec element.  
-  static constexpr auto elem_alloc_size = sizeof(T) * size;
+  static constexpr auto elem_alloc_size = sizeof(value_t) * size;
 };
 
 /// Specialization of the ArrayTraits class for the SoaVec class.
@@ -92,19 +85,19 @@ struct ArrayTraits<Vec<T, Size>> {
 /// \tparam Size The size  of the vector.
 template <typename T, std::size_t Size>
 struct ArrayTraits<SoaVec<T, Size>> {
-  /// The underlying type stored in the vector.
-  using raw_t     = std::decay_t<T>;
   /// The value type of the vector.
-  using value_t   = SoaVec<T, Size>;
+  using value_t   = std::decay_t<T>;
   /// The type to use to store the vector data.
   using storage_t = value_t*;
+  /// The type of the array implemenation.
+  using array_t   = SoaVec<T, Size>;
 
   /// Returns the number of elements in the array.  
   static constexpr auto size            = Size;
   /// Returns that the array data cannot be stored as SOA.
   static constexpr auto is_soa          = true;
   /// Returns the number of bytes required to allocate a Soa element.
-  static constexpr auto elem_alloc_size = sizeof(T) * size;
+  static constexpr auto elem_alloc_size = sizeof(value_t) * size;
 };
 
 /// Specialization of the ArrayTraits class for the case that it's celled using
@@ -132,10 +125,47 @@ public:
   static constexpr auto elem_alloc_size = impl_traits_t::elem_alloc_size;
 };
 
+//==--- [aliases & constants] ----------------------------------------------==//
+
 /// Gets the array traits for the type T.
 /// \tparam T The type to get the array traits for.
 template <typename T>
 using array_traits_t = ArrayTraits<std::decay_t<T>>;
+
+/// Returns true if the template parameter is an Array.
+/// \tparam T The type to determine if is an array.
+template <typename T>
+static constexpr bool is_array_v =
+  std::is_base_of_v<Array<std::decay_t<T>>, std::decay_t<T>>;
+
+/// Returns an implementation type which is copyable and trivially constructable
+/// between implementations ImplA and ImplB. This will first check the valididy
+/// of ImplA, and then of ImplB.
+///
+/// An implementation is valid if the storage type of the implementation is
+/// **not** a pointer (since the data for the pointer will then need to be
+/// allocaed) and **is** trivially constructible.
+///
+/// If neither ImplA nor ImplB are valid, then this will default to using the
+/// Vec type with a value type of ImplA and a the size of ImplA.
+///
+/// \tparam ImplA The type of the first array implementation.
+/// \tparam ImplB The type of the second array implementation.
+template <
+  typename ImplA,
+  typename ImplB,
+  typename StorageA  = typename array_traits_t<ImplA>::storage_t,
+  typename StorageB  = typename array_traits_t<ImplB>::storage_t,
+  bool     ValidityA =
+    !std::is_pointer_v<StorageA> && std::is_trivially_constructable<ImplA>,
+  bool     ValidityB =
+    !std::is_pointer_v<StorageB> && std::is_trivially_constructable<ImplB>,
+  typename Fallback  =
+    Vec<typename array_traits_t<ImplA>::value_t, array_traits_t<ImplA>::size>
+>
+using array_impl_t = std::conditional_t<
+  ValidityA, ImplA, std::conditional_t<ValidityB, ImplB, Fallback>   
+>;
 
 } // namespace streamline
 
