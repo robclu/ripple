@@ -25,6 +25,9 @@ namespace detail     {
 
 /// The Unroll struct invokes a callable object N times, where the invokations
 /// are unrolled at compile time.
+///
+/// This struct is an implementation detail for `unrolled_for`.
+///
 /// \tparam Amount  The amount of unrolling to do.
 template <std::size_t Amount>
 struct Unroll : Unroll<Amount - 1> {
@@ -35,10 +38,10 @@ struct Unroll : Unroll<Amount - 1> {
 
   /// Passes the \p functor and \p args to the previous level to invoke, and
   /// then invokes at this level.
-  /// \param[in]  functor   The functor to invoke.
-  /// \param[in]  args      The arguments to pass to the functor.
-  /// \tparam     Functor   The type of the functor to invoke.
-  /// \tparam     Args      The type of the arguments to invoke with.
+  /// \param  functor   The functor to invoke.
+  /// \param  args      The arguments to pass to the functor.
+  /// \tparam Functor   The type of the functor to invoke.
+  /// \tparam Args      The type of the arguments to invoke with.
   template <typename Functor, typename... Args>
   streamline_host_device Unroll(Functor&& functor, Args&&... args)
   : previous_level_t(
@@ -50,13 +53,15 @@ struct Unroll : Unroll<Amount - 1> {
 
 /// Specialization of the unrolling class to terminate the urolling at the
 /// lowest level.
+///
+/// This struct is an implementation detail for `unrolled_for`.
 template <>
 struct Unroll<1> {
   /// Invokes the functor with the given args.
-  /// \param[in]  functor   The functor to invoke.
-  /// \param[in]  args      The arguments to pass to the functor.
-  /// \tparam     Functor   The type of the functor to invoke.
-  /// \tparam     Args      The type of the arguments to invoke with.
+  /// \param  functor   The functor to invoke.
+  /// \param  args      The arguments to pass to the functor.
+  /// \tparam Functor   The type of the functor to invoke.
+  /// \tparam Args      The type of the arguments to invoke with.
   template <typename Functor, typename... Args>
   streamline_host_device Unroll(Functor&& functor, Args&&... args) {
     functor(Num<0>(), std::forward<Args>(args)...);
@@ -66,15 +71,17 @@ struct Unroll<1> {
 /// Specialization of the unrolling class for the case that 0 unrolling is
 /// specified. This specialization does nothing, it's defined for generic
 /// code that may invoke it.
+///
+/// This struct is an implementation detail for `unrolled_for`.
 template <>
 struct Unroll<0> {
   /// Does nothing.
-  /// \param[in]  functor   Placeholder for a functor.
-  /// \param[in]  args      Placeholder for the functor arguments.
-  /// \tparam     Functor   The type of the functor.
-  /// \tparam     Args      The type of the arguments.
+  /// \param  functor   Placeholder for a functor.
+  /// \param  args      Placeholder for the functor arguments.
+  /// \tparam Functor   The type of the functor.
+  /// \tparam Args      The type of the arguments.
   template <typename Functor, typename... Args>
-  constexpr Unroll(Functor&&, Args&&...) {}
+  streamline_host_device constexpr Unroll(Functor&& functor, Args&&... args) {}
 };
 
 }} // namespace streamline::detail

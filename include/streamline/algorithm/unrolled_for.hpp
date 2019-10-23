@@ -45,11 +45,11 @@ namespace streamline {
 /// \note If it's required that the unrolling is bounded,  then use the
 ///       `unrolled_for_bounded`.
 ///
-/// \param[in]  functor   The functor to unroll.
-/// \param[in]  args      The arguments to the functor.
-/// \tparam     Amount    The amount of unrolling to do.
-/// \tparam     Functor   The type of the functor.
-/// \tparam     Args      The type of the functor arguments.
+/// \param  functor   The functor to unroll.
+/// \param  args      The arguments to the functor.
+/// \tparam Amount    The amount of unrolling to do.
+/// \tparam Functor   The type of the functor.
+/// \tparam Args      The type of the functor arguments.
 template <std::size_t Amount, typename Functor, typename... Args>
 streamline_host_device constexpr inline auto unrolled_for(
   Functor&& functor, Args&&... args
@@ -74,11 +74,11 @@ streamline_host_device constexpr inline auto unrolled_for(
 ///
 /// This overload is only enabled when `Amount < streamline_max_unroll_depth`.
 /// 
-/// \param[in]  functor   The functor to unroll.
-/// \param[in]  args      The arguments to the functor.
-/// \tparam     Amount    The amount of unrolling to do.
-/// \tparam     Functor   The type of the functor.
-/// \tparam     Args      The type of the functor arguments.
+/// \param  functor   The functor to unroll.
+/// \param  args      The arguments to the functor.
+/// \tparam Amount    The amount of unrolling to do.
+/// \tparam Functor   The type of the functor.
+/// \tparam Args      The type of the functor arguments.
 template <
   std::size_t Amount ,
   typename    Functor,
@@ -109,11 +109,11 @@ streamline_host_device constexpr inline auto unrolled_for_bounded(
 ///
 /// This overload is only enabled when `Amount >= streamline_max_unroll_depth`.
 /// 
-/// \param[in]  functor   The functor to unroll.
-/// \param[in]  args      The arguments to the functor.
-/// \tparam     Amount    The amount of unrolling to do.
-/// \tparam     Functor   The type of the functor.
-/// \tparam     Args      The type of the functor arguments.
+/// \param  functor   The functor to unroll.
+/// \param  args      The arguments to the functor.
+/// \tparam Amount    The amount of unrolling to do.
+/// \tparam Functor   The type of the functor.
+/// \tparam Args      The type of the functor arguments.
 template <
   std::size_t Amount ,
   typename    Functor,

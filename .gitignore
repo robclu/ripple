@@ -3,3 +3,6 @@ googletest/
 lib/
 *.swp
 *.swo
+docs/_build
+docs/doxyoutput
+docs/api

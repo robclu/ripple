@@ -41,6 +41,7 @@ namespace streamline {
 /// for (auto i : range(23, 69, 3)) {
 ///   // Use i 
 /// }
+/// ~~~
 /// 
 /// The type of the range elements are defined by the type passed to the range
 /// creation function (i.e pass a float to get a range of floats):
@@ -49,7 +50,8 @@ namespace streamline {
 /// for (auto i : range(0.1f, 0.6f, 0.1f)) {
 ///   // Use i
 /// }
-/// 
+/// ~~~
+///
 /// \tparam T The type of the range data.
 template <typename T>
 class Range {
@@ -61,7 +63,7 @@ class Range {
   template <bool IsConst>
   struct Iterator {
     /// Defines the type of the iterator.
-    using self_t      = Iterator;
+    using self_t      = Iterator<IsConst>;
     /// Defines the type of the iterator data.
     using value_t     = std::decay_t<T>;
     /// Defines the type of a reference.
