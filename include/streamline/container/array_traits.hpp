@@ -50,7 +50,7 @@ struct ArrayTraits {
   /// The type used to store data for the array.
   using storage_t = value_t*;
   /// Defines the type of the array.
-  using array_t   = Array<T, 1>;>
+  using array_t   = Vec<T, 1>;
   
   /// Returns the number of elements in the array.  
   static constexpr auto size            = 1;
@@ -156,15 +156,29 @@ template <
   typename ImplB,
   typename StorageA  = typename array_traits_t<ImplA>::storage_t,
   typename StorageB  = typename array_traits_t<ImplB>::storage_t,
-  bool     ValidityA =
-    !std::is_pointer_v<StorageA> && std::is_trivially_constructable<ImplA>,
-  bool     ValidityB =
-    !std::is_pointer_v<StorageB> && std::is_trivially_constructable<ImplB>,
+  bool     ValidityA = !std::is_pointer_v<StorageA>,
+  bool     ValidityB = !std::is_pointer_v<StorageB>,
   typename Fallback  =
     Vec<typename array_traits_t<ImplA>::value_t, array_traits_t<ImplA>::size>
 >
 using array_impl_t = std::conditional_t<
   ValidityA, ImplA, std::conditional_t<ValidityB, ImplB, Fallback>   
+>;
+
+//==--- [enables] ----------------------------------------------------------==//
+
+/// Defines a valid type if the type T is either the same as the value type of
+/// the array implementation Impl, or convertible to the value type.
+/// \tparam T    The type to base the enable on.
+/// \tparam Impl The array implementation to get the value type from.
+template <
+  typename T,
+  typename Impl,
+  typename Type  = std::decay_t<T>,
+  typename Value = typename ArrayTraits<Impl>::value_t
+>
+using array_value_enable_t = std::enable_if_t<
+  std::is_same_v<Type, Value> || std::is_convertible_v<Type, Value>, int
 >;
 
 } // namespace streamline

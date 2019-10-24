@@ -17,7 +17,7 @@
 #define STREAMLINE_CONTAINER_ARRAY_HPP
 
 #include "array_traits.hpp"
-#include <streamline/utility/portability.hpp>
+#include <streamline/algorithm/unrolled_for.hpp>
 
 namespace streamline {
 
@@ -74,9 +74,8 @@ struct Array {
   /// then this will cause a compile time error.
   /// \param  val  The value to add to each element of the array.
   /// \tparam T    The type of the value.
-  template <typename T>
+  template <typename T, array_value_enable_t<T, impl_t> = 0>
   streamline_host_device constexpr auto operator+=(T val) -> impl_t& { 
-    assert_value_type_match<T>();
     using value_t       = typename array_traits_t<impl_t>::value_t;
     constexpr auto size = array_traits_t<impl_t>::size;
     unrolled_for_bounded<size>([&] (auto i) {
@@ -109,16 +108,15 @@ struct Array {
   /// array then this will cause a compile time error.
   /// \param  val  The value to add to each element of the array.
   /// \tparam T    The type of the value.
-  template <typename T>
+  template <typename T, array_value_enable_t<T, impl_t> = 0>
   streamline_host_device constexpr auto operator+(T val)
   -> array_impl_t<impl_t, impl_t> { 
-    assert_value_type_match<T>();
     using res_impl_t    = array_impl_t<impl_t, impl_t>;
     using value_t       = typename array_traits_t<impl_t>::value_t;
     constexpr auto size = array_traits_t<res_impl_t>::size;
     auto result         = res_impl_t();
     unrolled_for_bounded<size>([&] (auto i) {
-      res[i] = impl()->operator[](i) + static_cast<value_t>(val);
+      result[i] = impl()->operator[](i) + static_cast<value_t>(val);
     });
     return result;
   }
@@ -146,9 +144,8 @@ struct Array {
   /// array then this will cause a compile time error.
   /// \param  val  The value to subtract from each element of the array.
   /// \tparam T    The type of the value.
-  template <typename T>
+  template <typename T, array_value_enable_t<T, impl_t> = 0>
   streamline_host_device constexpr auto operator-=(T val) -> impl_t& { 
-    assert_value_type_match<T>();
     using value_t       = typename array_traits_t<impl_t>::value_t;
     constexpr auto size = array_traits_t<impl_t>::size;
     unrolled_for_bounded<size>([&] (auto i) {
@@ -182,16 +179,15 @@ struct Array {
   /// array then this will cause a compile time error.
   /// \param  val  The value to subtract from each element of the array.
   /// \tparam T    The type of the value.
-  template <typename T>
+  template <typename T, array_value_enable_t<T, impl_t> = 0>
   streamline_host_device constexpr auto operator-(T val)
   -> array_impl_t<impl_t, impl_t> { 
-    assert_value_type_match<T>();
     using res_impl_t    = array_impl_t<impl_t, impl_t>;
     using value_t       = typename array_traits_t<impl_t>::value_t;
     constexpr auto size = array_traits_t<res_impl_t>::size;
     auto result         = res_impl_t();
     unrolled_for_bounded<size>([&] (auto i) {
-      res[i] = impl()->operator[](i) - static_cast<value_t>(val);
+      result[i] = impl()->operator[](i) - static_cast<value_t>(val);
     });
     return result;
   }
@@ -220,9 +216,8 @@ struct Array {
   /// array then this will cause a compile time error.
   /// \param  val  The value to multiply with each element of the array.
   /// \tparam T    The type of the value.
-  template <typename T>
+  template <typename T, array_value_enable_t<T, impl_t> = 0>
   streamline_host_device constexpr auto operator*=(T val) -> impl_t& { 
-    assert_value_type_match<T>();
     using value_t       = typename array_traits_t<impl_t>::value_t;
     constexpr auto size = array_traits_t<impl_t>::size;
     unrolled_for_bounded<size>([&] (auto i) {
@@ -240,7 +235,7 @@ struct Array {
   template <typename ImplA>
   streamline_host_device constexpr auto operator*(const Array<ImplA>& a)
   -> array_impl_t<impl_t, ImplA> {
-    using res_impl_t      = array_impl_t<impl_t, ImplB>;
+    using res_impl_t      = array_impl_t<impl_t, ImplA>;
     auto           result = res_impl_t();
     constexpr auto size   = array_traits_t<res_impl_t>::size;
     unrolled_for_bounded<size>([&] (auto i) {
@@ -255,16 +250,15 @@ struct Array {
   /// array then this will cause a compile time error.
   /// \param  val  The value to multiply with each element of the array.
   /// \tparam T    The type of the value.
-  template <typename T>
+  template <typename T, array_value_enable_t<T, impl_t> = 0>
   streamline_host_device constexpr auto operator*(T val)
   -> array_impl_t<impl_t, impl_t> { 
-    assert_value_type_match<T>();
     using res_impl_t    = array_impl_t<impl_t, impl_t>;
     using value_t       = typename array_traits_t<impl_t>::value_t;
     constexpr auto size = array_traits_t<res_impl_t>::size;
     auto result         = res_impl_t();
     unrolled_for_bounded<size>([&] (auto i) {
-      res[i] = impl()->operator[](i) * static_cast<value_t>(val);
+      result[i] = impl()->operator[](i) * static_cast<value_t>(val);
     });
     return result;
   }
@@ -292,9 +286,8 @@ struct Array {
   /// array then this will cause a compile time error.
   /// \param  val  The value to divide each element of the array by.
   /// \tparam T    The type of the value.
-  template <typename T>
+  template <typename T, array_value_enable_t<T, impl_t> = 0>
   streamline_host_device constexpr auto operator/=(T val) -> impl_t& { 
-    assert_value_type_match<T>();
     using value_t       = typename array_traits_t<impl_t>::value_t;
     constexpr auto size = array_traits_t<impl_t>::size;
     unrolled_for_bounded<size>([&] (auto i) {
@@ -312,7 +305,7 @@ struct Array {
   template <typename ImplA>
   streamline_host_device constexpr auto operator/(const Array<ImplA>& a)
   -> array_impl_t<impl_t, ImplA> {
-    using res_impl_t      = array_impl_t<impl_t, ImplB>;
+    using res_impl_t      = array_impl_t<impl_t, ImplA>;
     auto           result = res_impl_t();
     constexpr auto size   = array_traits_t<res_impl_t>::size;
     unrolled_for_bounded<size>([&] (auto i) {
@@ -327,16 +320,15 @@ struct Array {
   /// array then this will cause a compile time error.
   /// \param  val  The value to multiply with each element of the array.
   /// \tparam T    The type of the value.
-  template <typename T>
+  template <typename T, array_value_enable_t<T, impl_t> = 0>
   streamline_host_device constexpr auto operator/(T val)
   -> array_impl_t<impl_t, impl_t> { 
-    assert_value_type_match<T>();
     using res_impl_t    = array_impl_t<impl_t, impl_t>;
     using value_t       = typename array_traits_t<impl_t>::value_t;
     constexpr auto size = array_traits_t<res_impl_t>::size;
     auto result         = res_impl_t();
     unrolled_for_bounded<size>([&] (auto i) {
-      res[i] = impl()->operator[](i) / static_cast<value_t>(val);
+      result[i] = impl()->operator[](i) / static_cast<value_t>(val);
     });
     return result;
   }
@@ -364,20 +356,6 @@ struct Array {
       "Cannot perform operations on arrays with different number of elements!"    
     );
   }
-
-  /// Performs a compile time assertation that the type T matches the value type
-  /// stored in the array -- i.e the type that is returned when dereferencing.
-  template <typename T>
-  streamline_host_device constexpr auto assert_value_type_match() const
-  -> void {
-    using value_t = typename array_traits_t<impl_t>::value_t;
-    using type_t  = std::decay_t<T>;
-    static_assert(
-      std::is_same_v<type_t, value_t> || std::is_convertible_v<type_t, value_t>,
-      "Cannot perform operations on an array with a type which is not the "
-      "value type, or convertible to the value type!"
-    );
-  }
 };
 
 //==--- [operator overloads] -----------------------------------------------==//
@@ -389,7 +367,7 @@ struct Array {
 /// \param  a     The array to add with the value.
 /// \tparam T     The type of the scalar.
 /// \tparam Impl  The implementation type of the array.
-template <typename T, typename Impl>
+template <typename T, typename Impl, array_value_enable_t<T, Impl> = 0>
 streamline_host_device constexpr auto operator+(T val, const Array<Impl>& a)
 -> array_impl_t<Impl, Impl> {
   using impl_t = array_impl_t<Impl, Impl>;
@@ -405,7 +383,7 @@ streamline_host_device constexpr auto operator+(T val, const Array<Impl>& a)
   auto           result = impl_t();
   constexpr auto size   = array_traits_t<impl_t>::size;
   unrolled_for_bounded<size>([&] (auto i) {
-    result[i] = static_cast<value_t>(val) + b[i];
+    result[i] = static_cast<value_t>(val) + a[i];
   });
   return result;
 }
@@ -417,7 +395,7 @@ streamline_host_device constexpr auto operator+(T val, const Array<Impl>& a)
 /// \param  a     The array to subtract with.
 /// \tparam T     The type of the scalar.
 /// \tparam Impl  The implementation type of the array.
-template <typename T, typename Impl>
+template <typename T, typename Impl, array_value_enable_t<T, Impl> = 0>
 streamline_host_device constexpr auto operator-(T val, const Array<Impl>& a)
 -> array_impl_t<Impl, Impl> {
   using impl_t = array_impl_t<Impl, Impl>;
@@ -433,7 +411,7 @@ streamline_host_device constexpr auto operator-(T val, const Array<Impl>& a)
   auto           result = impl_t();
   constexpr auto size   = array_traits_t<impl_t>::size;
   unrolled_for_bounded<size>([&] (auto i) {
-    result[i] = static_cast<value_t>(val) - b[i];
+    result[i] = static_cast<value_t>(val) - a[i];
   });
   return result;
 }
@@ -445,7 +423,7 @@ streamline_host_device constexpr auto operator-(T val, const Array<Impl>& a)
 /// \param  a     The array to multiply with the scalar.
 /// \tparam T     The type of the scalar.
 /// \tparam Impl  The implementation type of the array.
-template <typename T, typename Impl>
+template <typename T, typename Impl, array_value_enable_t<T, Impl> = 0>
 streamline_host_device constexpr auto operator*(T val, const Array<Impl>& a)
 -> array_impl_t<Impl, Impl> {
   using impl_t = array_impl_t<Impl, Impl>;
@@ -461,7 +439,7 @@ streamline_host_device constexpr auto operator*(T val, const Array<Impl>& a)
   auto           result = impl_t();
   constexpr auto size   = array_traits_t<impl_t>::size;
   unrolled_for_bounded<size>([&] (auto i) {
-    result[i] = static_cast<value_t>(val) * b[i];
+    result[i] = static_cast<value_t>(val) * a[i];
   });
   return result;
 }
@@ -473,7 +451,7 @@ streamline_host_device constexpr auto operator*(T val, const Array<Impl>& a)
 /// \param  a     The array to divide by.
 /// \tparam T     The type of the scalar.
 /// \tparam Impl  The implementation type of the array.
-template <typename T, typename Impl>
+template <typename T, typename Impl, array_value_enable_t<T, Impl> = 0>
 streamline_host_device constexpr auto operator/(T val, const Array<Impl>& a)
 -> array_impl_t<Impl, Impl> {
   using impl_t = array_impl_t<Impl, Impl>;
@@ -489,7 +467,7 @@ streamline_host_device constexpr auto operator/(T val, const Array<Impl>& a)
   auto           result = impl_t();
   constexpr auto size   = array_traits_t<impl_t>::size;
   unrolled_for_bounded<size>([&] (auto i) {
-    result[i] = static_cast<value_t>(val) / b[i];
+    result[i] = static_cast<value_t>(val) / a[i];
   });
   return result;
 }

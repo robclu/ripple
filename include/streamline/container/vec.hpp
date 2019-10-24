@@ -38,18 +38,30 @@ struct Vec : public Array<Vec<T, Size>>  {
   using storage_t = typename traits_t::storage_t;
 
  public:
+  //==--- [construction] ---------------------------------------------------==//
+
   /// Default constructor for the vector.
   constexpr Vec() = default;
   
+  /// Constructor to create the array from a list of values. This overload is
+  /// only enabled when the number of elements in the variadic parameter pack
+  /// matches the size of the array.
+  template <typename... Values, variadic_size_enable_t<Size, Values...> = 0>
+  streamline_host_device constexpr Vec(Values&&... values)
+  : _data{static_cast<typename traits_t::value_t>(values)...} {}
+
   /// Constructor to create the vector from another array of the same type and
   /// size.
   /// \param  arr  The array to use to create this one.
   /// \tparam Impl The implementation of the arrau interface.  
   template <typename Impl>
   streamline_host_device constexpr Vec(const Array<Impl>& arr) {
-    for (auto i = 0; i < Size; ++i)
+    for (auto i = 0; i < Size; ++i) {
       _data[i] = arr[i];
+    }
   }
+
+  //==--- [operator overloads] ---------------------------------------------==//
  
   /// Returns a constant reference to the element at position i.
   /// \param i The index of the element to get.  

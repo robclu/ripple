@@ -16,6 +16,7 @@
 #ifndef STREAMLINE_UTILITY_TYPE_TRAITS_HPP
 #define STREAMLINE_UTILITY_TYPE_TRAITS_HPP
 
+#include "portability.hpp"
 #include <type_traits>
 
 //==--- [std wrappers] -----------------------------------------------------==//
@@ -36,12 +37,23 @@ template <typename From, typename To>
 static constexpr bool is_convertible_v =
   std::is_convertible<std::decay<From>, std::decay_t<To>>::value;
 
+/// Wrapper around std::is_pointer for c++-14 compatibility.
+/// \tparam T The type to determine if is a pointer.
+template <typename T>
+static constexpr bool is_pointer_v = std::is_pointer<std::decay_t<T>>::value;
+
 /// Wrapper around std::is_same for c++-14 compatibility.
 /// \tparam T1 The first type for the comparison.
 /// \tparam T2 The second type for the comparison.
 template <typename T1, typename T2>
 static constexpr bool is_same_v =
   std::is_same<std::decay_t<T1>, std::decay_t<T2>>::value;
+
+/// Wrapper around std::is_trivially_constructible for c++-14 compatibility.
+/// \tparam T The type to determine if is trivially constructible.
+template <typename T>
+static constexpr bool is_trivially_constructible_v =
+  std::is_trivially_constructible<std::decay_t<T>>::value;
 
 } // namespace std
 
