@@ -13,6 +13,7 @@
 //
 //==------------------------------------------------------------------------==//
 
+#include "dim_tests.hpp"
 #include "number_tests.hpp"
 #include "range_tests.hpp"
 #include "type_traits_tests.hpp"
