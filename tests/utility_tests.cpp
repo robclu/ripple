@@ -66,6 +66,27 @@ TEST(range, range_works_with_non_integer_types) {
   }
 }
 
+//==--- [traits] -----------------------------------------------------------==//
+
+TEST(traits, all_arithmetic_v) {
+  const auto b1 = streamline::all_arithmetic_v<int, float, double, std::size_t>;
+  const auto b2 = streamline::all_arithmetic_v<int*, float, double>;
+  const auto b3 = streamline::all_arithmetic_v<int, float, double*>;
+  EXPECT_TRUE(b1);
+  EXPECT_FALSE(b2);
+  EXPECT_FALSE(b3);
+}
+
+TEST(traits, all_same_v) {
+  const auto b1 = streamline::all_same_v<int, float, double, std::size_t>;
+  const auto b2 = streamline::all_same_v<int, int, int>;
+  const auto b3 = streamline::all_same_v<int, int*, int>;
+
+  EXPECT_FALSE(b1);
+  EXPECT_TRUE(b2);
+  EXPECT_FALSE(b3);
+}
+
 int main(int argc, char** argv) {
   ::testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
