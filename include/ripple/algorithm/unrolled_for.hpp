@@ -1,8 +1,8 @@
-//==--- streamline/algorithm/unrolled-for.hpp -------------- -*- C++ -*- ---==//
+//==--- ripple/algorithm/unrolled-for.hpp ------------------ -*- C++ -*- ---==//
 //            
-//                                Streamline
+//                                Ripple
 // 
-//                      Copyright (c) 2019 Streamline.
+//                      Copyright (c) 2019 Ripple.
 //
 //  This file is distributed under the MIT License. See LICENSE for details.
 //
@@ -14,13 +14,13 @@
 //
 //==------------------------------------------------------------------------==//
 
-#ifndef STREAMLINE_ALGORITHM_UNROLLED_FOR_HPP
-#define STREAMLINE_ALGORITHM_UNROLLED_FOR_HPP
+#ifndef RIPPLE_ALGORITHM_UNROLLED_FOR_HPP
+#define RIPPLE_ALGORITHM_UNROLLED_FOR_HPP
 
 #include "detail/unrolled_for_impl_.hpp"
-#include <streamline/utility/range.hpp>
+#include <ripple/utility/range.hpp>
 
-namespace streamline {
+namespace ripple {
 
 /// Applies the functor Amount times and passes the index of the unrolling
 /// as the first argument to the functor. The unrolling is performed at compile
@@ -51,7 +51,7 @@ namespace streamline {
 /// \tparam Functor   The type of the functor.
 /// \tparam Args      The type of the functor arguments.
 template <std::size_t Amount, typename Functor, typename... Args>
-streamline_host_device constexpr inline auto unrolled_for(
+ripple_host_device constexpr inline auto unrolled_for(
   Functor&& functor, Args&&... args
 ) -> void {
   detail::Unroll<Amount> unrolled(
@@ -61,18 +61,18 @@ streamline_host_device constexpr inline auto unrolled_for(
 
 /// Applies the functor Amount times. However, this is a bounded version and
 /// is safer than `unrolled_for` in that it will not unroll if the value of
-/// Amount is larger than the value defined by `streamline_mac_unroll_depth` at
+/// Amount is larger than the value defined by `ripple_mac_unroll_depth` at
 /// compile time. 
 ///
-/// In the case that Amount is larger than `streamline_max_unroll_length` then
+/// In the case that Amount is larger than `ripple_max_unroll_length` then
 /// a normal loop is performed and the functor is invoked on each iteration. In
-/// the case that `Amount <= streamline_max_unroll_depth`, then this behaves
+/// the case that `Amount <= ripple_max_unroll_depth`, then this behaves
 /// exactly as `unrolled_for`. See `unrolled_for` for more details.
 ///
 /// This version will not always used a constexpr index, and therefore the index
 /// cannot be used in constexpr contexts.
 ///
-/// This overload is only enabled when `Amount < streamline_max_unroll_depth`.
+/// This overload is only enabled when `Amount < ripple_max_unroll_depth`.
 /// 
 /// \param  functor   The functor to unroll.
 /// \param  args      The arguments to the functor.
@@ -85,7 +85,7 @@ template <
   typename... Args   ,
   unroll_enabled_t<Amount> = 0
 >
-streamline_host_device constexpr inline auto unrolled_for_bounded(
+ripple_host_device constexpr inline auto unrolled_for_bounded(
   Functor&& functor, Args&&... args
 ) -> void {
   unrolled_for<Amount>(
@@ -96,18 +96,18 @@ streamline_host_device constexpr inline auto unrolled_for_bounded(
 
 /// Applies the functor Amount times. However, this is a bounded version and
 /// is safer than `unrolled_for` in that it will not unroll if the value of
-/// Amount is larger than the value defined by `streamline_mac_unroll_depth` at
+/// Amount is larger than the value defined by `ripple_mac_unroll_depth` at
 /// compile time. 
 ///
-/// In the case that Amount is larger than `streamline_max_unroll_length` then
+/// In the case that Amount is larger than `ripple_max_unroll_length` then
 /// a normal loop is performed and the functor is invoked on each iteration. In
-/// the case that `Amount <= streamline_max_unroll_depth`, then this behaves
+/// the case that `Amount <= ripple_max_unroll_depth`, then this behaves
 /// exactly as `unrolled_for`. See `unrolled_for` for more details.
 ///
 /// This version will not always used a constexpr index, and therefore the index
 /// cannot be used in constexpr contexts.
 ///
-/// This overload is only enabled when `Amount >= streamline_max_unroll_depth`.
+/// This overload is only enabled when `Amount >= ripple_max_unroll_depth`.
 /// 
 /// \param  functor   The functor to unroll.
 /// \param  args      The arguments to the functor.
@@ -120,7 +120,7 @@ template <
   typename... Args   ,
   unroll_disabled_t<Amount> = 0
 >
-streamline_host_device constexpr inline auto unrolled_for_bounded(
+ripple_host_device constexpr inline auto unrolled_for_bounded(
   Functor&& functor, Args&&... args
 ) -> void {
   for (const auto i : range(Amount)) {
@@ -128,6 +128,6 @@ streamline_host_device constexpr inline auto unrolled_for_bounded(
   }
 }
 
-} // namespace streamline
+} // namespace ripple
 
-#endif // STREAMLINE_ALGORITHM_UNROLLED_FOR_HPP
+#endif // RIPPLE_ALGORITHM_UNROLLED_FOR_HPP

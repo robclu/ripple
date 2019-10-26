@@ -1,9 +1,9 @@
-.. Streamline documentation master file, created by
+.. Ripple documentation master file, created by
    sphinx-quickstart on Tue Oct 22 14:08:54 2019.
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to Streamline's documentation!
+Welcome to Ripple's documentation!
 ======================================
 
 .. toctree::
@@ -11,10 +11,10 @@ Welcome to Streamline's documentation!
    :caption: Contents:
 
    modules/utilities.rst
-   api/streamline_api_root.rst
+   api/ripple_api_root.rst
 
   
-This is the official documentation for streamline. Streamline is a framework for
+This is the official documentation for ripple. Ripple is a framework for
 solving large, complex, and possibly coupled fluid and solid dynamics problems
 with adaptive mesh refinement on massively parallel heterogeneous architectures.
 
@@ -33,11 +33,11 @@ The header ``portability.hpp`` can be included for cross platform and cross
 architecture functionality. The most important components are the macros for
 marking functions as host and device. Any function, especially kernels, which is
 intended to be usable on either a CPU or GPU should be marked as
-``streamline_host_device``, while functions intended explicitly for execution on
-the device should be marked ``streamline_device_only``. For host only functions,
-the ``streamline_host_only`` macro can be used, however, by default, functions
+``ripple_host_device``, while functions intended explicitly for execution on
+the device should be marked ``ripple_device_only``. For host only functions,
+the ``ripple_host_only`` macro can be used, however, by default, functions
 which are not marked are host only functions. For CUDA kernels, used the marco
-``streamline_global``.
+``ripple_global``.
 
 Type Traits
 -----------

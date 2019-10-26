@@ -1,28 +1,31 @@
-//==--- cpp/tests/array_tests.cpp -------------------------- -*- C++ -*- ---==//
+//==--- ripple/tests/container/vec_tests.cpp --------------- -*- C++ -*- ---==//
 //            
-//                                Streamline
+//                                Ripple
 // 
-//                      Copyright (c) 2019 Streamline.
+//                      Copyright (c) 2019 Rob Clucas.
 //
 //  This file is distributed under the MIT License. See LICENSE for details.
 //
 //==------------------------------------------------------------------------==//
 //
-/// \file  array_tests.cpp
-/// \brief This file contains tests for arrays.
+/// \file  vec_tests.hpp
+/// \brief This file contains tests for vec.
 //
 //==------------------------------------------------------------------------==//
 
-#include <streamline/container/vec.hpp>
+#ifndef RIPPLE_TESTS_CONTAINER_VEC_TESTS_HPP
+#define RIPPLE_TESTS_CONTAINER_VEC_TESTS_HPP
+
+#include <ripple/container/vec.hpp>
 #include <gtest/gtest.h>
 
-TEST(vec, can_create_vec_default_constructor) {
-  auto v = streamline::Vec<float, 3>();
+TEST(container_vec, can_create_vec_default_constructor) {
+  auto v = ripple::Vec<float, 3>();
   EXPECT_TRUE(v.size() == 3);
 }
 
-TEST(vec, can_create_vec_with_values_and_modify_them) {
-  auto v = streamline::Vec<int, 3>(1, 2, 3);
+TEST(container_vec, can_create_vec_with_values_and_modify_them) {
+  auto v = ripple::Vec<int, 3>(1, 2, 3);
   EXPECT_EQ(v[0], 1);
   EXPECT_EQ(v[1], 2);
   EXPECT_EQ(v[2], 3);
@@ -34,24 +37,24 @@ TEST(vec, can_create_vec_with_values_and_modify_them) {
   EXPECT_EQ(v[2], 30);
 }
 
-TEST(vec, can_create_set_and_modify_vec_values) {
-  auto v = streamline::Vec<int, 3>();
+TEST(container_vec, can_create_set_and_modify_vec_values) {
+  auto v = ripple::Vec<int, 3>();
   v[0] = 1; v[1] = 2; v[2] = 3;
   EXPECT_EQ(v[0], 1);
   EXPECT_EQ(v[1], 2);
   EXPECT_EQ(v[2], 3);
 }
 
-TEST(vec, can_add_vecs) {
-  auto v = streamline::Vec<int, 3>(1, 2, 3);
+TEST(container_vec, can_add_vecs) {
+  auto v = ripple::Vec<int, 3>(1, 2, 3);
   v += v;
   EXPECT_EQ(v[0], 2);
   EXPECT_EQ(v[1], 4);
   EXPECT_EQ(v[2], 6);
 }
 
-TEST(vec, can_add_vecs_and_scalar) {
-  auto v = streamline::Vec<int, 3>(1, 2, 3);
+TEST(container_vec, can_add_vecs_and_scalar) {
+  auto v = ripple::Vec<int, 3>(1, 2, 3);
   v += 5;
   EXPECT_EQ(v[0], 6);
   EXPECT_EQ(v[1], 7);
@@ -68,16 +71,16 @@ TEST(vec, can_add_vecs_and_scalar) {
   EXPECT_EQ(v3[2], 19);
 }
 
-TEST(vec, can_subtract_vecs) {
-  auto v = streamline::Vec<int, 3>(1, 2, 3);
+TEST(container_vec, can_subtract_vecs) {
+  auto v = ripple::Vec<int, 3>(1, 2, 3);
   v -= (v + v);
   EXPECT_EQ(v[0], -1);
   EXPECT_EQ(v[1], -2);
   EXPECT_EQ(v[2], -3);
 }
 
-TEST(vec, can_subtract_vecs_and_scalar) {
-  auto v = streamline::Vec<int, 3>(11, 12, 13);
+TEST(container_vec, can_subtract_vecs_and_scalar) {
+  auto v = ripple::Vec<int, 3>(11, 12, 13);
   v -= 5;
   EXPECT_EQ(v[0], 6);
   EXPECT_EQ(v[1], 7);
@@ -94,16 +97,16 @@ TEST(vec, can_subtract_vecs_and_scalar) {
   EXPECT_EQ(v3[2], 0);
 }
 
-TEST(vec, can_multiply_vecs) {
-  auto v = streamline::Vec<int, 3>(1, 2, 3);
+TEST(container_vec, can_multiply_vecs) {
+  auto v = ripple::Vec<int, 3>(1, 2, 3);
   v *= v;
   EXPECT_EQ(v[0], 1);
   EXPECT_EQ(v[1], 4);
   EXPECT_EQ(v[2], 9);
 }
 
-TEST(vec, can_multiply_vecs_and_scalar) {
-  auto v = streamline::Vec<int, 3>(1, 2, 3);
+TEST(container_vec, can_multiply_vecs_and_scalar) {
+  auto v = ripple::Vec<int, 3>(1, 2, 3);
   v *= 5;
   EXPECT_EQ(v[0], 5);
   EXPECT_EQ(v[1], 10);
@@ -120,17 +123,17 @@ TEST(vec, can_multiply_vecs_and_scalar) {
   EXPECT_EQ(v3[2], 150);
 }
 
-TEST(vec, can_divide_vecs) {
-  auto u = streamline::Vec<int, 3>(2, 3, 4);
-  auto v = streamline::Vec<int, 3>(12, 21, 36);
+TEST(container_vec, can_divide_vecs) {
+  auto u = ripple::Vec<int, 3>(2, 3, 4);
+  auto v = ripple::Vec<int, 3>(12, 21, 36);
   v /= u;
   EXPECT_EQ(v[0], 6);
   EXPECT_EQ(v[1], 7);
   EXPECT_EQ(v[2], 9);
 }
 
-TEST(vec, can_divide_vecs_and_scalar) {
-  auto v = streamline::Vec<int, 3>(10, 20, 30);
+TEST(container_vec, can_divide_vecs_and_scalar) {
+  auto v = ripple::Vec<int, 3>(10, 20, 30);
   v /= 5;
   EXPECT_EQ(v[0], 2);
   EXPECT_EQ(v[1], 4);
@@ -147,7 +150,4 @@ TEST(vec, can_divide_vecs_and_scalar) {
   EXPECT_EQ(v3[2], 12);
 }
 
-int main(int argc, char** argv) {
-  ::testing::InitGoogleTest(&argc, argv);
-  return RUN_ALL_TESTS();
-}
+#endif // RIPPLE_TESTS_CONTAINER_VEC_TESTS_HPP

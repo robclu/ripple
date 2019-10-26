@@ -1,8 +1,8 @@
-//==--- streamline/container/array.hpp --------------------- -*- C++ -*- ---==//
+//==--- ripple/container/array.hpp ------------------------- -*- C++ -*- ---==//
 //            
-//                                Streamline
+//                                Ripple
 // 
-//                      Copyright (c) 2019 Streamline.
+//                      Copyright (c) 2019 Ripple.
 //
 //  This file is distributed under the MIT License. See LICENSE for details.
 //
@@ -13,13 +13,13 @@
 //
 //==------------------------------------------------------------------------==//
 
-#ifndef STREAMLINE_CONTAINER_ARRAY_HPP
-#define STREAMLINE_CONTAINER_ARRAY_HPP
+#ifndef RIPPLE_CONTAINER_ARRAY_HPP
+#define RIPPLE_CONTAINER_ARRAY_HPP
 
 #include "array_traits.hpp"
-#include <streamline/algorithm/unrolled_for.hpp>
+#include <ripple/algorithm/unrolled_for.hpp>
 
-namespace streamline {
+namespace ripple {
 
 /// The Array class defines an interface to which all specialized
 /// implementations must conform. The implementation is provided by the template
@@ -34,24 +34,24 @@ struct Array {
  public:
   /// Returns the value at position \p i in the array.
   /// \param i The index of the element to return.
-  streamline_host_device constexpr auto operator[](std::size_t i) 
+  ripple_host_device constexpr auto operator[](std::size_t i) 
   -> typename array_traits_t<impl_t>::value_t& {
     return impl()->operator[](i);  
   }
 
   /// Returns the value at position \p i in the array.
   /// \param i The index of the element to return.
-  streamline_host_device constexpr auto operator[](std::size_t i) const 
+  ripple_host_device constexpr auto operator[](std::size_t i) const 
   -> const typename array_traits_t<impl_t>::value_t& {
     return impl()->operator[](i);  
   }
     
   /// Returns the number of elements in the array.
-  streamline_host_device constexpr auto size() const -> std::size_t {
+  ripple_host_device constexpr auto size() const -> std::size_t {
     return array_traits_t<impl_t>::size;
   }
 
-  //==--- [operator {+,+=} overloads] ----------------------------------------==//
+  //==--- [operator {+,+=} overloads] --------------------------------------==//
 
   /// Overload of operator+= to add each element of array \p a to each element
   /// of this array. If the sizes of the arrays are different, this will cause a
@@ -59,7 +59,7 @@ struct Array {
   /// \param  a     The array to add with.
   /// \tparam ImplA The implementation type of the addition array.
   template <typename ImplA>
-  streamline_host_device constexpr auto operator+=(const Array<ImplA>& a) 
+  ripple_host_device constexpr auto operator+=(const Array<ImplA>& a) 
   -> impl_t& {
     assert_size_match<ImplA>();
     constexpr auto size = array_traits_t<impl_t>::size;
@@ -75,7 +75,7 @@ struct Array {
   /// \param  val  The value to add to each element of the array.
   /// \tparam T    The type of the value.
   template <typename T, array_value_enable_t<T, impl_t> = 0>
-  streamline_host_device constexpr auto operator+=(T val) -> impl_t& { 
+  ripple_host_device constexpr auto operator+=(T val) -> impl_t& { 
     using value_t       = typename array_traits_t<impl_t>::value_t;
     constexpr auto size = array_traits_t<impl_t>::size;
     unrolled_for_bounded<size>([&] (auto i) {
@@ -91,7 +91,7 @@ struct Array {
   /// \param  a     The array for the addition.
   /// \tparam ImplA The implementation type of the other array.
   template <typename ImplA>
-  streamline_host_device constexpr auto operator+(const Array<ImplA>& a)
+  ripple_host_device constexpr auto operator+(const Array<ImplA>& a)
   -> array_impl_t<impl_t, ImplA> {
     using res_impl_t      = array_impl_t<impl_t, ImplA>;
     auto           result = res_impl_t();
@@ -109,7 +109,7 @@ struct Array {
   /// \param  val  The value to add to each element of the array.
   /// \tparam T    The type of the value.
   template <typename T, array_value_enable_t<T, impl_t> = 0>
-  streamline_host_device constexpr auto operator+(T val)
+  ripple_host_device constexpr auto operator+(T val)
   -> array_impl_t<impl_t, impl_t> { 
     using res_impl_t    = array_impl_t<impl_t, impl_t>;
     using value_t       = typename array_traits_t<impl_t>::value_t;
@@ -129,7 +129,7 @@ struct Array {
   /// \param  a     The array to subtract with.
   /// \tparam ImplA The implementation type of the subtraction array.
   template <typename ImplA>
-  streamline_host_device constexpr auto operator-=(const Array<ImplA>& a) 
+  ripple_host_device constexpr auto operator-=(const Array<ImplA>& a) 
   -> impl_t& {
     assert_size_match<ImplA>();
     constexpr auto size = array_traits_t<impl_t>::size;
@@ -145,7 +145,7 @@ struct Array {
   /// \param  val  The value to subtract from each element of the array.
   /// \tparam T    The type of the value.
   template <typename T, array_value_enable_t<T, impl_t> = 0>
-  streamline_host_device constexpr auto operator-=(T val) -> impl_t& { 
+  ripple_host_device constexpr auto operator-=(T val) -> impl_t& { 
     using value_t       = typename array_traits_t<impl_t>::value_t;
     constexpr auto size = array_traits_t<impl_t>::size;
     unrolled_for_bounded<size>([&] (auto i) {
@@ -162,7 +162,7 @@ struct Array {
   /// \param  a     The array for the subtraction.
   /// \tparam ImplA The implementation type of the subtraction array.
   template <typename ImplA>
-  streamline_host_device constexpr auto operator-(const Array<ImplA>& a)
+  ripple_host_device constexpr auto operator-(const Array<ImplA>& a)
   -> array_impl_t<impl_t, ImplA> {
     using res_impl_t      = array_impl_t<impl_t, ImplA>;
     auto           result = res_impl_t();
@@ -180,7 +180,7 @@ struct Array {
   /// \param  val  The value to subtract from each element of the array.
   /// \tparam T    The type of the value.
   template <typename T, array_value_enable_t<T, impl_t> = 0>
-  streamline_host_device constexpr auto operator-(T val)
+  ripple_host_device constexpr auto operator-(T val)
   -> array_impl_t<impl_t, impl_t> { 
     using res_impl_t    = array_impl_t<impl_t, impl_t>;
     using value_t       = typename array_traits_t<impl_t>::value_t;
@@ -201,7 +201,7 @@ struct Array {
   /// \param  a     The array to multiply with.
   /// \tparam ImplA The implementation type of the multiplication array.
   template <typename ImplA>
-  streamline_host_device constexpr auto operator*=(const Array<ImplA>& a) 
+  ripple_host_device constexpr auto operator*=(const Array<ImplA>& a) 
   -> impl_t& {
     assert_size_match<ImplA>();
     constexpr auto size = array_traits_t<impl_t>::size;
@@ -217,7 +217,7 @@ struct Array {
   /// \param  val  The value to multiply with each element of the array.
   /// \tparam T    The type of the value.
   template <typename T, array_value_enable_t<T, impl_t> = 0>
-  streamline_host_device constexpr auto operator*=(T val) -> impl_t& { 
+  ripple_host_device constexpr auto operator*=(T val) -> impl_t& { 
     using value_t       = typename array_traits_t<impl_t>::value_t;
     constexpr auto size = array_traits_t<impl_t>::size;
     unrolled_for_bounded<size>([&] (auto i) {
@@ -233,7 +233,7 @@ struct Array {
   /// \param  a     The array to multiply with.
   /// \tparam ImplA The implementation type of the multiplication array.
   template <typename ImplA>
-  streamline_host_device constexpr auto operator*(const Array<ImplA>& a)
+  ripple_host_device constexpr auto operator*(const Array<ImplA>& a)
   -> array_impl_t<impl_t, ImplA> {
     using res_impl_t      = array_impl_t<impl_t, ImplA>;
     auto           result = res_impl_t();
@@ -251,7 +251,7 @@ struct Array {
   /// \param  val  The value to multiply with each element of the array.
   /// \tparam T    The type of the value.
   template <typename T, array_value_enable_t<T, impl_t> = 0>
-  streamline_host_device constexpr auto operator*(T val)
+  ripple_host_device constexpr auto operator*(T val)
   -> array_impl_t<impl_t, impl_t> { 
     using res_impl_t    = array_impl_t<impl_t, impl_t>;
     using value_t       = typename array_traits_t<impl_t>::value_t;
@@ -271,7 +271,7 @@ struct Array {
   /// \param  a     The array to multiply with.
   /// \tparam ImplA The implementation type of the multiplication array.
   template <typename ImplA>
-  streamline_host_device constexpr auto operator/=(const Array<ImplA>& a) 
+  ripple_host_device constexpr auto operator/=(const Array<ImplA>& a) 
   -> impl_t& {
     assert_size_match<ImplA>();
     constexpr auto size = array_traits_t<impl_t>::size;
@@ -287,7 +287,7 @@ struct Array {
   /// \param  val  The value to divide each element of the array by.
   /// \tparam T    The type of the value.
   template <typename T, array_value_enable_t<T, impl_t> = 0>
-  streamline_host_device constexpr auto operator/=(T val) -> impl_t& { 
+  ripple_host_device constexpr auto operator/=(T val) -> impl_t& { 
     using value_t       = typename array_traits_t<impl_t>::value_t;
     constexpr auto size = array_traits_t<impl_t>::size;
     unrolled_for_bounded<size>([&] (auto i) {
@@ -303,7 +303,7 @@ struct Array {
   /// \param  a     The array to divide by.
   /// \tparam ImplA The implementation type of the division array.
   template <typename ImplA>
-  streamline_host_device constexpr auto operator/(const Array<ImplA>& a)
+  ripple_host_device constexpr auto operator/(const Array<ImplA>& a)
   -> array_impl_t<impl_t, ImplA> {
     using res_impl_t      = array_impl_t<impl_t, ImplA>;
     auto           result = res_impl_t();
@@ -321,7 +321,7 @@ struct Array {
   /// \param  val  The value to multiply with each element of the array.
   /// \tparam T    The type of the value.
   template <typename T, array_value_enable_t<T, impl_t> = 0>
-  streamline_host_device constexpr auto operator/(T val)
+  ripple_host_device constexpr auto operator/(T val)
   -> array_impl_t<impl_t, impl_t> { 
     using res_impl_t    = array_impl_t<impl_t, impl_t>;
     using value_t       = typename array_traits_t<impl_t>::value_t;
@@ -335,12 +335,12 @@ struct Array {
     
  private:
   /// Returns a pointer to the implementation of the interface.
-  streamline_host_device constexpr auto impl() -> impl_t* {
+  ripple_host_device constexpr auto impl() -> impl_t* {
     return static_cast<impl_t*>(this);
   }
     
   /// Returns a pointer to constant implementation of the interface.
-  streamline_host_device constexpr auto impl() const -> const impl_t* {
+  ripple_host_device constexpr auto impl() const -> const impl_t* {
     return static_cast<const impl_t*>(this);
   }
 
@@ -348,7 +348,7 @@ struct Array {
   /// implemented by ImplA has the same nunber of elements that this array does.
   /// \tparam ImplA The implementation type of the array to check.
   template <typename ImplA>
-  streamline_host_device constexpr auto assert_size_match() const -> void {
+  ripple_host_device constexpr auto assert_size_match() const -> void {
     constexpr auto size   = array_traits_t<Impl>::size;
     constexpr auto size_a = array_traits_t<ImplA>::size;
     static_assert(
@@ -368,7 +368,7 @@ struct Array {
 /// \tparam T     The type of the scalar.
 /// \tparam Impl  The implementation type of the array.
 template <typename T, typename Impl, array_value_enable_t<T, Impl> = 0>
-streamline_host_device constexpr auto operator+(T val, const Array<Impl>& a)
+ripple_host_device constexpr auto operator+(T val, const Array<Impl>& a)
 -> array_impl_t<Impl, Impl> {
   using impl_t = array_impl_t<Impl, Impl>;
   using value_t = typename array_traits_t<impl_t>::value_t;
@@ -396,7 +396,7 @@ streamline_host_device constexpr auto operator+(T val, const Array<Impl>& a)
 /// \tparam T     The type of the scalar.
 /// \tparam Impl  The implementation type of the array.
 template <typename T, typename Impl, array_value_enable_t<T, Impl> = 0>
-streamline_host_device constexpr auto operator-(T val, const Array<Impl>& a)
+ripple_host_device constexpr auto operator-(T val, const Array<Impl>& a)
 -> array_impl_t<Impl, Impl> {
   using impl_t = array_impl_t<Impl, Impl>;
   using value_t = typename array_traits_t<impl_t>::value_t;
@@ -424,7 +424,7 @@ streamline_host_device constexpr auto operator-(T val, const Array<Impl>& a)
 /// \tparam T     The type of the scalar.
 /// \tparam Impl  The implementation type of the array.
 template <typename T, typename Impl, array_value_enable_t<T, Impl> = 0>
-streamline_host_device constexpr auto operator*(T val, const Array<Impl>& a)
+ripple_host_device constexpr auto operator*(T val, const Array<Impl>& a)
 -> array_impl_t<Impl, Impl> {
   using impl_t = array_impl_t<Impl, Impl>;
   using value_t = typename array_traits_t<impl_t>::value_t;
@@ -452,7 +452,7 @@ streamline_host_device constexpr auto operator*(T val, const Array<Impl>& a)
 /// \tparam T     The type of the scalar.
 /// \tparam Impl  The implementation type of the array.
 template <typename T, typename Impl, array_value_enable_t<T, Impl> = 0>
-streamline_host_device constexpr auto operator/(T val, const Array<Impl>& a)
+ripple_host_device constexpr auto operator/(T val, const Array<Impl>& a)
 -> array_impl_t<Impl, Impl> {
   using impl_t = array_impl_t<Impl, Impl>;
   using value_t = typename array_traits_t<impl_t>::value_t;
@@ -472,6 +472,6 @@ streamline_host_device constexpr auto operator/(T val, const Array<Impl>& a)
   return result;
 }
 
-} // namespace streamline
+} // namespace ripple
 
-#endif // STREAMLINE_CONTAINER_ARRAY_HPP
+#endif // RIPPLE_CONTAINER_ARRAY_HPP

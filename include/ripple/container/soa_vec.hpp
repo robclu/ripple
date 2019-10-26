@@ -1,8 +1,8 @@
-//==--- streamline/container/soa_vec.hpp ------------------- -*- C++ -*- ---==//
+//==--- ripple/container/soa_vec.hpp ----------------------- -*- C++ -*- ---==//
 //            
-//                                Streamline
+//                                Ripple
 // 
-//                      Copyright (c) 2019 Streamline.
+//                      Copyright (c) 2019 Robb Clucas.
 //
 //  This file is distributed under the MIT License. See LICENSE for details.
 //
@@ -14,13 +14,13 @@
 //
 //==------------------------------------------------------------------------==//
 
-#ifndef STREAMLINE_CONTAINER_SOA_VEC_HPP
-#define STREAMLINE_CONTAINER_SOA_VEC_HPP
+#ifndef RIPPLE_CONTAINER_SOA_VEC_HPP
+#define RIPPLE_CONTAINER_SOA_VEC_HPP
 
 #include "array.hpp"
-#include <streamline/utility/portability.hpp>
+#include <ripple/utility/portability.hpp>
 
-namespace streamline {
+namespace ripple {
 
 /// The SoaVec class implements the Array interface for a vector with a fixed
 /// type and known compile time size. The data for the elements is __not__
@@ -63,7 +63,7 @@ struct SoaVec : public Array<SoaVec<T, Size>> {
   /// \param  arr  The array to use to create this one.
   /// \tparam Impl The implementation of the arrau interface.  
   template <typename Impl>
-  streamline_host_device constexpr Vec(const Array<Impl>& arr) {
+  ripple_host_device constexpr Vec(const Array<Impl>& arr) {
     unrolled_for_bounded<Size>([&] (auto i) {
       _data[i] = arr[i];
     });
@@ -71,20 +71,20 @@ struct SoaVec : public Array<SoaVec<T, Size>> {
 
   /// Returns a constant reference to the element at position i.
   /// \param i The index of the element to get.  
-  streamline_host_device constexpr auto operator[](std::size_t i) const
+  ripple_host_device constexpr auto operator[](std::size_t i) const
   -> const typename traits_t::value_t& {
     return _data[i];
   }
 
   /// Returns a reference to the element at position i.
   /// \param i The index of the element to get.  
-  streamline_host_device constexpr auto operator[](std::size_t i)
+  ripple_host_device constexpr auto operator[](std::size_t i)
   -> typename traits_t::value_t& {
     return _data[i];
   }
    
   /// Returns the number of elements in the vector. 
-  streamline_host_device constexpr auto size() const -> std::size_t {
+  ripple_host_device constexpr auto size() const -> std::size_t {
     return Size;
   }
 
@@ -93,7 +93,7 @@ struct SoaVec : public Array<SoaVec<T, Size>> {
   std::size_t _step = 0;        //!< Step size to the next element.
 };
 
-} // namespace streamline
+} // namespace ripple
 
-#endif // STREAMLINE_CONTAINER_SOA_VEC_HPP
+#endif // RIPPLE_CONTAINER_SOA_VEC_HPP
 

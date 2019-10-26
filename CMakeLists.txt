@@ -1,13 +1,13 @@
-#==--- CMakeLists.txt -------------------------------------------------------==#
+#==--- riplpe/CMakeLists.txt ------------------------------------------------==#
 #
-#                      Copyright (c) 2019 Streamline.
+#                      Copyright (c) 2019 Rob Clucas.
 #
 #  This file is distributed under the MIT License. See LICENSE for details.
 #
 #==--------------------------------------------------------------------------==#
 
 cmake_minimum_required(VERSION 3.8 FATAL_ERROR)
-project(streamline VERSION 0.1.0 LANGUAGES CXX)
+project(ripple VERSION 0.1.0 LANGUAGES CXX)
 
 #==--- Build Type -----------------------------------------------------------==#
 
@@ -54,9 +54,9 @@ if (${CXX_CLANG})
     message("-- CXX : Using system clang++ for cxx since CXX_CLANG=ON"     )
     message("         but CLANG_PATH is empty. Specify -DCLANG_PATH=<path>")
     message("         if a different clang is required."                   )
-    set(STREAMLINE_CXX_COMPILER clang++)
+    set(RIPPLE_CXX_COMPILER clang++)
   else() 
-    set(STREAMLINE_CXX_COMPILER ${CLANG_COMPILER_PATH})
+    set(RIPPLE_CXX_COMPILER ${CLANG_COMPILER_PATH})
   endif()
 endif()
 
@@ -69,10 +69,10 @@ if (${CUDA_CLANG})
     message("          if a different clang is required."                     )
     set(CLANG_COMPILER_PATH clang++)
   endif() 
-  set(STREAMLINE_CUDA_COMPILER ${CLANG_COMPILER_PATH})
+  set(RIPPLE_CUDA_COMPILER ${CLANG_COMPILER_PATH})
 
   # If we use clang for cuda, we use clang for c++ as well
-  set(STREAMLINE_CXX_COMPILER ${CLANG_COMPILER_PATH})
+  set(RIPPLE_CXX_COMPILER ${CLANG_COMPILER_PATH})
 
   # We need to have a cuda path, if we don't we can't continue.
   if (NOT EXISTS ${CUDA_PATH})
@@ -92,16 +92,16 @@ set(CUDA_TOOLKIT_ROOT_DIR ${CUDA_PATH})
 
 # If not using clang, use NVCC.
 if (NOT ${USING_CLANG})
-  set(STREAMLINE_CUDA_COMPILER "${CUDA_TOOLKIT_ROOT_DIR}/bin/nvcc")
-  set(STREAMLINE_CXX_COMPILER   ${STEAMLINE_CUDA_COMPILER})
+  set(RIPPLE_CUDA_COMPILER "${CUDA_TOOLKIT_ROOT_DIR}/bin/nvcc")
+  set(RIPPLE_CXX_COMPILER   ${STEAMLINE_CUDA_COMPILER})
 endif()
 
 
 # Test that the version of the cuda compiler is sufficient:
-message("-- Using CUDA compiler : ${STREAMLINE_CUDA_COMPILER}")
-message("-- Using CXX  compiler : ${STREAMLINE_CXX_COMPILER}" )
+message("-- Using CUDA compiler : ${RIPPLE_CUDA_COMPILER}")
+message("-- Using CXX  compiler : ${RIPPLE_CXX_COMPILER}" )
 execute_process(
-  COMMAND ${STREAMLINE_CUDA_COMPILER} --version OUTPUT_VARIABLE NVCC_VERSION
+  COMMAND ${RIPPLE_CUDA_COMPILER} --version OUTPUT_VARIABLE NVCC_VERSION
 )
 
 if (NVCC_VERSION MATCHES "V9" OR NVCC_VERSION MATCHES "V10")
@@ -117,7 +117,7 @@ endif()
 
 #==--- Googletest  ----------------------------------------------------------==#
 
-if (EXISTS ${streamline_SOURCE_DIR}/googletest)
+if (EXISTS ${ripple_SOURCE_DIR}/googletest)
   add_subdirectory(googletest)
 else()
   message("-- NOTE: Googletest not found, fetching ...")
@@ -144,7 +144,7 @@ endif()
 message("-- CUDA INCLUDE DIR: ${CUDA_INCLUDE_DIR}")
 message("-- CUDA LIBRARY DIR: ${CUDA_LIB_DIRS}"   )
 
-set(CUDA_DEFS "-DSTREAMLINE_CUDA_AVAILABLE=1")
+set(CUDA_DEFS "-DRIPPLE_CUDA_AVAILABLE=1")
 
 if (NOT EXISTS ${CUDA_ARCH_VER})
   message("-- CUDA : No architecture version is set for cuda, using 3.5.")

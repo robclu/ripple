@@ -1,6 +1,6 @@
-//==--- streamline/algorithm/detail/unrolled_for_impl_.hpp - -*- C++ -*- ---==//
+//==--- ripple/algorithm/detail/unrolled_for_impl_.hpp i---- -*- C++ -*- ---==//
 //            
-//                                Streamline
+//                                Ripple
 // 
 //                      Copyright (c) 2019 Rob Clucas.
 //
@@ -14,14 +14,14 @@
 //
 //==------------------------------------------------------------------------==//
 
-#ifndef STREAMLINE_ALGORITHM_UNROLLED_FOR_IMPL_HPP
-#define STREAMLINE_ALGORITHM_UNROLLED_FOR_IMPL_HPP
+#ifndef RIPPLE_ALGORITHM_UNROLLED_FOR_IMPL_HPP
+#define RIPPLE_ALGORITHM_UNROLLED_FOR_IMPL_HPP
 
-#include <streamline/utility/number.hpp>
+#include <ripple/utility/number.hpp>
 #include <utility>
 
-namespace streamline {
-namespace detail     {
+namespace ripple {
+namespace detail {
 
 /// The Unroll struct invokes a callable object N times, where the invokations
 /// are unrolled at compile time.
@@ -43,7 +43,7 @@ struct Unroll : Unroll<Amount - 1> {
   /// \tparam Functor   The type of the functor to invoke.
   /// \tparam Args      The type of the arguments to invoke with.
   template <typename Functor, typename... Args>
-  streamline_host_device Unroll(Functor&& functor, Args&&... args)
+  ripple_host_device Unroll(Functor&& functor, Args&&... args)
   : previous_level_t(
       std::forward<Functor>(functor), std::forward<Args>(args)... 
     ) {
@@ -63,7 +63,7 @@ struct Unroll<1> {
   /// \tparam Functor   The type of the functor to invoke.
   /// \tparam Args      The type of the arguments to invoke with.
   template <typename Functor, typename... Args>
-  streamline_host_device Unroll(Functor&& functor, Args&&... args) {
+  ripple_host_device Unroll(Functor&& functor, Args&&... args) {
     functor(Num<0>(), std::forward<Args>(args)...);
   }
 };
@@ -81,9 +81,9 @@ struct Unroll<0> {
   /// \tparam Functor   The type of the functor.
   /// \tparam Args      The type of the arguments.
   template <typename Functor, typename... Args>
-  streamline_host_device constexpr Unroll(Functor&& functor, Args&&... args) {}
+  ripple_host_device constexpr Unroll(Functor&& functor, Args&&... args) {}
 };
 
-}} // namespace streamline::detail
+}} // namespace ripple::detail
 
-#endif // STREAMLINE_ALGORITHM_UNROLLED_FOR_HPP
+#endif // RIPPLE_ALGORITHM_UNROLLED_FOR_HPP

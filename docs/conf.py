@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Streamline documentation build configuration file, created by
+# Ripple documentation build configuration file, created by
 # sphinx-quickstart on Tue Oct 22 14:08:54 2019.
 #
 # This file is execfile()d with the current directory set to its
@@ -39,15 +39,15 @@ extensions = [
 
 # Setup the breathe extension.
 breathe_projects = {
-    "Streamline" : "./doxyoutput"
+    "Ripple" : "./doxyoutput"
 }
-breathe_default_project = "Streamline"
+breathe_default_project = "Ripple"
 
 # Setup the exhale extensions.
 exhale_args = {
     "containmentFolder"     : "./api",
-    "rootFileName"          : "streamline_api_root.rst",
-    "rootFileTitle"         : "Streamline API",
+    "rootFileName"          : "ripple_api_root.rst",
+    "rootFileTitle"         : "Ripple API",
     "doxygenStripFromPath"  : "..",
     "createTreeView"        : True,
     "exhaleExecutesDoxygen" : True,
@@ -73,7 +73,7 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'Streamline'
+project = u'Ripple'
 copyright = u'2019, Rob Clucas'
 author = u'Rob Clucas'
 
@@ -140,7 +140,7 @@ html_sidebars = {
 # -- Options for HTMLHelp output ------------------------------------------
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'Streamlinedoc'
+htmlhelp_basename = 'Rippledoc'
 
 
 # -- Options for LaTeX output ---------------------------------------------
@@ -167,7 +167,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'Streamline.tex', u'Streamline Documentation',
+    (master_doc, 'Ripple.tex', u'Ripple Documentation',
      u'Rob Clucas', 'manual'),
 ]
 
@@ -177,7 +177,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'streamline', u'Streamline Documentation',
+    (master_doc, 'ripple', u'Ripple Documentation',
      [author], 1)
 ]
 
@@ -188,8 +188,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'Streamline', u'Streamline Documentation',
-     author, 'Streamline', 'One line description of project.',
+    (master_doc, 'Ripple', u'Ripple Documentation',
+     author, 'Ripple', 'One line description of project.',
      'Miscellaneous'),
 ]
 

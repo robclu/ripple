@@ -1,6 +1,6 @@
-//==--- streamline/utility/range.hpp ----------------------- -*- C++ -*- ---==//
+//==--- ripple/utility/range.hpp --------------------------- -*- C++ -*- ---==//
 //
-//                                Streamline
+//                                Ripple
 //                                
 //                      Copyright (c) 2019 Rob Clucas.
 //
@@ -14,13 +14,13 @@
 //
 //==------------------------------------------------------------------------==//
 
-#ifndef STREAMLINE_ITERATOR_RANGE_HPP
-#define STREAMLINE_ITERATOR_RANGE_HPP
+#ifndef RIPPLE_UTILITY_RANGE_HPP
+#define RIPPLE_UTILITY_RANGE_HPP
 
 #include "portability.hpp"
 #include "type_traits.hpp"
 
-namespace streamline {
+namespace ripple {
 
 /// The Range class defines a utility class which allows a simpler syntax for
 /// looping --  a python like range based for loop. It is wrapped range
@@ -76,7 +76,7 @@ class Range {
     /// Sets the value of the iterator and the step size.
     /// \param[in]  value   The value for the iterator.
     /// \param[in]  step    The size of the steps for the iterator.
-    streamline_host_device constexpr Iterator(value_t value, value_t step)
+    ripple_host_device constexpr Iterator(value_t value, value_t step)
     : _value(value), _step(step) {}
 
     //==--- [operator overloads] -------------------------------------------==//
@@ -84,24 +84,24 @@ class Range {
     /// Overload of increment operator to move the iterator forward by the step
     /// size. This overload is for the postfix operator and returns the old
     /// value of the iterator.
-    streamline_host_device constexpr self_t operator++() { 
+    ripple_host_device constexpr self_t operator++() { 
       self_t i = *this; _value += _step; return i;
     }
 
     /// Overload of increment operator to move the iterator forward by the step
     /// size. This overload is for the prefix operator and returns the updated
     /// iterator.
-    streamline_host_device constexpr self_t operator++(int) {
+    ripple_host_device constexpr self_t operator++(int) {
       _value += _step; return *this;
     }
 
     /// Returns a reference to the value of the iterator.
-    streamline_host_device constexpr reference_t operator*() {
+    ripple_host_device constexpr reference_t operator*() {
       return _value;
     }
 
     /// Returns a pointer to the value of the iterator.
-    streamline_host_device constexpr pointer_t operator->() {
+    ripple_host_device constexpr pointer_t operator->() {
       return &_value;
     }
 
@@ -109,7 +109,7 @@ class Range {
     /// equivalent. This returns true if the value of this iterator is greater
     /// than the or equal to the value of \p other.
     /// \param[in]  other   The other iterator to compare with.
-    streamline_host_device constexpr bool operator==(const self_t& other) {
+    ripple_host_device constexpr bool operator==(const self_t& other) {
       return _value >= other._value;
     }
 
@@ -117,7 +117,7 @@ class Range {
     /// not equivalent. This returns true if the value of this iterator is less
     /// than the value of \p other.
     /// \param[in]  other   The other iterator to compare with.
-    streamline_host_device constexpr bool operator!=(const self_t& other) {
+    ripple_host_device constexpr bool operator!=(const self_t& other) {
       return _value < other._value;
     }
 
@@ -144,26 +144,26 @@ class Range {
   /// \param[in]  min   The minimum (start) value for the range.
   /// \param[in]  max   The maximum (end) value for the range.
   /// \param[in]  step  The step size for the range.
-  streamline_host_device constexpr Range(value_t min, value_t max, value_t step)
+  ripple_host_device constexpr Range(value_t min, value_t max, value_t step)
   : _min(min), _max(max), _step(step) {}
 
   /// Gets a non constant iterator to the beginning of the range.
-  streamline_host_device auto begin() {
+  ripple_host_device auto begin() {
     return iterator_t{_min, _step};
   }
   
   /// Gets a non constant iterator to the end of the range.
-  streamline_host_device auto end() {
+  ripple_host_device auto end() {
    return iterator_t{_max, _step};   
   }
 
   /// Gets a constant iterator to the beginning of the range.
-  streamline_host_device auto begin() const {
+  ripple_host_device auto begin() const {
     return const_iterator_t(_min, _step);
   }
   
   /// Gets a non constant iterator to the end of the range.
-  streamline_host_device auto end() const {
+  ripple_host_device auto end() const {
    return const_iterator_t(_max, _step);   
   }
 };
@@ -174,7 +174,7 @@ class Range {
 /// \param[in]  end   The end value for the range
 /// \tparam     T     The type of the range data.
 template <typename T>
-streamline_host_device constexpr inline auto range(T end) -> Range<T> {
+ripple_host_device constexpr inline auto range(T end) -> Range<T> {
   return Range<T>(T{0}, static_cast<T>(end), T{1});
 }
 
@@ -184,12 +184,12 @@ streamline_host_device constexpr inline auto range(T end) -> Range<T> {
 /// \param[in]  step  The step size of the range.
 /// \tparam     T     The type of the range data.
 template <typename T>
-streamline_host_device constexpr inline auto range(
+ripple_host_device constexpr inline auto range(
   T start, T end, T step = T{1}
 ) -> Range<T> {
   return Range<T>(start, end, step);
 }
 
-} // namespace streamline
+} // namespace ripple
 
-#endif // FLUIDITY_ITERATOR_RANGE_HPP
+#endif // RIPPPLE_UTILITY_RANGE_HPP

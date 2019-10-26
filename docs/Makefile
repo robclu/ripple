@@ -4,7 +4,7 @@
 # You can set these variables from the command line.
 SPHINXOPTS    =
 SPHINXBUILD   = python3 -msphinx
-SPHINXPROJ    = Streamline
+SPHINXPROJ    = Ripple
 SOURCEDIR     = .
 BUILDDIR      = _build
 
@@ -12,7 +12,7 @@ BUILDDIR      = _build
 help:
 	@$(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
-.PHONY: help Makefile clen
+.PHONY: help Makefile clean
 
 # Clean the documentation.
 clean:

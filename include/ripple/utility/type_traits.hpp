@@ -1,8 +1,8 @@
-//==--- streamline/utility/type_traits.hpp ----------------- -*- C++ -*- ---==//
+//==--- ripple/utility/type_traits.hpp --------------------- -*- C++ -*- ---==//
 //            
-//                                Streamline
+//                                Ripple
 // 
-//                      Copyright (c) 2019 Streamline.
+//                      Copyright (c) 2019 Robb Clucas.
 //
 //  This file is distributed under the MIT License. See LICENSE for details.
 //
@@ -13,8 +13,8 @@
 //
 //==------------------------------------------------------------------------==//
 
-#ifndef STREAMLINE_UTILITY_TYPE_TRAITS_HPP
-#define STREAMLINE_UTILITY_TYPE_TRAITS_HPP
+#ifndef RIPPLE_UTILITY_TYPE_TRAITS_HPP
+#define RIPPLE_UTILITY_TYPE_TRAITS_HPP
 
 #include "portability.hpp"
 #include <type_traits>
@@ -84,9 +84,9 @@ static constexpr bool is_trivially_constructible_v =
 
 } // namespace std
 
-//==--- [streamline traits] ------------------------------------------------==//
+//==--- [ripple traits] ------------------------------------------------==//
 
-namespace streamline {
+namespace ripple {
 
 /// Returns true if all the types are arithmetic.
 /// \tparam Ts The types to check.
@@ -118,19 +118,19 @@ template <std::size_t Size, typename... Values>
 using variadic_size_enable_t =
   std::enable_if_t<Size == sizeof...(Values), int>;
 
-/// Defines a valid type if Size is less than `streamline_max_unroll_depth`.
+/// Defines a valid type if Size is less than `ripple_max_unroll_depth`.
 /// \tparam Size The size of the unrolling.
 template <std::size_t Size>
 using unroll_enabled_t = 
-  std::enable_if_t<(Size < streamline_max_unroll_depth), int>;
+  std::enable_if_t<(Size < ripple_max_unroll_depth), int>;
 
 /// Defines a valid type if Size is more than or equal to 
-/// `streamline_max_unroll_depth`.
+/// `ripple_max_unroll_depth`.
 /// \tparam Size The size of the unrolling.
 template <std::size_t Size>
 using unroll_disabled_t = 
-  std::enable_if_t<(Size >= streamline_max_unroll_depth), int>;
+  std::enable_if_t<(Size >= ripple_max_unroll_depth), int>;
 
-} // namespace streamline
+} // namespace ripple
 
-#endif // STREAMLINE_UTILITY_TYPE_TRAITS_HPP
+#endif // RIPPLE_UTILITY_TYPE_TRAITS_HPP

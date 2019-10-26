@@ -1,8 +1,8 @@
-//==--- streamline/container/array_traits.hpp -------------- -*- C++ -*- ---==//
+//==--- ripple/container/array_traits.hpp ------------------ -*- C++ -*- ---==//
 //            
-//                                Streamline
+//                                Ripple
 // 
-//                      Copyright (c) 2019 Streamline.
+//                      Copyright (c) 2019 Ripple.
 //
 //  This file is distributed under the MIT License. See LICENSE for details.
 //
@@ -13,12 +13,12 @@
 //
 //==------------------------------------------------------------------------==//
 
-#ifndef STREAMLINE_CONTAINER_ARRAY_TRAITS_HPP
-#define STREAMLINE_CONTAINER_ARRAY_TRAITS_HPP
+#ifndef RIPPLE_CONTAINER_ARRAY_TRAITS_HPP
+#define RIPPLE_CONTAINER_ARRAY_TRAITS_HPP
 
-#include <streamline/utility/type_traits.hpp>
+#include <ripple/utility/type_traits.hpp>
 
-namespace streamline {
+namespace ripple {
 
 //==--- [forward declarations] ---------------------------------------------==//
 
@@ -47,15 +47,17 @@ template <typename T>
 struct ArrayTraits {
   /// The value type for the array.
   using value_t   = std::decay_t<T>;
-  /// The type used to store data for the array.
+  /// The type used to store data of type T in an array.
   using storage_t = value_t*;
   /// Defines the type of the array.
   using array_t   = Vec<T, 1>;
   
   /// Returns the number of elements in the array.  
   static constexpr auto size            = 1;
-  /// Returns that the array data cannot be stored as SOA.
-  static constexpr auto is_soa          = false;
+  /// Returns that the array data must not be stored as SOA on the CPU.
+  static constexpr auto is_soa_cpu      = false;
+  /// Returns that the array data must not cannot be stored as SOA on the GPU.
+  static constexpr auto is_soa_gpu      = false;
   /// Returns the number of bytes required to allocate an element.  
   static constexpr auto elem_alloc_size = sizeof(value_t);
 };
@@ -67,15 +69,17 @@ template <typename T, std::size_t Size>
 struct ArrayTraits<Vec<T, Size>> {
   /// The value type stored in the vector.
   using value_t   = std::decay_t<T>;
-  /// The type to use to store the vector data.
+  /// The type to use to store the vector data in an array.
   using storage_t = value_t;
   /// The array type.
   using array_t   = Vec<T, Size>;
 
   /// Returns the number of elements in the array.  
   static constexpr auto size            = Size;
-  /// Returns that the array data cannot be stored as SOA.
-  static constexpr auto is_soa          = false;
+  /// Returns that the array data must not be stored as SOA on the CPU.
+  static constexpr auto is_soa_cpu      = false;
+  /// Returns that the array data must not be stored as SOA on the GPU.
+  static constexpr auto is_soa_gpu      = false;
   /// Returns the number of bytes required to allocate a Vec element.  
   static constexpr auto elem_alloc_size = sizeof(value_t) * size;
 };
@@ -94,8 +98,10 @@ struct ArrayTraits<SoaVec<T, Size>> {
 
   /// Returns the number of elements in the array.  
   static constexpr auto size            = Size;
-  /// Returns that the array data cannot be stored as SOA.
-  static constexpr auto is_soa          = true;
+  /// Returns that the array data can be stored as SOA on the CPU.
+  static constexpr auto is_soa_cpu      = true;
+  /// Returns that the array data can be storaed as SOA on the GPU.
+  static constexpr auto is_soa_gpu      = true;
   /// Returns the number of bytes required to allocate a Soa element.
   static constexpr auto elem_alloc_size = sizeof(value_t) * size;
 };
@@ -119,8 +125,10 @@ public:
     
   /// Returns the number of elements in the array.  
   static constexpr auto size            = impl_traits_t::size;
-  /// Returns true if the array is an SOA version.
-  static constexpr auto is_soa          = impl_traits_t::is_soa;
+  /// Returns true if the array is an SOA version for the CPU.
+  static constexpr auto is_soa_cpu      = impl_traits_t::is_soa_cpu;
+  /// Returns true if the array is an SOA version for the CPU.
+  static constexpr auto is_soa_gpu      = impl_traits_t::is_soa_gpu;
   /// Returns the number of bytes required to allocate an element.
   static constexpr auto elem_alloc_size = impl_traits_t::elem_alloc_size;
 };
@@ -181,6 +189,6 @@ using array_value_enable_t = std::enable_if_t<
   std::is_same_v<Type, Value> || std::is_convertible_v<Type, Value>, int
 >;
 
-} // namespace streamline
+} // namespace ripple
 
-#endif // STREAMLINE_CONTAINER_ARRAY_TRAITS_HPP
+#endif // RIPPLE_CONTAINER_ARRAY_TRAITS_HPP

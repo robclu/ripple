@@ -1,8 +1,8 @@
-//==--- streamline/container/vec.hpp ----------------------- -*- C++ -*- ---==//
+//==--- ripple/container/vec.hpp --------------------------- -*- C++ -*- ---==//
 //            
-//                                Streamline
+//                                Ripple
 // 
-//                      Copyright (c) 2019 Streamline.
+//                      Copyright (c) 2019 Ripple.
 //
 //  This file is distributed under the MIT License. See LICENSE for details.
 //
@@ -14,13 +14,13 @@
 //
 //==------------------------------------------------------------------------==//
 
-#ifndef STREAMLINE_CONTAINER_VEC_HPP
-#define STREAMLINE_CONTAINER_VEC_HPP
+#ifndef RIPPLE_CONTAINER_VEC_HPP
+#define RIPPLE_CONTAINER_VEC_HPP
 
 #include "array.hpp"
-#include <streamline/utility/portability.hpp>
+#include <ripple/utility/portability.hpp>
 
-namespace streamline {
+namespace ripple {
 
 /// The Vec class implements the Array interface for a vector with a fixed type
 /// and known compile time size. The data for the elements in allocated
@@ -47,7 +47,7 @@ struct Vec : public Array<Vec<T, Size>>  {
   /// only enabled when the number of elements in the variadic parameter pack
   /// matches the size of the array.
   template <typename... Values, variadic_size_enable_t<Size, Values...> = 0>
-  streamline_host_device constexpr Vec(Values&&... values)
+  ripple_host_device constexpr Vec(Values&&... values)
   : _data{static_cast<typename traits_t::value_t>(values)...} {}
 
   /// Constructor to create the vector from another array of the same type and
@@ -55,7 +55,7 @@ struct Vec : public Array<Vec<T, Size>>  {
   /// \param  arr  The array to use to create this one.
   /// \tparam Impl The implementation of the arrau interface.  
   template <typename Impl>
-  streamline_host_device constexpr Vec(const Array<Impl>& arr) {
+  ripple_host_device constexpr Vec(const Array<Impl>& arr) {
     for (auto i = 0; i < Size; ++i) {
       _data[i] = arr[i];
     }
@@ -65,20 +65,20 @@ struct Vec : public Array<Vec<T, Size>>  {
  
   /// Returns a constant reference to the element at position i.
   /// \param i The index of the element to get.  
-  streamline_host_device constexpr auto operator[](std::size_t i) const
+  ripple_host_device constexpr auto operator[](std::size_t i) const
   -> const typename traits_t::value_t& {
     return _data[i];
   }
 
   /// Returns a reference to the element at position i.
   /// \param i The index of the element to get.  
-  streamline_host_device constexpr auto operator[](std::size_t i)
+  ripple_host_device constexpr auto operator[](std::size_t i)
   -> typename traits_t::value_t& {
     return _data[i];
   }
    
   /// Returns the number of elements in the vector. 
-  streamline_host_device constexpr auto size() const -> std::size_t {
+  ripple_host_device constexpr auto size() const -> std::size_t {
     return Size;
   }
     
@@ -86,8 +86,8 @@ struct Vec : public Array<Vec<T, Size>>  {
   storage_t _data[Size];  //!< The data for the array.
 };
 
-} // namespace streamline
+} // namespace ripple
 
-#endif // namespace STREAMLINE_CONTAINER_VEC_HPP
+#endif // namespace RIPPLE_CONTAINER_VEC_HPP
 
 

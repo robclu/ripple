@@ -1,8 +1,8 @@
-//==--- fluidity/utility/number.hpp ------------------------ -*- C++ -*- ---==//
+//==--- ripple/utility/number.hpp -------------------------- -*- C++ -*- ---==//
 //            
-//                                Fluidity
+//                                Ripple
 // 
-//                      Copyright (c) 2018 Rob Clucas.
+//                      Copyright (c) 2019 Rob Clucas.
 //
 //  This file is distributed under the MIT License. See LICENSE for details.
 //
@@ -15,12 +15,12 @@
 //
 //==------------------------------------------------------------------------==//
 
-#ifndef STREAMLINE_UTILITY_NUMBER_HPP
-#define STREAMLINE_UTILITY_NUMBER_HPP
+#ifndef RIPPLE_UTILITY_NUMBER_HPP
+#define RIPPLE_UTILITY_NUMBER_HPP
 
 #include "portability.hpp"
 
-namespace streamline {
+namespace ripple {
 
 /// The Num struct stores a number as a type, but also provides functionality to
 /// convert the value of the number into a numeric type at runtime or compile
@@ -34,7 +34,7 @@ struct Num {
   static constexpr auto value = std::size_t{Value};
 
   /// Conversion to size_t so that the number can be used as a size type.
-  streamline_host_device constexpr operator size_t() const {
+  ripple_host_device constexpr operator size_t() const {
     return Value;
   }
 };
@@ -51,11 +51,11 @@ struct Int64 {
   static constexpr auto value = int64_t{Value};
 
   /// Conversion to size_t so that the number can be used as a size type.
-  streamline_host_device constexpr operator int64_t() const {
+  ripple_host_device constexpr operator int64_t() const {
     return Value;
   }
 };
 
-} // namespace streamline
+} // namespace ripple
 
-#endif // STREAMLINE_UTILITY_NUMBER_HPP
+#endif // RIPPLE_UTILITY_NUMBER_HPP
