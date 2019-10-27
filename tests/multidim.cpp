@@ -1,4 +1,4 @@
-//==--- ripple/tests/all.cpp -------------------------------- -*- C++ -*- ---==//
+//==--- ripple/tests/multidim.cpp -------------------------- -*- C++ -*- ---==//
 //            
 //                                Ripple
 // 
@@ -8,15 +8,13 @@
 //
 //==------------------------------------------------------------------------==//
 //
-/// \file  all.cpp
-/// \brief This file contains all tests.
+/// \file  multidim_tests.cpp
+/// \brief This file contains multidimensional tests.
 //
 //==------------------------------------------------------------------------==//
 
-#include "algorithm/algorithm_tests.hpp"
-#include "container/container_tests.hpp"
 #include "multidim/multidim_tests.hpp"
-#include "utility/utility_tests.hpp"
+#include <gtest/gtest.h>
 
 int main(int argc, char** argv) {
   ::testing::InitGoogleTest(&argc, argv);

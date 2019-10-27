@@ -67,6 +67,15 @@ ripple_target_link_libraries(
   container_tests ${GTEST_BOTH_LIBRARIES}
 )
 
+#==--------------------------------------------------------------------------==#
+
+ripple_add_executable(
+  multidim_tests ${ripple_SOURCE_DIR}/tests/multidim.cpp
+)
+ripple_target_link_libraries(
+  multidim_tests ${GTEST_BOTH_LIBRARIES}
+)
+
 #------------------------------------------------------------------------------#
 
 ripple_add_executable(

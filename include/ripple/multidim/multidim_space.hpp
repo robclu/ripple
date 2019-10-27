@@ -1,4 +1,4 @@
-//==--- ripple/container/multidim_storage_info.hpp --------- -*- C++ -*- ---==//
+//==--- ripple/multidim/multidim_space.hpp ----------------- -*- C++ -*- ---==//
 //            
 //                                Ripple
 // 
@@ -8,24 +8,25 @@
 //
 //==------------------------------------------------------------------------==//
 //
-/// \file  multidim_storage_info.hpp
-/// \brief This file imlements a class for multidimensional storage information.
+/// \file  multidim_space.hpp
+/// \brief This file imlements a class for multidimensional spatial information.
 //
 //==------------------------------------------------------------------------==//
 
-#ifndef RIPPLE_CONTAINER_MULTIDIM_STORAGE_INFO_HPP
-#define RIPPLE_CONTAINER_MULTIDIM_STORAGE_INFO_HPP
+#ifndef RIPPLE_CONTAINER_MULTIDIM_SPACE_HPP
+#define RIPPLE_CONTAINER_MULTIDIM_SPACE_HPP
 
-#include "vec.hpp"
+#include <ripple/container/vec.hpp>
+#include <ripple/utility/type_traits.hpp>
 
 namespace ripple {
 
-/// The DimensionInfo struct defines dimension information over multiple
-/// dimensions, specifically the sizes of the dimensions and the steps for each
-/// of the dimensions.
-/// \tparam Dims The number of dimensions.
+/// The MultidimSapce struct defines spatial information over multiple
+/// dimensions, specifically the sizes of the dimensions and the steps required
+/// to get from one element to another in the dimensions of the space.
+/// \tparam Dimebsions The number of dimensions.
 template <std::size_t Dimensions>
-struct MultidimStorageInfo {
+struct MultidimSpace {
  private:
   /// Defines the number of dimensions
   static constexpr auto dims = Dimensions;
@@ -34,17 +35,14 @@ struct MultidimStorageInfo {
   using container_t = Vec<std::size_t, dims>;
 
  public:
-  /// Default constructor -- enables creation of empty dimension information.
-  MultidimStorageInfo() = default;
+  /// Default constructor -- enables creation of empty spatial information.
+  MultidimSpace() = default;
 
-  /// Sets the sizes of the dimensions for the storage. This constructor can be
-  /// used when the data being stored is not an array type with SOA storage
-  /// functionality.
-  /// 
+  /// Sets the sizes of the dimensions for the space.
   /// \param  sizes The sizes of the dimensions. 
   /// \tparam Sizes The type of the sizes.
   template <typename... Sizes, arithmetic_size_enable_t<dims, Sizes...> = 0>
-  ripple_host_device MultidimStorageInfo(Sizes&&... sizes)
+  ripple_host_device MultidimSpace(Sizes&&... sizes)
   : _sizes{static_cast<std::size_t>(sizes)...} {}
 
   /// Returns the size of the \p dim dimension.
@@ -56,17 +54,17 @@ struct MultidimStorageInfo {
   }
 
   /// Returns the step size to from one element in \p dim to the next element in
-  /// \p dim. If the elements are stored as SOA, with \p soa_width elements in
-  /// each array, then this will additionally factor in the width.
-  /// \param  dim       The dimension to get the step size in.
-  /// \param  soa_width The width of the array if the storage is soa.  
-  /// \tparam Dim       The type of the dimension.
+  /// \p dim. If the space is used for AOS or SOA storage with \p width elements
+  /// in each array, then this will additionally factor in the width.
+  /// \param  dim   The dimension to get the step size in.
+  /// \param  width The width of the array if the space is for soa or soa.
+  /// \tparam Dim   The type of the dimension.
   template <typename Dim>
-  ripple_host_device auto step(Dim dim, std::size_t soa_width = 1) const
+  ripple_host_device auto step(Dim dim, std::size_t width = 1) const
   -> std::size_t {
     if (dim == 0) { return 1; }
 
-    std::size_t res = soa_width;
+    std::size_t res = width;
     for (auto d : range(static_cast<std::size_t>(dim))) {
       res *= _sizes[d];
     }
@@ -74,7 +72,7 @@ struct MultidimStorageInfo {
   }
 
   /// Returns the total size of the N dimensional space i.e the total number of
-  /// elements in the space. This is the product sum of the dimension 
+  /// elements in the space. This is the product sum of the dimension sizes.
   ripple_host_device auto size() const -> std::size_t {
     std::size_t prod_sum = 1;
     unrolled_for<dims>([&] (auto dim) {
@@ -97,4 +95,5 @@ struct MultidimStorageInfo {
 
 } // namespace ripple
 
-#endif // RIPPLE_CONTAINER_MULTIDIM_STORAGE_INFO_HPP
+#endif // RIPPLE_CONTAINER_MULTIDIM_SPACE_HPP
+
