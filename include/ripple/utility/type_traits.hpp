@@ -92,7 +92,7 @@ namespace ripple {
 /// \tparam Ts The types to check.
 template <typename... Ts>
 static constexpr auto all_arithmetic_v = 
-  std::conjunction_v<std::is_arithmetic<Ts>...>;
+  std::conjunction_v<std::is_arithmetic<std::decay_t<Ts>>...>;
 
 /// Returns true if all the types are the same.
 /// \tparam T  The first type in the pack.

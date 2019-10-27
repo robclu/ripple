@@ -54,7 +54,6 @@ TEST(multidim_dynamic_multidim_space, size_and_step_2d) {
   EXPECT_EQ(space.step(ripple::dim_x, 4), size_t{1} );
   EXPECT_EQ(space.step(ripple::dim_y, 4), size_t{40});
 
-
   space[0] = 5;
   space[1] = 10;
   EXPECT_EQ(space.size()             , size_t{50});
