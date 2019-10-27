@@ -13,4 +13,4 @@
 //
 //==------------------------------------------------------------------------==//
 
-#include "multidim_space_tests.hpp"
+#include "dynamic_multidim_space_tests.hpp"
