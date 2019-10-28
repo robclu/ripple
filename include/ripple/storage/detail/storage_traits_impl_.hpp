@@ -17,14 +17,17 @@
 #define RIPPLE_STORAGE_DETAIL_STORAGE_TRAITS_IMPL_HPP
 
 #include "../storage_layout.hpp"
+#include <ripple/utility/type_traits.hpp>
 
 namespace ripple {
 namespace detail {
 
+//==--- [is storage layout] ------------------------------------------------==//
+
 /// Defines a class to determine of the type T is a layout type.
 /// \tparam T The type to determine if is a storage layout type.
 template <typename T>
-struct IsStorageLayout {
+struct IsStorageLayout : std::false_type {
   /// Defines that the type is not a storage layout type.
   static constexpr auto value = false;
 };
@@ -33,10 +36,31 @@ struct IsStorageLayout {
 /// type to check is a StorageLayout.
 /// \tparam Layout The kind of the layout for the storage.
 template <LayoutKind Layout>
-struct IsStorageLayout<StorageLayout<Layout>> {
+struct IsStorageLayout<StorageLayout<Layout>> : std::true_type {
   /// Defines that the type is a storage layout type.
   static constexpr auto value = true;
 };
+
+//==--- [has storage layout] -----------------------------------------------==//
+
+/// Defines a struct to determine if the type T has a storage layout type
+/// template parameter.
+/// \tparam T The type to determine if has a storage layout parameter.
+template <typename T>
+struct HasStorageLayout {
+  /// Returns that the type does not have a storage layout paramter.
+  static constexpr auto value = false;
+};
+
+/// Specialization for the case that the type has template parameters.
+/// \tparam T  The type to determine if has a storage layout parameter.
+/// \tparam Ts The types for the type T.
+template <template <class...> typename T, typename... Ts>
+struct HasStorageLayout<T<Ts...>> {
+  /// Returns that the type does not have a storage layout paramter.
+  static constexpr auto value = std::disjunction_v<IsStorageLayout<Ts>...>;
+};
+
 
 }} // namespace ripple::detail
 
