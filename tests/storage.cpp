@@ -1,4 +1,4 @@
-//==--- ripple/tests/all.cpp -------------------------------- -*- C++ -*- ---==//
+//==--- ripple/tests/storage.cpp --------------------------- -*- C++ -*- ---==//
 //            
 //                                Ripple
 // 
@@ -8,16 +8,13 @@
 //
 //==------------------------------------------------------------------------==//
 //
-/// \file  all.cpp
-/// \brief This file contains all tests.
+/// \file  storage.cpp
+/// \brief This file implements tests for the storage module.
 //
 //==------------------------------------------------------------------------==//
 
-#include "algorithm/algorithm_tests.hpp"
-#include "container/container_tests.hpp"
-#include "multidim/multidim_tests.hpp"
 #include "storage/storage_tests.hpp"
-#include "utility/utility_tests.hpp"
+#include <gtest/gtest.h>
 
 int main(int argc, char** argv) {
   ::testing::InitGoogleTest(&argc, argv);
