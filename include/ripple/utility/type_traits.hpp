@@ -16,29 +16,14 @@
 #ifndef RIPPLE_UTILITY_TYPE_TRAITS_HPP
 #define RIPPLE_UTILITY_TYPE_TRAITS_HPP
 
+#include "detail/conjunction_impl_.hpp"
+#include "detail/disjunction_impl_.hpp"
 #include "portability.hpp"
 #include <type_traits>
 
 //==--- [std wrappers] -----------------------------------------------------==//
 
 namespace std    {
-namespace detail {
-
-/// Defines a default case for the conjuction.
-template<class...> struct Conjunction : std::true_type {};
-
-/// Specialization of the conjunction class for a single type.
-/// \tparam Bool The bool type which defines the conjunction as true or false.
-template<class Bool> struct Conjunction<Bool> : Bool {};
-
-/// Specialization of the conjunction class for multiple types.
-/// \tparam Bool  The first bool type.
-/// \tparam Bools The rest of the bool types.
-template<class Bool, class... Bools>
-struct Conjunction<Bool, Bools...> 
-: std::conditional_t<bool(Bool::value), Conjunction<Bools...>, Bool> {};
-
-} // namespace detail
 
 /// Forms the logical conjunction of the type traits B..., effectively
 /// performing a logical AND on the sequence of traits.
@@ -49,6 +34,16 @@ struct Conjunction<Bool, Bools...>
 ///               to bool.
 template <typename... Bools>
 static constexpr bool conjunction_v = detail::Conjunction<Bools...>::value;
+
+/// Forms the logical cdisjunction of the type traits B..., effectively
+/// performing a logical OR on the sequence of traits.
+///
+/// \tparam Bools The types of the template bool parameters. Every template
+///               argument Bi for which Bi::value is instantiated must be usable
+///               as a base class and define member `value` that is convertible
+///               to bool.
+template <typename... Bools>
+static constexpr bool disjunction_v = detail::Disjunction<Bools...>::value;
 
 /// Wrapper around std::is_base_of for c++-14 compatibility.
 /// \tparam Base The base type to use.
@@ -94,6 +89,12 @@ template <typename... Ts>
 static constexpr auto all_arithmetic_v = 
   std::conjunction_v<std::is_arithmetic<std::decay_t<Ts>>...>;
 
+/// Returns true if any of the types are arithmetic.
+/// \tparam Ts The types to check.
+template <typename... Ts>
+static constexpr auto any_arithmetic_v = 
+  std::disjunction_v<std::is_arithmetic<std::decay_t<Ts>>...>;
+
 /// Returns true if all the types are the same.
 /// \tparam T  The first type in the pack.
 /// \tparam Ts The rest of the types to check.
@@ -101,12 +102,19 @@ template <typename T, typename... Ts>
 static constexpr auto all_same_v = 
   std::conjunction_v<std::is_same<T, Ts>...>;
 
+/// Returns true if any of the types are the same as type T.
+/// \tparam T  The first type in the pack to match against.
+/// \tparam Ts The rest of the types to check.
+template <typename T, typename... Ts>
+static constexpr auto any_same_v = 
+  std::disjunction_v<std::is_same<T, Ts>...>;
+
 /// Defines a valid type when the number of elements in the variadic pack
 /// matches the size defined by Size, and all the types are arithmetic.
 /// \tparam Size   The size that the pack must be.
 /// \tparam Values The values in the pack.
 template <std::size_t Size, typename... Values>
-using arithmetic_size_enable_t = std::enable_if_t<
+using all_arithmetic_size_enable_t = std::enable_if_t<
   Size == sizeof...(Values) && all_arithmetic_v<Values...>, int
 >;
 

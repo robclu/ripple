@@ -38,4 +38,23 @@ TEST(utility_traits, all_same_v) {
   EXPECT_FALSE(b3);
 }
 
+TEST(utility_traits, any_arithmetic_v) {
+  const auto b1 = ripple::any_arithmetic_v<int, float, double, std::size_t>;
+  const auto b2 = ripple::any_arithmetic_v<int*, float*, double*>;
+  const auto b3 = ripple::any_arithmetic_v<int, float, double*>;
+  EXPECT_TRUE(b1);
+  EXPECT_FALSE(b2);
+  EXPECT_TRUE(b3);
+}
+
+TEST(utility_traits, any_same_v) {
+  const auto b1 = ripple::any_same_v<int, float, double, std::size_t, int>;
+  const auto b2 = ripple::any_same_v<int, int, int>;
+  const auto b3 = ripple::any_same_v<int, int*, float>;
+
+  EXPECT_TRUE(b1);
+  EXPECT_TRUE(b2);
+  EXPECT_FALSE(b3);
+}
+
 #endif // RIPPLE_TESTS_UTILITY_TYPE_TRAITS_TESTS_HPP

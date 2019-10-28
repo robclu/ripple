@@ -48,7 +48,7 @@ struct DynamicMultidimSpace :
   /// Sets the sizes of the dimensions for the space.
   /// \param  sizes The sizes of the dimensions. 
   /// \tparam Sizes The type of the sizes.
-  template <typename... Sizes, arithmetic_size_enable_t<dims, Sizes...> = 0>
+  template <typename... Sizes, all_arithmetic_size_enable_t<dims, Sizes...> = 0>
   ripple_host_device DynamicMultidimSpace(Sizes&&... sizes)
   : _sizes{static_cast<std::size_t>(sizes)...} {}
 
