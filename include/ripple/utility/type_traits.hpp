@@ -16,72 +16,13 @@
 #ifndef RIPPLE_UTILITY_TYPE_TRAITS_HPP
 #define RIPPLE_UTILITY_TYPE_TRAITS_HPP
 
-#include "detail/conjunction_impl_.hpp"
-#include "detail/disjunction_impl_.hpp"
+#include "detail/index_of_impl_.hpp"
 #include "portability.hpp"
 #include <type_traits>
 
-//==--- [std wrappers] -----------------------------------------------------==//
-
-namespace std    {
-
-/// Forms the logical conjunction of the type traits B..., effectively
-/// performing a logical AND on the sequence of traits.
-///
-/// \tparam Bools The types of the template bool parameters. Every template
-///               argument Bi for which Bi::value is instantiated must be usable
-///               as a base class and define member `value` that is convertible
-///               to bool.
-template <typename... Bools>
-static constexpr bool conjunction_v = detail::Conjunction<Bools...>::value;
-
-/// Forms the logical cdisjunction of the type traits B..., effectively
-/// performing a logical OR on the sequence of traits.
-///
-/// \tparam Bools The types of the template bool parameters. Every template
-///               argument Bi for which Bi::value is instantiated must be usable
-///               as a base class and define member `value` that is convertible
-///               to bool.
-template <typename... Bools>
-static constexpr bool disjunction_v = detail::Disjunction<Bools...>::value;
-
-/// Wrapper around std::is_base_of for c++-14 compatibility.
-/// \tparam Base The base type to use.
-/// \tparam Impl The implementation to check if is a base of Base.
-template <typename Base, typename Impl>
-static constexpr bool is_base_of_v = 
-  std::is_base_of<std::decay_t<Base>, std::decay_t<Impl>>::value;
-
-/// Wrapper around std::is_convertible for c++14 compatibility.
-/// \tparam From The type to convert from.
-/// \tparam To   The type to convert to.
-template <typename From, typename To>
-static constexpr bool is_convertible_v =
-  std::is_convertible<std::decay<From>, std::decay_t<To>>::value;
-
-/// Wrapper around std::is_pointer for c++-14 compatibility.
-/// \tparam T The type to determine if is a pointer.
-template <typename T>
-static constexpr bool is_pointer_v = std::is_pointer<std::decay_t<T>>::value;
-
-/// Wrapper around std::is_same for c++-14 compatibility.
-/// \tparam T1 The first type for the comparison.
-/// \tparam T2 The second type for the comparison.
-template <typename T1, typename T2>
-static constexpr bool is_same_v =
-  std::is_same<std::decay_t<T1>, std::decay_t<T2>>::value;
-
-/// Wrapper around std::is_trivially_constructible for c++-14 compatibility.
-/// \tparam T The type to determine if is trivially constructible.
-template <typename T>
-static constexpr bool is_trivially_constructible_v =
-  std::is_trivially_constructible<std::decay_t<T>>::value;
-
-} // namespace std
-
-//==--- [ripple traits] ------------------------------------------------==//
-
 namespace ripple {
+
+//==--- [aliases] ----------------------------------------------------------==//
 
 /// Returns true if all the types are arithmetic.
 /// \tparam Ts The types to check.
@@ -108,6 +49,65 @@ static constexpr auto all_same_v =
 template <typename T, typename... Ts>
 static constexpr auto any_same_v = 
   std::disjunction_v<std::is_same<T, Ts>...>;
+
+/// Returns true if the types T and U are the same, ignoring template parameters
+/// if the types have template parameters. For example, for a type
+///
+/// ~~~
+/// template <typename T> struct X {};
+/// ~~~
+/// 
+/// with `T = X<int>, U = X<float>` this will return true.
+///
+/// This will work correctly for non-type parameters as well, and the number of
+/// parameters can be anything.
+///
+/// The cases where this will not work are where a type mixes type and non-type
+/// template parameters, or has non-type parameters which are different (e.g
+/// size_t and int). These cases are rare, and the non-type parameters can
+/// always be wrapped in the `Num` or `Int64` classes to convert them to types.
+///
+/// \tparam T The first type to compare.
+/// \tparam U The second type to compare.
+template <typename T, typename U>
+static constexpr auto is_same_ignoring_templates_v =
+  detail::IsSameIgnoringTemplates<T, U>::value;
+
+/// Returns the index of the type T in the pack Ts. If T is not in the pack,
+/// this will return sizeof...(Ts) + 1. It will also return false for types
+/// with template types, unless they match exactly.
+/// \tparam T  The type to search for the index of.
+/// \tparam Ts The list of types to search in.
+template <typename T, typename... Ts>
+static constexpr auto index_of_v = detail::IndexOf<0, T, Ts...>::value;
+
+/// Returns the index of the type T in the pack Ts. If T is not in the pack,
+/// this will return sizeof...(Ts) + 1. 
+///
+/// This ignores the template types of both T and any of the Ts, and will match
+/// on the outer type. For example, for some type
+/// 
+/// ~~~
+/// template <typename T> struct X {};
+/// ~~~
+/// 
+/// with `T = X<int>, Ts = <int, float, X<float>>`, this will return 2.
+///
+/// This will work correctly for non-type parameters, and the number of
+/// parameters can be anything.
+///
+/// The cases where this will not work are where a type mixes type and non-type
+/// template parameters, or has non-type parameters which are different (e.g
+/// size_t and int). These cases are rare, and the non-type parameters can
+/// always be wrapped in the `Num` or `Int64` classes to convert them to types.
+///
+/// \tparam T  The type to search for the index of.
+/// \tparam Ts The list of types to search in.
+template <typename T, typename... Ts>
+static constexpr auto index_of_ignore_tempaltes_v =
+  detail::IndexOfIgnoreTemplates<0, T, Ts...>::value;
+
+//==--- [traits] -----------------------------------------------------------==//
 
 /// Defines a valid type when the number of elements in the variadic pack
 /// matches the size defined by Size, and all the types are arithmetic.
