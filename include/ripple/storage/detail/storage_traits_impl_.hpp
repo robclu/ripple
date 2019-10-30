@@ -16,6 +16,7 @@
 #ifndef RIPPLE_STORAGE_DETAIL_STORAGE_TRAITS_IMPL_HPP
 #define RIPPLE_STORAGE_DETAIL_STORAGE_TRAITS_IMPL_HPP
 
+#include "../storage_element_traits.hpp"
 #include "../storage_layout.hpp"
 #include <ripple/utility/type_traits.hpp>
 
@@ -38,6 +39,26 @@ struct IsStorageLayout : std::false_type {
 template <LayoutKind Layout>
 struct IsStorageLayout<StorageLayout<Layout>> : std::true_type {
   /// Defines that the type is a storage layout type.
+  static constexpr auto value = true;
+};
+
+//==--- [is storage element] -----------------------------------------------==//
+
+/// Defines a class to determine of the type T is a storage element type.
+/// \tparam T The type to determine if is a storage element type.
+template <typename T>
+struct IsStorageElement : std::false_type {
+  /// Defines that the type is not a storage element type.
+  static constexpr auto value = false;
+};
+
+/// Specialization for the case of the IsStorageElement struct for the case the
+/// type to check is a StorageElement.
+/// \tparam T     The type for the element.
+/// \tparam Value The number of values for the type.
+template <typename T, std::size_t Values>
+struct IsStorageElement<StorageElement<T, Values>> : std::true_type {
+  /// Defines that the type is a storage element type.
   static constexpr auto value = true;
 };
 

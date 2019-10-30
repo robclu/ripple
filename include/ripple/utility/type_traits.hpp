@@ -104,7 +104,7 @@ static constexpr auto index_of_v = detail::IndexOf<0, T, Ts...>::value;
 /// \tparam T  The type to search for the index of.
 /// \tparam Ts The list of types to search in.
 template <typename T, typename... Ts>
-static constexpr auto index_of_ignore_tempaltes_v =
+static constexpr auto index_of_ignore_templates_v =
   detail::IndexOfIgnoreTemplates<0, T, Ts...>::value;
 
 //==--- [traits] -----------------------------------------------------------==//
@@ -125,6 +125,11 @@ using all_arithmetic_size_enable_t = std::enable_if_t<
 template <std::size_t Size, typename... Values>
 using variadic_size_enable_t =
   std::enable_if_t<Size == sizeof...(Values), int>;
+
+/// Defines a valid type when the type T is a pointer type.
+/// \tparam T The type to base the enable on.
+template <typename T>
+using pointer_enable_t = std::enable_if_t<std::is_pointer_v<T>, int>;
 
 /// Defines a valid type if Size is less than `ripple_max_unroll_depth`.
 /// \tparam Size The size of the unrolling.
