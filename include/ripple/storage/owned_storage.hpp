@@ -1,4 +1,4 @@
-//==--- ripple/storage/contiguous_storage.hpp -------------- -*- C++ -*- ---==//
+//==--- ripple/storage/owned_storage.hpp ------------------- -*- C++ -*- ---==//
 //            
 //                                Ripple
 // 
@@ -8,39 +8,39 @@
 //
 //==------------------------------------------------------------------------==//
 //
-/// \file  contiguous_storage.hpp
-/// \brief This file implements a storage class for storing data in a contiguous
-///        manner.
+/// \file  owned_storage.hpp
+/// \brief This file implements a storage class which owns it storage.
 //
 //==------------------------------------------------------------------------==//
 
-#ifndef RIPPLE_STORAGE_CONTIGUOUS_STORAGE_HPP
-#define RIPPLE_STORAGE_CONTIGUOUS_STORAGE_HPP
+#ifndef RIPPLE_STORAGE_OWNED_STORAGE_HPP
+#define RIPPLE_STORAGE_OWNED_STORAGE_HPP
 
 #include "storage_traits.hpp"
+#include <ripple/utility/type_traits.hpp>
 
 namespace ripple {
 
 /// This creates storage for the Ts types defined by the arguments, and it
-/// creates the storage for the types in a contiguous buffer. It provides
-/// access to the types via the `get<>` method, to get a reference to the
-/// appropriate type.
+/// creates the storage as pointers to arrays of each of the types Ts. It then
+/// provides access to the types via the `get<>` method, to get a reference to
+/// the appropriate type.
 ///
-/// To allocate multiple ContiguousStorage elements, the publicly accessible
-/// allocator should be used to determine the memory requirement, and then to
-/// create the data.
+/// The OwnedStorage class defines a class which has storage for the types
+/// defined by the Ts types, which is owned by the class itself. The data for
+/// the types is stored contiguously.
 ///
-/// Currently, the types are not sortded by alignment size, so if the Ts are not
-/// ordered in descending alignment size, padding will be added to correctly
-/// align the types.
+/// Currently, this requires that the Ts be ordered in descending alignment
+/// size, as there is no functionality to sort the types, otherwise padding will
+/// be added to align the types correctly.
 ///
 /// \tparam Ts The types to create storage for.
 template <typename... Ts>
-class ContiguousStorage {
+class OwnedStorage {
   /// Defines the data type for the buffer.
-  using ptr_t     = void*;
+  using buffer_t  = char;
   /// Defines the type of the storage.
-  using storage_t = ContiguousStorage<Ts...>;
+  using storage_t = OwnedStorage<Ts...>;
 
   //==--- [traits] ---------------------------------------------------------==//
 
@@ -114,88 +114,11 @@ class ContiguousStorage {
   /// Returns the effective byte size of all elements in the storage.
   static constexpr auto storage_byte_size_v = storage_byte_size();
 
-  //==--- [allocator] ------------------------------------------------------==//
-
-  /// Allocator for contiguous storage. This can be used to determine the memory
-  /// requirement for the storage for different spatial configurations, as well
-  /// as to offset ContiguousStorage elements within the allocated space.
-  struct Allocator {
-    /// Returns the number of bytes required to allocate a total of \p elements
-    /// of the types defined by Ts.
-    ///
-    /// \param elements The number of elements to allocate.
-    ripple_host_device static constexpr auto allocation_size(
-      std::size_t elements
-    ) -> std::size_t {
-      return storage_byte_size_v * elements;
-    }
-
-    /// Returns the number of bytes required to allocate a total of Elements
-    /// of the types defined by Ts. This overload of the function can be used to
-    /// allocate static memory when the number of elements in the space is known
-    /// at compile time.
-    ///
-    /// \tparam Elements The number of elements to allocate.
-    template <std::size_t Elements>
-    ripple_host_device static constexpr auto allocation_size() -> std::size_t {
-      return storage_byte_size_v * Elements;
-    }
-
-    /// Offsets the storage by the amount specified by the indices \p is. This
-    /// assumes that the data into which the storage can offset is valid, which
-    /// is the case if the storage was created through the allocator.
-    ///
-    /// This returns a new ContiguousStorage, offset to the new indices in the
-    /// space.
-    ///
-    /// \param  storage   The storage to offset.
-    /// \param  space     The space for which the storage is defined.
-    /// \param  is        The indices to offset to in the space.
-    /// \tparam SpaceImpl The implementation of the spatial interface.
-    /// \tparam Indices   The types of the indices.
-    template <typename SpaceImpl, typename... Indices>
-    ripple_host_device static auto offset(
-      const storage_t&                storage,
-      const MultidimSpace<SpaceImpl>& space  ,
-      Indices&&...                    is
-    ) -> storage_t {
-      storage_t r;
-      r._data = static_cast<void*>(
-        static_cast<char*>(storage._data) + offset_to_aos(
-          space, storage_byte_size_v, std::forward<Indices>(is)...
-        )
-      );
-      return r;
-    }
-
-    /// Creates the storage, initializing a ContiguousStorage instance which has
-    /// its data pointer pointing to the correc location in the memory space
-    /// which is pointed to by \p ptr. The memory space should have a size which
-    /// is returned by the `allocation_size()` method, otherwise this may index
-    /// into undefined memory.
-    /// \param  ptr       A pointer to the beginning of the memory space.
-    /// \param  space     The multidimensional space which defines the domain.
-    /// \tparam SpaceImpl The implementation of the spatial interface.
-    template <typename SpaceImpl>
-    ripple_host_device static auto create(
-      void* ptr,
-      const MultidimSpace<SpaceImpl>& space
-    ) -> storage_t {
-      storage_t r;
-      r._data = ptr;
-      return r;
-    }
-  };
-
   //==--- [members] --------------------------------------------------------==//
 
-  ptr_t _data = nullptr;  //!< Pointer to the data.
+  buffer_t _data[storage_byte_size_v]; //!< Buffer for the storage.
 
  public:
-  //==--- [traits] ---------------------------------------------------------==//
-
-  /// Defines the type of the allocator for creating StridedStorage.
-  using allocator_t = Allocator;
 
   //==--- [interface] ------------------------------------------------------==//
 
@@ -278,5 +201,4 @@ class ContiguousStorage {
 
 } // namespace ripple
 
-
-#endif // RIPPLE_STORAGE_CONTIGUOUS_STORAGE_HPP
+#endif // RIPPLE_STORAGE_OWNED_STORAGE_HPP
