@@ -68,7 +68,6 @@ using storage_element_traits_t = StorageElementTraits<std::decay_t<T>>;
 template <typename T>
 using storage_element_enable_t = std::enable_if_t<is_storage_element_v<T>, int>;
 
-
 /// Define a valid type if the type T is not a StorageElement, otherwise does
 /// not define a valid type.
 /// \tparam T The type to base the enable on.

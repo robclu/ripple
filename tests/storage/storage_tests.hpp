@@ -13,5 +13,6 @@
 //
 //==------------------------------------------------------------------------==//
 
+#include "contiguous_storage_tests.hpp"
 #include "storage_traits_tests.hpp"
 #include "strided_storage_tests.hpp"

@@ -46,6 +46,8 @@ struct StorageElementTraits {
   static constexpr auto num_elements = 1;
   /// Defines the byte size required to allocate the element.
   static constexpr auto byte_size    = sizeof(value_t);
+  /// Defines the alignment size required for the type.
+  static constexpr auto align_size   = alignof(value_t);
 };
 
 /// Specialization for a StorageElement.
@@ -57,6 +59,8 @@ struct StorageElementTraits<StorageElement<T, Values>> {
   static constexpr auto num_elements = Values;
   /// Defines the byte size required to allocate the element.
   static constexpr auto byte_size    = sizeof(value_t) * num_elements;
+  /// Defines the alignment requirement for the storage.
+  static constexpr auto align_size   = alignof(value_t);
 };
   
 

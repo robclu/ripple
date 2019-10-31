@@ -1,4 +1,4 @@
-//==--- ripple/storage/strided_storage.hpp ----------------- -*- C++ -*- ---==//
+//==--- ripple/storage/contiguous_storage.hpp -------------- -*- C++ -*- ---==//
 //            
 //                                Ripple
 // 
@@ -8,44 +8,39 @@
 //
 //==------------------------------------------------------------------------==//
 //
-/// \file  strided_storage.hpp
-/// \brief This file implements a storage class for storing data in a strided
+/// \file  contiguous_storage.hpp
+/// \brief This file implements a storage class for storing data in a contiguous
 ///        manner.
 //
 //==------------------------------------------------------------------------==//
 
-#ifndef RIPPLE_STORAGE_STRIDED_STORAGE_HPP
-#define RIPPLE_STORAGE_STRIDED_STORAGE_HPP
+#ifndef RIPPLE_STORAGE_CONTIGUOUS_STORAGE_HPP
+#define RIPPLE_STORAGE_CONTIGUOUS_STORAGE_HPP
 
 #include "storage_traits.hpp"
-#include <ripple/multidim/offset_to.hpp>
-#include <ripple/utility/type_traits.hpp>
 
 namespace ripple {
 
 /// This creates storage for the Ts types defined by the arguments, and it
-/// creates the storage as pointers to arrays of each of the types Ts. It then
-/// provides access to the types via the `get<>` method, to get a reference to
-/// the appropriate type.
+/// creates the storage for the types in a contiguous buffer. It provides
+/// access to the types via the `get<>` method, to get a reference to the
+/// appropriate type.
 ///
-/// If any of the Ts are StorageElement<T, V> types, then this will provide
-/// storage such each of the V components of the element are strided 
-/// (i.e as SoA).
-///
-/// To allocate multiple StridedStorage elements, the publicly accessible
+/// To allocate multiple ContiguousStorage elements, the publicly accessible
 /// allocator should be used to determine the memory requirement, and then to
 /// create the data.
 ///
-/// Currently, this requires that the Ts be ordered in descending alignment
-/// size, as there is no functionality to sort the types.
+/// Currently, the types are not sortded by alignment size, so if the Ts are not
+/// ordered in descending alignment size, padding will be added to correctly
+/// align the types.
 ///
 /// \tparam Ts The types to create storage for.
 template <typename... Ts>
-class StridedStorage {
-  /// Defines the type of the pointer to the data.
+class ContiguousStorage {
+  /// Defines the data type for the buffer.
   using ptr_t     = void*;
   /// Defines the type of the storage.
-  using storage_t = StridedStorage<Ts...>;
+  using storage_t = ContiguousStorage<Ts...>;
 
   //==--- [traits] ---------------------------------------------------------==//
 
@@ -54,16 +49,9 @@ class StridedStorage {
   template <typename T>
   using element_value_t = typename storage_element_traits_t<T>::value_t;
 
-  /// Gets the value type of the storage element traits the type at position I.
-  /// \tparam I The index of the type to get the value type for.
-  template <std::size_t I>
-  using element_at_value_t = element_value_t<
-    std::tuple_element_t<I, std::tuple<Ts...>>
-  >;
-
   //==--- [constants] ------------------------------------------------------==//
-  
-  /// Returns the number of different types.
+
+  /// Defines the number of different types.
   static constexpr auto num_types = sizeof...(Ts);
 
   /// Gets the numbber of components for the storage element.
@@ -72,26 +60,65 @@ class StridedStorage {
   static constexpr auto element_components_v =
     storage_element_traits_t<T>::num_elements;
 
-  /// Defines the effective byte size of all elements to store.
-  static constexpr auto storage_byte_size_v =
-    (storage_element_traits_t<Ts>::byte_size + ... + std::size_t{0});
-
-  //==--- [size containers] ------------------------------------------------==//
-  
   /// Defines the sizes of each of the types.
   static constexpr std::size_t byte_sizes[num_types] = {
-    sizeof(element_value_t<Ts>)...
+    storage_element_traits_t<Ts>::byte_size...
   };
-  /// Defines the number of components in each of the types.
-  static constexpr std::size_t components[num_types] = {
-    element_components_v<Ts>...
+  /// Defines the alignment sizes of each of the types.
+  static constexpr std::size_t align_sizes[num_types] = {
+    storage_element_traits_t<Ts>::align_size...
   };
+
+  /// Returns the effective byte size of all elements to store, including any
+  /// required padding. This should not be called, other than to define
+  /// byte_size_v, since it is expensive to compile.
+  static constexpr auto storage_byte_size() -> std::size_t{
+    auto size = byte_sizes[0];
+    for (size_t i = 1; i < num_types; ++i) {
+      // If not aligned, find the first alignment after the total size:
+      if ((size % align_sizes[i]) != 0) {
+        auto first_align = align_sizes[i];
+        while (first_align < size) {
+          first_align += align_sizes[i];
+        }
+        // New size is smallest alignment.
+        size = first_align;
+      }
+      // Add the size of the component:
+      size += byte_sizes[i];
+    }
+    return size;
+  }
+
+  /// Returns the offset, in bytes, to the index I in the type list, accounding
+  /// for any required padding dues to __badly specifier__ data layout.
+  /// \tparam I The index of the type to get the offset to.
+  template <std::size_t I>
+  static constexpr auto offset_to() {
+    auto offset = std::size_t{0};
+    for (std::size_t i = 1; i <= I; ++i) {
+      offset += byte_sizes[i - 1];
+      // If not aligned, find the first alignment after the total size:
+      if ((offset % align_sizes[i]) != 0 || offset < align_sizes[i]) {
+        auto first_align = align_sizes[i];
+        while (first_align < offset) {
+          first_align += align_sizes[i];
+        }
+        // New size is smallest alignment.
+        offset = first_align;
+      }
+    }
+    return offset;
+  }
+
+  /// Returns the effective byte size of all elements in the storage.
+  static constexpr auto storage_byte_size_v = storage_byte_size();
 
   //==--- [allocator] ------------------------------------------------------==//
 
-  /// Allocator for the strided storage. This can be used to determine the
-  /// memory requirement for the storage for a spicifc spatial configuration, as
-  /// well as to access into the storage space.
+  /// Allocator for contiguous storage. This can be used to determine the memory
+  /// requirement for the storage for different spatial configurations, as well
+  /// as to offset ContiguousStorage elements within the allocated space.
   struct Allocator {
     /// Returns the number of bytes required to allocate a total of \p elements
     /// of the types defined by Ts.
@@ -114,39 +141,11 @@ class StridedStorage {
       return storage_byte_size_v * Elements;
     }
 
-    /// Creates the storage, initializing a StridedStorage instance which has
-    /// its data pointers pointing to the correc locations in the memory space
-    /// which is pointed to by \p ptr. The memory space should have a size which
-    /// is returned by the `allocation_size()` method, otherwise this may index
-    /// into undefined memory.
-    /// \param  ptr       A pointer to the beginning of the memory space.
-    /// \param  space     The multidimensional space which defines the domain.
-    /// \tparam SpaceImpl The implementation of the spatial interface.
-    template <typename SpaceImpl>
-    ripple_host_device static auto create(
-      void* ptr,
-      const MultidimSpace<SpaceImpl>& space
-    ) -> storage_t {
-      storage_t r;
-      r._stride       = space.size(dim_x);
-      r._data[0]      = ptr;
-      const auto size = space.size();
-      auto offset     = 0;
-      unrolled_for<num_types - 1>([&] (auto prev_index) {
-        constexpr auto curr_index = prev_index + 1;
-        offset += components[prev_index] * size * byte_sizes[prev_index];
-        r._data[curr_index] = static_cast<void*>(
-          static_cast<char*>(ptr) + offset
-        );
-      });
-      return r;
-    }
-
     /// Offsets the storage by the amount specified by the indices \p is. This
     /// assumes that the data into which the storage can offset is valid, which
     /// is the case if the storage was created through the allocator.
     ///
-    /// This returns a new StridedStorage, offset to the new indices in the
+    /// This returns a new ContiguousStorage, offset to the new indices in the
     /// space.
     ///
     /// \param  storage   The storage to offset.
@@ -161,22 +160,36 @@ class StridedStorage {
       Indices&&...                    is
     ) -> storage_t {
       storage_t r;
-      r._stride = storage._stride;
-      unrolled_for<num_types>([&] (auto i) {
-        using type_t = element_at_value_t<i>;
-        r._data[i]   = static_cast<void*>(
-          static_cast<type_t*>(storage._data[i]) + 
-          offset_to_soa(space, components[i], std::forward<Indices>(is)...)
-        );
-      });
+      r._data = static_cast<void*>(
+        static_cast<char*>(storage._data) + offset_to_aos(
+          space, storage_byte_size_v, std::forward<Indices>(is)...
+        )
+      );
+      return r;
+    }
+
+    /// Creates the storage, initializing a ContiguousStorage instance which has
+    /// its data pointer pointing to the correc location in the memory space
+    /// which is pointed to by \p ptr. The memory space should have a size which
+    /// is returned by the `allocation_size()` method, otherwise this may index
+    /// into undefined memory.
+    /// \param  ptr       A pointer to the beginning of the memory space.
+    /// \param  space     The multidimensional space which defines the domain.
+    /// \tparam SpaceImpl The implementation of the spatial interface.
+    template <typename SpaceImpl>
+    ripple_host_device static auto create(
+      void* ptr,
+      const MultidimSpace<SpaceImpl>& space
+    ) -> storage_t {
+      storage_t r;
+      r._data = ptr;
       return r;
     }
   };
 
   //==--- [members] --------------------------------------------------------==//
 
-  ptr_t     _data[num_types]; //!< Pointers to the data.
-  uint32_t  _stride = 1;      //!< Stride between elements.
+  ptr_t _data = nullptr;  //!< Pointer to the data.
 
  public:
   //==--- [traits] ---------------------------------------------------------==//
@@ -196,7 +209,10 @@ class StridedStorage {
     non_storage_element_enable_t<T> = 0
   >
   auto get() -> element_value_t<T>& {
-    return *static_cast<element_value_t<T>*>(_data[I]);
+    constexpr auto offset = offset_to<I>();
+    return *reinterpret_cast<element_value_t<T>*>(
+      static_cast<char*>(_data) + offset
+    );
   }
 
   /// Gets a const reference to the Ith data type. This will only be enabled
@@ -209,7 +225,10 @@ class StridedStorage {
     non_storage_element_enable_t<T> = 0
   >
   auto get() const -> const element_value_t<T>& {
-    return *static_cast<const element_value_t<T>*>(_data[I]); 
+    constexpr auto offset = offset_to<I>();
+    return *reinterpret_cast<const element_value_t<T>*>(
+      static_cast<char*>(_data) + offset
+    );
   }
 
   /// Gets a reference to the Jth element of the Ith data type. This will only
@@ -228,7 +247,10 @@ class StridedStorage {
     static_assert(
       J < element_components_v<T>, "Out of range acess for storage element!"
     );
-    return static_cast<element_value_t<T>*>(_data[I])[J * _stride];
+    constexpr auto offset = offset_to<I>();
+    return reinterpret_cast<element_value_t<T>*>(
+      static_cast<char*>(_data) + offset
+    )[J];
   }
 
   /// Gets a const reference to the Jth element of the Ith data type. This will
@@ -247,10 +269,14 @@ class StridedStorage {
     static_assert(
       J < element_components_v<T>, "Out of range acess for storage element!"
     );
-    return static_cast<const element_value_t<T>*>(_data[I])[J * _stride]; 
+    constexpr auto offset = offset_to<I>();
+    return reinterpret_cast<const element_value_t<T>*>(
+      static_cast<char*>(_data) + offset
+    )[J];
   }
 };
 
 } // namespace ripple
 
-#endif // RIPPLE_STORAGE_STRIDED_STORAGE_HPP
+
+#endif // RIPPLE_STORAGE_CONTIGUOUS_STORAGE_HPP
