@@ -1,4 +1,4 @@
-//==--- ripple/storage/strided_storage.hpp ----------------- -*- C++ -*- ---==//
+//==--- ripple/storage/strided_storage_view.hpp ------------ -*- C++ -*- ---==//
 //            
 //                                Ripple
 // 
@@ -8,44 +8,32 @@
 //
 //==------------------------------------------------------------------------==//
 //
-/// \file  strided_storage.hpp
-/// \brief This file implements a storage class for storing data in a strided
-///        manner.
+/// \file  strided_storage_view.hpp
+/// \brief This file implements a storage class which views data which is
+///        strided (SoA), and which knows how to allocate and offset into such
+///        data.
 //
 //==------------------------------------------------------------------------==//
 
-#ifndef RIPPLE_STORAGE_STRIDED_STORAGE_HPP
-#define RIPPLE_STORAGE_STRIDED_STORAGE_HPP
+#ifndef RIPPLE_STORAGE_STRIDED_STORAGE_VIEW_HPP
+#define RIPPLE_STORAGE_STRIDED_STORAGE_VIEW_HPP
 
 #include "storage_traits.hpp"
+#include "storage_accessor.hpp"
 #include <ripple/multidim/offset_to.hpp>
 #include <ripple/utility/type_traits.hpp>
 
 namespace ripple {
 
-/// This creates storage for the Ts types defined by the arguments, and it
-/// creates the storage as pointers to arrays of each of the types Ts. It then
-/// provides access to the types via the `get<>` method, to get a reference to
-/// the appropriate type.
-///
-/// If any of the Ts are StorageElement<T, V> types, then this will provide
-/// storage such each of the V components of the element are strided 
-/// (i.e as SoA).
-///
-/// To allocate multiple StridedStorage elements, the publicly accessible
-/// allocator should be used to determine the memory requirement, and then to
-/// create the data.
-///
-/// Currently, this requires that the Ts be ordered in descending alignment
-/// size, as there is no functionality to sort the types.
-///
-/// \tparam Ts The types to create storage for.
+/// Defines a view into strided storage for Ts types.
+/// See StridedStorageView for more information.
+/// \tparam Ts The types to create a storage view for.
 template <typename... Ts>
-class StridedStorage {
+class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
   /// Defines the type of the pointer to the data.
   using ptr_t     = void*;
   /// Defines the type of the storage.
-  using storage_t = StridedStorage<Ts...>;
+  using storage_t = StridedStorageView<Ts...>;
 
   //==--- [traits] ---------------------------------------------------------==//
 
@@ -57,9 +45,7 @@ class StridedStorage {
   /// Gets the value type of the storage element traits the type at position I.
   /// \tparam I The index of the type to get the value type for.
   template <std::size_t I>
-  using element_at_value_t = element_value_t<
-    std::tuple_element_t<I, std::tuple<Ts...>>
-  >;
+  using nth_element_value_t = element_value_t<nth_element_t<I, Ts...>>;
 
   //==--- [constants] ------------------------------------------------------==//
   
@@ -163,7 +149,7 @@ class StridedStorage {
       storage_t r;
       r._stride = storage._stride;
       unrolled_for<num_types>([&] (auto i) {
-        using type_t = element_at_value_t<i>;
+        using type_t = nth_element_value_t<i>;
         r._data[i]   = static_cast<void*>(
           static_cast<type_t*>(storage._data[i]) + 
           offset_to_soa(space, components[i], std::forward<Indices>(is)...)
@@ -192,7 +178,7 @@ class StridedStorage {
   /// \tparam T The type of the Ith element.
   template <
     std::size_t I,
-    typename    T = std::tuple_element_t<I, std::tuple<Ts...>>,
+    typename    T = nth_element_t<I, Ts...>,
     non_storage_element_enable_t<T> = 0
   >
   auto get() -> element_value_t<T>& {
@@ -205,7 +191,7 @@ class StridedStorage {
   /// \tparam T The type of the Ith element.
   template <
     std::size_t I,
-    typename    T = std::tuple_element_t<I, std::tuple<Ts...>>,
+    typename    T = nth_element_t<I, Ts...>,
     non_storage_element_enable_t<T> = 0
   >
   auto get() const -> const element_value_t<T>& {
@@ -221,7 +207,7 @@ class StridedStorage {
   template <
     std::size_t I,
     std::size_t J,
-    typename    T = std::tuple_element_t<I, std::tuple<Ts...>>,
+    typename    T = nth_element_t<I, Ts...>,
     storage_element_enable_t<T> = 0
   >
   auto get() -> element_value_t<T>& {
@@ -240,7 +226,7 @@ class StridedStorage {
   template <
     std::size_t I,
     std::size_t J,
-    typename    T = std::tuple_element_t<I, std::tuple<Ts...>>,
+    typename    T = nth_element_t<I, Ts...>,
     storage_element_enable_t<T> = 0
   >
   auto get() const -> const element_value_t<T>& {
@@ -249,8 +235,28 @@ class StridedStorage {
     );
     return static_cast<const element_value_t<T>*>(_data[I])[J * _stride]; 
   }
+
+  //==--- [operator overload] ----------------------------------------------==//
+
+  /// Overload of operator= to set the data for the StridedStorageView from
+  /// another StorageAccessor. This returns the StridedStorageView with the
+  /// data copied from \p from.
+  /// \param  from The accessor to copy the data from.
+  /// \tparam Impl The implementation of the StorageAccessor.
+  template <typename Impl>
+  ripple_host_device auto operator=(const StorageAccessor<Impl>& from)
+  -> storage_t& {
+    unrolled_for<num_types>([&] (auto i) {
+      constexpr std::size_t type_idx = i;
+      constexpr auto        values   = 
+        element_components_v<nth_element_t<type_idx, Ts...>>;
+
+      copy_from_to<type_idx, values>(from, *this);
+    });
+    return *this;
+  }
 };
 
 } // namespace ripple
 
-#endif // RIPPLE_STORAGE_STRIDED_STORAGE_HPP
+#endif // RIPPLE_STORAGE_STRIDED_STORAGE_VIEW_HPP

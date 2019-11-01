@@ -1,4 +1,4 @@
-//==--- ripple/storage/contiguous_storage.hpp -------------- -*- C++ -*- ---==//
+//==--- ripple/storage/contiguous_storage_view.hpp --------- -*- C++ -*- ---==//
 //            
 //                                Ripple
 // 
@@ -8,39 +8,30 @@
 //
 //==------------------------------------------------------------------------==//
 //
-/// \file  contiguous_storage.hpp
+/// \file  contiguous_storage_view.hpp
 /// \brief This file implements a storage class for storing data in a contiguous
 ///        manner.
 //
 //==------------------------------------------------------------------------==//
 
-#ifndef RIPPLE_STORAGE_CONTIGUOUS_STORAGE_HPP
-#define RIPPLE_STORAGE_CONTIGUOUS_STORAGE_HPP
+#ifndef RIPPLE_STORAGE_CONTIGUOUS_STORAGE_VIEW_HPP
+#define RIPPLE_STORAGE_CONTIGUOUS_STORAGE_VIEW_HPP
 
 #include "storage_traits.hpp"
+#include "storage_accessor.hpp"
 
 namespace ripple {
 
-/// This creates storage for the Ts types defined by the arguments, and it
-/// creates the storage for the types in a contiguous buffer. It provides
-/// access to the types via the `get<>` method, to get a reference to the
-/// appropriate type.
-///
-/// To allocate multiple ContiguousStorage elements, the publicly accessible
-/// allocator should be used to determine the memory requirement, and then to
-/// create the data.
-///
-/// Currently, the types are not sortded by alignment size, so if the Ts are not
-/// ordered in descending alignment size, padding will be added to correctly
-/// align the types.
-///
-/// \tparam Ts The types to create storage for.
+/// Defines a view into contiguous storage for Ts types.
+/// See ContiguousStorageView for more information.
+/// \tparam Ts The types to create a storage view for.
 template <typename... Ts>
-class ContiguousStorage {
+class ContiguousStorageView : 
+    public StorageAccessor<ContiguousStorageView<Ts...>> {
   /// Defines the data type for the buffer.
   using ptr_t     = void*;
   /// Defines the type of the storage.
-  using storage_t = ContiguousStorage<Ts...>;
+  using storage_t = ContiguousStorageView<Ts...>;
 
   //==--- [traits] ---------------------------------------------------------==//
 
@@ -205,7 +196,7 @@ class ContiguousStorage {
   /// \tparam T The type of the Ith element.
   template <
     std::size_t I,
-    typename    T = std::tuple_element_t<I, std::tuple<Ts...>>,
+    typename    T = nth_element_t<I, Ts...>,
     non_storage_element_enable_t<T> = 0
   >
   auto get() -> element_value_t<T>& {
@@ -221,13 +212,13 @@ class ContiguousStorage {
   /// \tparam T The type of the Ith element.
   template <
     std::size_t I,
-    typename    T = std::tuple_element_t<I, std::tuple<Ts...>>,
+    typename    T = nth_element_t<I, Ts...>,
     non_storage_element_enable_t<T> = 0
   >
   auto get() const -> const element_value_t<T>& {
     constexpr auto offset = offset_to<I>();
     return *reinterpret_cast<const element_value_t<T>*>(
-      static_cast<char*>(_data) + offset
+      static_cast<const char*>(_data) + offset
     );
   }
 
@@ -240,7 +231,7 @@ class ContiguousStorage {
   template <
     std::size_t I,
     std::size_t J,
-    typename    T = std::tuple_element_t<I, std::tuple<Ts...>>,
+    typename    T = nth_element_t<I, Ts...>,
     storage_element_enable_t<T> = 0
   >
   auto get() -> element_value_t<T>& {
@@ -262,7 +253,7 @@ class ContiguousStorage {
   template <
     std::size_t I,
     std::size_t J,
-    typename    T = std::tuple_element_t<I, std::tuple<Ts...>>,
+    typename    T = nth_element_t<I, Ts...>,
     storage_element_enable_t<T> = 0
   >
   auto get() const -> const element_value_t<T>& {
@@ -271,12 +262,31 @@ class ContiguousStorage {
     );
     constexpr auto offset = offset_to<I>();
     return reinterpret_cast<const element_value_t<T>*>(
-      static_cast<char*>(_data) + offset
+      static_cast<const char*>(_data) + offset
     )[J];
+  }
+
+  //==--- [operator overload] ----------------------------------------------==//
+
+  /// Overload of operator= to set the data for the ContiguousStorageView from
+  /// another StorageAccessor. This returns the contiguousStorageView with the
+  /// data copied from \p from.
+  /// \param  from The accessor to copy the data from.
+  /// \tparam Impl The implementation of the StorageAccessor.
+  template <typename Impl>
+  ripple_host_device auto operator=(const StorageAccessor<Impl>& from)
+  -> storage_t& {
+    unrolled_for<num_types>([&] (auto i) {
+      constexpr std::size_t type_idx = i;
+      constexpr auto        values   = 
+        element_components_v<nth_element_t<type_idx, Ts...>>;
+
+      copy_from_to<type_idx, values>(from, *this);
+    });
+    return *this;
   }
 };
 
 } // namespace ripple
 
-
-#endif // RIPPLE_STORAGE_CONTIGUOUS_STORAGE_HPP
+#endif // RIPPLE_STORAGE_CONTIGUOUS_STORAGE_VIEW_HPP

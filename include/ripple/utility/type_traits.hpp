@@ -17,6 +17,7 @@
 #define RIPPLE_UTILITY_TYPE_TRAITS_HPP
 
 #include "detail/index_of_impl_.hpp"
+#include "detail/nth_element_impl_.hpp"
 #include "portability.hpp"
 #include <type_traits>
 
@@ -143,6 +144,12 @@ using unroll_enabled_t =
 template <std::size_t Size>
 using unroll_disabled_t = 
   std::enable_if_t<(Size >= ripple_max_unroll_depth), int>;
+
+/// Defines the type of the Nth element in the type list.
+/// \tparam N   The index of the element to get.
+/// \tparam Ts  The type list to get the type from.
+template <std::size_t N, typename... Ts>
+using nth_element_t = typename detail::NthElement<N, Ts...>::type;
 
 } // namespace ripple
 

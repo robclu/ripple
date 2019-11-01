@@ -17,26 +17,18 @@
 #define RIPPLE_STORAGE_OWNED_STORAGE_HPP
 
 #include "storage_traits.hpp"
+#include "storage_accessor.hpp"
 #include <ripple/utility/type_traits.hpp>
+
+#include <iostream>
 
 namespace ripple {
 
-/// This creates storage for the Ts types defined by the arguments, and it
-/// creates the storage as pointers to arrays of each of the types Ts. It then
-/// provides access to the types via the `get<>` method, to get a reference to
-/// the appropriate type.
-///
-/// The OwnedStorage class defines a class which has storage for the types
-/// defined by the Ts types, which is owned by the class itself. The data for
-/// the types is stored contiguously.
-///
-/// Currently, this requires that the Ts be ordered in descending alignment
-/// size, as there is no functionality to sort the types, otherwise padding will
-/// be added to align the types correctly.
-///
+/// Defines an owned contiguous, statically allocated, storage for Ts types.
+/// See OwnedStorage for more information.
 /// \tparam Ts The types to create storage for.
 template <typename... Ts>
-class OwnedStorage {
+class OwnedStorage : public StorageAccessor<OwnedStorage<Ts...>> {
   /// Defines the data type for the buffer.
   using buffer_t  = char;
   /// Defines the type of the storage.
@@ -128,7 +120,7 @@ class OwnedStorage {
   /// \tparam T The type of the Ith element.
   template <
     std::size_t I,
-    typename    T = std::tuple_element_t<I, std::tuple<Ts...>>,
+    typename    T = nth_element_t<I, Ts...>,
     non_storage_element_enable_t<T> = 0
   >
   auto get() -> element_value_t<T>& {
@@ -144,13 +136,13 @@ class OwnedStorage {
   /// \tparam T The type of the Ith element.
   template <
     std::size_t I,
-    typename    T = std::tuple_element_t<I, std::tuple<Ts...>>,
+    typename    T = nth_element_t<I, Ts...>,
     non_storage_element_enable_t<T> = 0
   >
   auto get() const -> const element_value_t<T>& {
     constexpr auto offset = offset_to<I>();
     return *reinterpret_cast<const element_value_t<T>*>(
-      static_cast<char*>(_data) + offset
+      static_cast<const char*>(_data) + offset
     );
   }
 
@@ -163,7 +155,7 @@ class OwnedStorage {
   template <
     std::size_t I,
     std::size_t J,
-    typename    T = std::tuple_element_t<I, std::tuple<Ts...>>,
+    typename    T = nth_element_t<I, Ts...>,
     storage_element_enable_t<T> = 0
   >
   auto get() -> element_value_t<T>& {
@@ -185,7 +177,7 @@ class OwnedStorage {
   template <
     std::size_t I,
     std::size_t J,
-    typename    T = std::tuple_element_t<I, std::tuple<Ts...>>,
+    typename    T = nth_element_t<I, Ts...>,
     storage_element_enable_t<T> = 0
   >
   auto get() const -> const element_value_t<T>& {
@@ -194,8 +186,28 @@ class OwnedStorage {
     );
     constexpr auto offset = offset_to<I>();
     return reinterpret_cast<const element_value_t<T>*>(
-      static_cast<char*>(_data) + offset
+      static_cast<const char*>(_data) + offset
     )[J];
+  }
+
+  //==--- [operator overload] ----------------------------------------------==//
+
+  /// Overload of operator= to set the data for the owned storage from another
+  /// StorageAccessor. This returns the owned storage with the data copied from
+  /// \p from.
+  /// \param  from The accessor to copy the data from.
+  /// \tparam Impl The implementation of the StorageAccessor.
+  template <typename Impl>
+  ripple_host_device auto operator=(const StorageAccessor<Impl>& from)
+  -> storage_t& {
+    unrolled_for<num_types>([&] (auto i) {
+      constexpr std::size_t type_idx = i;
+      constexpr auto        values   = 
+        element_components_v<nth_element_t<type_idx, Ts...>>;
+
+      copy_from_to<type_idx, values>(from, *this);
+    });
+    return *this;
   }
 };
 

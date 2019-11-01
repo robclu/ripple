@@ -38,7 +38,7 @@
 
   /// Macro for thread synchronization for the device.
   #define ripple_syncthreads() __syncthreads()
-#else
+#elif
   /// Defines if GPU functionality is available.
   #define ripple_gpu_available  false
   /// Defines if CUDA functionality is available
@@ -55,6 +55,15 @@
   /// Macro for thread synchronization for the host.
   #define ripple_syncthreads() 
 #endif
+
+//==--- [compiler] ---------------------------------------------------------==//
+
+/// Defines if clang is being used.
+#define ripple_clang  __clang__
+/// Defines if gcc is being used.
+#define riplple_gcc   __GNUC__ && !(__clang__) && !(__CUDACC__)
+/// Defines if nvcc is being used.
+#define ripple_nvcc   __CUDACC__ && !(__clang__)
 
 #ifndef MAX_UNROLL_DEPTH
   /// Defines the max depth for compile time unrolling.
