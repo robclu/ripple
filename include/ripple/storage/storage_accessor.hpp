@@ -41,6 +41,15 @@ struct StorageAccessor {
   }
 
  public:
+  /// Returns the number of components in the Ith type being stored. For
+  /// non-indexable types this will always return 1, otherwise will return the
+  /// number of possible components which can be indexed.
+  /// \tparam I The index of the type to get the number of components for.
+  template <std::size_t I>
+  ripple_host_device constexpr auto components_of() const -> std::size_t {
+    return impl()->template components_of<I>();
+  }
+
   /// Gets a reference to the Ith data type which is stored.
   /// \tparam I The index of the type to get the data from.
   template <std::size_t I>
@@ -78,6 +87,31 @@ struct StorageAccessor {
   ripple_host_device auto get() const {
     return impl()->template get<I, J>();
   }
+
+  /// Gets a reference to the jth element in the Ith data type which is stored.
+  /// The implementation should ensure that calling this with indices I, j which
+  /// result in incorrect acceess, causes a compile time error. For example if
+  /// the Ith type is an int, for which there is no j element, then this should
+  /// cause a compile time error.
+  /// \param  j The index of the element in the type to get.
+  /// \tparam I The index of the type to get the data from.
+  template <size::size_t I>
+  ripple_host_device auto get(std::size_t j) {
+    return impl()->get<I>(j);
+  }
+
+  /// Gets a reference to the jth element in the Ith data type which is stored.
+  /// The implementation should ensure that calling this with indices I, j which
+  /// result in incorrect acceess, causes a compile time error. For example if
+  /// the Ith type is an int, for which there is no j element, then this should
+  /// cause a compile time error.
+  /// \param  j The index of the element in the type to get.
+  /// \tparam I The index of the type to get the data from.
+  template <size::size_t I>
+  ripple_host_device auto get(std::size_t j) const {
+    return impl()->get<I>(j);
+  }
+
 };
 
 //==--- [utilities] --------------------------------------------------------==//
