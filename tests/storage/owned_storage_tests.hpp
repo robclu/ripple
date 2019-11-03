@@ -18,6 +18,21 @@
 
 #include <ripple/storage/owned_storage.hpp>
 
+TEST(storage_owned_storage, can_get_number_of_components_for_types) {
+  using e_3i_t      = ripple::StorageElement<int, 3>;
+  using e_2f_t      = ripple::StorageElement<float, 2>;
+  using storage_t   = ripple::OwnedStorage<e_3i_t, e_2f_t, int>;
+
+  storage_t s;
+  constexpr auto size_i3 = s.components_of<0>();
+  constexpr auto size_f2 = s.components_of<1>();
+  constexpr auto size_i  = s.components_of<2>();
+
+  EXPECT_EQ(size_i3, std::size_t{3});
+  EXPECT_EQ(size_f2, std::size_t{2});
+  EXPECT_EQ(size_i , std::size_t{1});
+}
+
 TEST(storage_owned_storage, correct_size_simple_types) {
   using storage_t   = ripple::OwnedStorage<int, float>;
   storage_t s;

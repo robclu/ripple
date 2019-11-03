@@ -95,7 +95,7 @@ struct StorageAccessor {
   /// cause a compile time error.
   /// \param  j The index of the element in the type to get.
   /// \tparam I The index of the type to get the data from.
-  template <size::size_t I>
+  template <std::size_t I>
   ripple_host_device auto get(std::size_t j) {
     return impl()->get<I>(j);
   }
@@ -107,11 +107,10 @@ struct StorageAccessor {
   /// cause a compile time error.
   /// \param  j The index of the element in the type to get.
   /// \tparam I The index of the type to get the data from.
-  template <size::size_t I>
+  template <std::size_t I>
   ripple_host_device auto get(std::size_t j) const {
     return impl()->get<I>(j);
   }
-
 };
 
 //==--- [utilities] --------------------------------------------------------==//

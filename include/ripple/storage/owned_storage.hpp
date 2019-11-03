@@ -60,7 +60,11 @@ class OwnedStorage : public StorageAccessor<OwnedStorage<Ts...>> {
   static constexpr std::size_t align_sizes[num_types] = {
     storage_element_traits_t<Ts>::align_size...
   };
-
+  /// Defines the number of components in each of the types.
+  static constexpr std::size_t components[num_types] = {
+    element_components_v<Ts>...
+  };
+  
   /// Returns the effective byte size of all elements to store, including any
   /// required padding. This should not be called, other than to define
   /// byte_size_v, since it is expensive to compile.
@@ -113,6 +117,15 @@ class OwnedStorage : public StorageAccessor<OwnedStorage<Ts...>> {
  public:
 
   //==--- [interface] ------------------------------------------------------==//
+
+ /// Returns the number of components in the Ith type being stored. For
+  /// non-indexable types this will always return 1, otherwise will return the
+  /// number of possible components which can be indexed.
+  /// \tparam I The index of the type to get the number of components for.
+  template <std::size_t I>
+  ripple_host_device constexpr auto components_of() const -> std::size_t {
+    return components[I];
+  }
 
   /// Gets a reference to the Ith data type. This will only be enabled when the
   /// type of the Ith type is not a StorageElement<>.
@@ -189,6 +202,43 @@ class OwnedStorage : public StorageAccessor<OwnedStorage<Ts...>> {
       static_cast<const char*>(_data) + offset
     )[J];
   }
+
+  /// Gets a reference to the jth element of the Ith data type. This will only
+  /// be enabled when the type of the Ith type is a StorageElement<> so that the
+  /// call to operator[] on the Ith type is valid.
+  /// \param  j The index of the component in the type to get.
+  /// \tparam I The index of the type to get the data from.
+  /// \tparam T The type of the Ith element.
+  template <
+    std::size_t I,
+    typename    T = nth_element_t<I, Ts...>,
+    storage_element_enable_t<T> = 0
+  >
+  auto get(std::size_t j) -> element_value_t<T>& {
+    constexpr auto offset = offset_to<I>();
+    return reinterpret_cast<element_value_t<T>*>(
+      static_cast<char*>(_data) + offset
+    )[j];
+  }
+
+  /// Gets a const reference to the jth element of the Ith data type. This will
+  /// only be enabled when the type of the Ith type is a StorageElement<> so
+  /// that the call to operator[] on the Ith type is valid.
+  /// \param  j The index of the component in the type to get.
+  /// \tparam I The index of the type to get the data from.
+  /// \tparam T The type of the Ith element.
+  template <
+    std::size_t I,
+    typename    T = nth_element_t<I, Ts...>,
+    storage_element_enable_t<T> = 0
+  >
+  auto get(std::size_t j) const -> const element_value_t<T>& {
+    constexpr auto offset = offset_to<I>();
+    return reinterpret_cast<const element_value_t<T>*>(
+      static_cast<const char*>(_data) + offset
+    )[j];
+  }
+
 
   //==--- [operator overload] ----------------------------------------------==//
 
