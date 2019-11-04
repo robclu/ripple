@@ -20,18 +20,26 @@ namespace ripple {
 
 /// The LayoutKind enum defines the possible types of layouts.
 enum class LayoutKind : uint8_t {
-	contiguous = 0, //!< Specifier for data which must be laid out contiguously.
-  strided    = 1  //!< Specifier for data which must be laid out strided.
+	contiguous_view  = 0,   //!< Contiguous, viewed (not owned) layout.
+  strided_view     = 1,   //!< Strided, viewed (not owned) layout.
+  contiguous_owned = 2    //!< Contiguous, owned layout.
 };
 
 /// The StorageLayout struct defines a type which represents the the layout for
-/// storage.
+/// storage, as a type.
 /// \tparam Layout The kind of the layout.
 template <LayoutKind Layout>
 struct StorageLayout { 
   /// Defines the value of the layout for the storage.
   static constexpr auto value = Layout;
 };
+
+/// Alias for a type which defines contigous viewed storage.
+using contiguous_view_t  = StorageLayout<LayoutKind::contiguous_view>;
+/// Alias for a type which defines strided viewed storage.
+using strided_view_t     = StorageLayout<LayoutKind::strided_view>;
+/// Alias for a type which defines contiguous owned storage.
+using contiguous_owned_t = StorageLayout<LayoutKind::contiguous_owned>;
 
 } // namespace ripple
 

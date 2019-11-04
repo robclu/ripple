@@ -17,6 +17,7 @@
 #define RIPPLE_STORAGE_STORAGE_TRAITS_HPP
 
 #include "detail/storage_traits_impl_.hpp"
+#include "layout_traits.hpp"
 #include "storage_element_traits.hpp"
 
 namespace ripple {
@@ -115,7 +116,30 @@ template <typename... Ts> class OwnedStorage;
 /// \tparam Ts The types to create a storage view for.
 template <typename... Ts> class StridedStorageView;
 
+//==--- [interfaces] -------------------------------------------------------==//
+
+/// The AutoLayout class defines a static interface for classes which define the
+/// classes to layout, but which allow the allocation and layout of bulk data
+/// for the type to be automatically performed by the container. This is useful
+/// for types on which computationally intense processing will be performed so
+/// that the storage can be allocated and laid out optimally for the processing
+/// platform.
+/// \tparam Impl The implementation of the interface.
+template <typename Impl> struct AutoLayout;
+
+/// The StorageAccessor struct defines an interface for all classes which
+/// access storage using compile time indices, where the compile time indices
+/// are used to access the Ith type in the storage, and for storage where the
+/// Ith type is an array type, the Jth element.
+/// \tparam Impl The implementation of the interface.
+template <typename Impl> struct StorageAccessor;
+
 //==--- [traits] -----------------------------------------------------------==//
+
+/// Returns true if the type I implements the StridableLayout interface.
+/// \tparam T The type to determine if implements the interface.
+template <typename T, typename DT = std::decay_t<T>>
+static constexpr auto is_auto_layable_v = std::is_base_of_v<AutoLayout<DT>, DT>;
 
 /// Returns true if the type T is a StorageLayout type, otherwise returns false.
 /// \tparam T The type to determine if is a StoageLayout type.
@@ -144,15 +168,16 @@ static constexpr auto has_storage_layout_v =
 
 //==-- [aliases] -----------------------------------------------------------==//
 
-/// Defines an alias for storage which is laid out contiguously.
-using contiguous_layout_t = StorageLayout<LayoutKind::contiguous>;
-/// Defines an alias for storage which is laid out strided.
-using strided_layout_t    = StorageLayout<LayoutKind::strided>;
-
 /// Alias for storage element traits.
 /// \tparam T The type to get the traits for.
 template <typename T>
 using storage_element_traits_t = StorageElementTraits<std::decay_t<T>>;
+
+/// Alias for storage layout traits.
+/// \tparam T The type to get the traits for.
+template <typename T>
+using layout_traits_t = 
+  LayoutTraits<std::decay_t<T>, is_auto_layable_v<std::decay_t<T>>>;
 
 //==--- [enables] ----------------------------------------------------------==//
 

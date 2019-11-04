@@ -21,6 +21,7 @@
 #include "storage_traits.hpp"
 #include "storage_accessor.hpp"
 #include <ripple/multidim/offset_to.hpp>
+#include <ripple/utility/dim.hpp>
 #include <ripple/utility/type_traits.hpp>
 
 namespace ripple {

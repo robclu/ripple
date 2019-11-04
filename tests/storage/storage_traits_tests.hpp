@@ -16,21 +16,27 @@
 #ifndef RIPPLE_TESTS_STORAGE_STORAGE_TRAITS_TESTS_HPP
 #define RIPPLE_TESTS_STORAGE_STORAGE_TRAITS_TESTS_HPP
 
-#include <ripple/utility/number.hpp>
+#include <ripple/multidim/dynamic_multidim_space.hpp>
+#include <ripple/storage/auto_layout.hpp>
+#include <ripple/storage/storage_descriptor.hpp>
 #include <ripple/storage/storage_traits.hpp>
+#include <ripple/utility/number.hpp>
+#include <gtest/gtest.h>
 
 TEST(storage_storage_traits, can_determine_layout_types) {
   struct Test {};
 
-  auto b1 = ripple::is_storage_layout_v<ripple::strided_layout_t>;
-  auto b2 = ripple::is_storage_layout_v<ripple::contiguous_layout_t>;
+  auto b1 = ripple::is_storage_layout_v<ripple::strided_view_t>;
+  auto b2 = ripple::is_storage_layout_v<ripple::contiguous_view_t>;
   auto b3 = ripple::is_storage_layout_v<int>;
   auto b4 = ripple::is_storage_layout_v<Test>;
+  auto b5 = ripple::is_storage_layout_v<ripple::contiguous_owned_t>;
 
   EXPECT_TRUE(b1);
   EXPECT_TRUE(b2);
   EXPECT_FALSE(b3);
   EXPECT_FALSE(b4);
+  EXPECT_TRUE(b5);
 }
 
 // Usual struct:
@@ -39,18 +45,18 @@ struct Normal {};
 template <typename... Ts>
 struct Params {};
 // Struct with a default type.
-template <typename T, typename U = ripple::contiguous_layout_t>
+template <typename T, typename U = ripple::contiguous_view_t>
 struct Default {};
 // Struct with int.
 template <int I, typename... Ts>
 struct WithInt {};
 
 TEST(storage_storage_traits, can_determine_if_type_has_storage_layout) {
-  using mult_2_t   = Params<int, ripple::contiguous_layout_t>;
-  using mult_3_t   = Params<ripple::strided_layout_t, int, float>;
+  using mult_2_t   = Params<int, ripple::contiguous_view_t>;
+  using mult_3_t   = Params<ripple::strided_view_t, int, float>;
   using default_t  = Default<int>;
-  using with_int_t = WithInt<4, float, ripple::strided_layout_t>;
-  using int_wrap_t = Params<ripple::Int64<4>, float, ripple::strided_layout_t>;
+  using with_int_t = WithInt<4, float, ripple::strided_view_t>;
+  using int_wrap_t = Params<ripple::Int64<4>, float, ripple::strided_view_t>;
 
   auto b1 = ripple::has_storage_layout_v<Normal>;
   auto b2 = ripple::has_storage_layout_v<mult_2_t>;
@@ -66,5 +72,62 @@ TEST(storage_storage_traits, can_determine_if_type_has_storage_layout) {
   EXPECT_FALSE(b5);
   EXPECT_TRUE(b6);
 }
+
+//==--- [descritptor traits] -----------------------------------------------==//
+
+// Dummy class that implements the AutoLayout interface, which allows the
+// differently laid out storage types to be generated at compile time.
+template <typename T, typename S = ripple::contiguous_owned_t>
+struct Test : ripple::AutoLayout<Test<T, S>> {
+  using descriptor_t = ripple::StorageDescriptor<
+    S, ripple::StorageElement<int, 3>, float
+  >;
+};
+
+using test_strided_t = Test<int, ripple::strided_view_t>;
+using test_contig_t  = Test<int, ripple::contiguous_view_t>;
+using test_owned_t   = Test<int, ripple::contiguous_owned_t>;
+
+TEST(storage_storage_traits, can_get_strided_alloc_traits_for_auto_layout) {
+  // Get strided allocation traits:
+  using traits_t = 
+    typename ripple::layout_traits_t<test_contig_t>::
+    template alloc_traits_t<ripple::LayoutKind::strided_view>;
+
+  const auto ref_same = std::is_same_v<
+    typename traits_t::ref_t, test_strided_t
+  >; 
+  const auto ref_diff = std::is_same_v<
+    typename traits_t::ref_t, test_contig_t
+  >; 
+  const auto copy_same = std::is_same_v<
+    typename traits_t::copy_t, test_owned_t
+  >;
+
+  EXPECT_TRUE(ref_same);
+  EXPECT_FALSE(ref_diff);
+  EXPECT_TRUE(copy_same);
+}
+
+TEST(storage_storage_traits, can_get_contig_alloc_traits_for_auto_layout) {
+  // Get contiguous allocation traits:
+  using traits_t = 
+    typename ripple::layout_traits_t<test_contig_t>::
+    template alloc_traits_t<ripple::LayoutKind::contiguous_view>;
+
+  const auto ref_same = std::is_same_v<
+    typename traits_t::ref_t, test_contig_t
+  >; 
+  const auto ref_diff = std::is_same_v<
+    typename traits_t::ref_t, test_strided_t
+  >; 
+  const auto copy_same = std::is_same_v<
+    typename traits_t::copy_t, test_owned_t
+  >;
+
+  EXPECT_TRUE(ref_same);
+  EXPECT_FALSE(ref_diff);
+  EXPECT_TRUE(copy_same);
+};
 
 #endif // RIPPLE_TESTS_STORAGE_STORAGE_TRAITS_TESTS_HPP

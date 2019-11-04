@@ -17,6 +17,8 @@
 #ifndef RIPPLE_STORAGE_STORAGE_ACCESSOR_HPP
 #define RIPPLE_STORAGE_STORAGE_ACCESSOR_HPP
 
+#include "storage_traits.hpp"
+
 namespace ripple {
 
 /// The StorageAccessor struct defines an interface for all classes which
