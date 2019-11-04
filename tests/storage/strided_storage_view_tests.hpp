@@ -125,6 +125,46 @@ TEST(storage_strided_storage_view, static_allocation_size_mixed_types) {
   );
 }
 
+//--- [indexing] -----------------------------------------------------------==//
+
+TEST(storage_strided_storage_view, can_access_indexable_types_at_runtime) {
+  using e_3i_t      = ripple::StorageElement<int, 3>;
+  using storage_t   = ripple::StridedStorageView<e_3i_t, float>;
+  using allocator_t = typename storage_t::allocator_t;
+  using space_t     = ripple::DynamicMultidimSpace<1>;
+
+
+  constexpr auto elements = 100;
+  constexpr auto size     = allocator_t::allocation_size(elements);
+  const auto     space    = space_t{elements};
+  void*          data     = malloc(size);
+  auto           storage  = allocator_t::create(data, space);
+
+  for (const auto i : ripple::range(elements)) {
+    auto s = allocator_t::offset(storage, space, i);
+    s.get<0, 0>() = i;
+    s.get<0, 1>() = i + 1;
+    s.get<0, 2>() = i + 2;
+    s.get<1>() = static_cast<float>(i);
+  }
+
+  for (const auto i : ripple::range(elements)) {
+    const auto s = allocator_t::offset(storage, space, i);
+    EXPECT_EQ((s.get<0, 0>()), i);
+    EXPECT_EQ((s.get<0, 1>()), i + 1);
+    EXPECT_EQ((s.get<0, 2>()), i + 2);
+    EXPECT_EQ(s.get<1>(), static_cast<float>(i));
+
+    EXPECT_EQ((s.get<0, 0>()), s.get<0>(0));
+    EXPECT_EQ((s.get<0, 1>()), s.get<0>(1));
+    EXPECT_EQ((s.get<0, 2>()), s.get<0>(2));
+  }  
+  
+  free(data);
+}
+
+//==--- [access 1d] --------------------------------------------------------==//
+
 TEST(storage_strided_storage_view, can_create_and_access_simple_types_1d) {
   using storage_t   = ripple::StridedStorageView<int, float>;
   using allocator_t = typename storage_t::allocator_t;

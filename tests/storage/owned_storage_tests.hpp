@@ -46,6 +46,8 @@ TEST(storage_owned_storage, correct_size_storage_element_types) {
   EXPECT_EQ(sizeof(s), sizeof(int) * 4 + sizeof(float));
 }
 
+//==--- [padding] ----------------------------------------------------------==//
+
 TEST(storage_owned_storage, correct_size_with_padding) {
   using elem_2i_t = ripple::StorageElement<int, 4>;
   using storage_t = ripple::OwnedStorage<bool, elem_2i_t, float>;
@@ -54,6 +56,8 @@ TEST(storage_owned_storage, correct_size_with_padding) {
   // Padding required for alignment of ints after bool:
   EXPECT_EQ(sizeof(s), sizeof(bool) + 3 + sizeof(int) * 4 + sizeof(float));
 }
+
+//==--- [indexing] ---------------------------------------------------------==//
 
 TEST(storage_owned_storage, can_access_and_set_types) {
   using elem_2i_t = ripple::StorageElement<int, 4>;
@@ -71,6 +75,29 @@ TEST(storage_owned_storage, can_access_and_set_types) {
   EXPECT_EQ((s.get<0, 2>()), 3   );
   EXPECT_EQ((s.get<0, 3>()), 4   );
   EXPECT_EQ((s.get<1>())   , 7.7f);
+}
+
+TEST(storage_owned_storage, can_access_indexable_types_at_runtime) {
+  using elem_2i_t = ripple::StorageElement<int, 4>;
+  using storage_t = ripple::OwnedStorage<elem_2i_t, float>;
+  storage_t s;
+
+  s.get<0, 0>() = 1;
+  s.get<0, 1>() = 2;
+  s.get<0, 2>() = 3;
+  s.get<0, 3>() = 4;
+  s.get<1>()    = 7.7f;
+
+  EXPECT_EQ((s.get<0, 0>()), 1   );
+  EXPECT_EQ((s.get<0, 1>()), 2   );
+  EXPECT_EQ((s.get<0, 2>()), 3   );
+  EXPECT_EQ((s.get<0, 3>()), 4   );
+  EXPECT_EQ((s.get<1>())   , 7.7f);
+
+  EXPECT_EQ((s.get<0, 0>()), s.get<0>(0));
+  EXPECT_EQ((s.get<0, 1>()), s.get<0>(1));
+  EXPECT_EQ((s.get<0, 2>()), s.get<0>(2));
+  EXPECT_EQ((s.get<0, 3>()), s.get<0>(3));
 }
 
 #endif // RIPPLE_TESTS_OWNED_STORAGE_TESTS_HPP
