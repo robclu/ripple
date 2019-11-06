@@ -33,30 +33,28 @@ template <typename T, typename Space>
 class BlockIterator {
   //==--- [traits] ---------------------------------------------------------==//
 
+  /// Defines the type of the iterator.
+  using self_t          = BlockIterator;
   /// Defines the layout traits for the type t.
   using layout_traits_t = layout_traits_t<T>;
   /// Defines the value type for the iterator.
   using value_t         = typename layout_traits_t::value_t;
-  /// Defines a reference type for the iterator.
-  using ref_t           = value_t&;
-  /// Defines a const reference type for the iterator.
-  using const_ref_t     = const value_t&;
-  /// Defines a pointer type for the iterator.
-  using ptr_t           = value_t*;
-  /// Defines a const pointer type for the iterator.
-  using const_ptr_t     = const value_t*;
+  /// Defines the type to return for reference semantics.
+  using ref_t           = typename layout_traits_t::iter_ref_t;
+  /// Defines the type to return for constant reference semantics.
+  using const_ref_t     = typename layout_traits_t::iter_const_ref_t;
+  /// Defines the type to return for pointer semantics.
+  using ptr_t           = typename layout_traits_t::iter_ptr_t;
+  /// Defines the type to return for constant pointer semantics.
+  using const_ptr_t     = typename layout_traits_t::iter_const_ptr_t;
   /// Defines the type used when making a copy.
-  using copy_t          = typename layout_traits_t::copy_t;
+  using copy_t          = typename layout_traits_t::iter_copy_t;
+  /// Defines the type of the storage for the iterator.
+  using storage_t       = typename layout_traits_t::iter_storage_t;
+  /// Defines the type of the class to use to offset the storage.
+  using offsetter_t     = typename layout_traits_t::allocator_t;
   /// Defines the type of the space for the iterator.
   using space_t         = Space;
-
-  /// Defines the type of the storage. If the type is stridable, the access
-  /// types are actual types which behave like pointers, so we store the actual
-  /// type, however, for non strided types, they are normal types and therefore
-  /// a pointer to the type need to be stored.
-  using storage_t       =
-    std::conditional_t<layout_traits_t::is_stridable_layout, value_t, value_t*>;
-
   //==--- [constants] ------------------------------------------------------==//
 
   /// Defines an overload instance for overloading implementations based on the
@@ -69,14 +67,14 @@ class BlockIterator {
   /// Implementation of dereferencing for stridable types. Since the stridable
   /// type stores a pointer like wrapper, a reference to this type is returned.
   ripple_host_device auto deref_impl(stridable_overload_t) -> ref_t {
-    return _data_ptr;
+    return ref_t{_data_ptr};
   }
   /// Implementation of dereferencing for stridable types. Since the stridable
   /// type stores a pointer like wrapper, a constant reference to this type is
   /// returned.
   ripple_host_device auto deref_impl(stridable_overload_t) const
   -> const_ref_t {
-    return _data_ptr;
+    return const_ref_t{_data_ptr};
   }
 
   /// Implementation of dereferencing for non stridable types. Since for regular
@@ -99,14 +97,14 @@ class BlockIterator {
   /// pointer like wrapper is stored, rather than a pointer, so the address of
   /// the wrapping type needs to be returned.
   ripple_host_device auto access_impl(stridable_overload_t) -> ptr_t {
-    return &_data_ptr;
+    return ptr_t{value_t{_data_ptr}};
   }
   /// Implementation of accessing for stridable types. For a stirdable type, a
   /// pointer like wrapper is stored, rather than a pointer, so the constant
   /// address of the wrapping type needs to be returned.
   ripple_host_device auto access_impl(stridable_overload_t) const
   -> const_ptr_t {
-    return &_data_ptr;
+    return const_ptr_t{value_t{_data_ptr}};
   }
   
   /// Implementation of accessing for non stridable types. For a non stridable
@@ -123,9 +121,14 @@ class BlockIterator {
     return _data_ptr;
   }
 
+  /// Implementation of unwrapping functionality, to return the type the
+  /// iterator iterates over. This overload is for a stridable type.
   ripple_host_device auto unwrap_impl(stridable_overload_t) const -> copy_t {
     return copy_t{_data_ptr};
   }
+
+  /// Implementation of unwrapping functionality, to return the type the
+  /// iterator iterates over. This overload is for a non stridable type.
   ripple_host_device auto unwrap_impl(non_stridable_overload_t) const
   -> copy_t {
     return copy_t{*_data_ptr};
@@ -175,6 +178,30 @@ class BlockIterator {
   /// points.
   ripple_host_device auto unwrap() const -> copy_t {
     return unwrap_impl(is_stridable_overload_v);
+  }
+
+  //==--- [offsetting] -----------------------------------------------------==//
+
+  /// Offsets the iterator by \p amount positions in the block in the \p dim
+  /// dimension, returning a new iterator offset to the location.
+  /// \param  dim    The dimension to offset in
+  /// \param  amount The amount to offset by.
+  /// \tparam Dim    The type of the dimension specifier.
+  template <typename Dim>
+  ripple_host_device constexpr auto offset(Dim&& dim, int amount = 1) const 
+  -> self_t {
+    return self_t{offsetter_t::offset(_data_ptr, _space, dim, amount), _space};
+  }
+
+  /// Shifts the iterator by \p amount positions in the block in the \p dim
+  /// dimension, returning a new iterator offset to the location.
+  /// \param  dim    The dimension to offset in
+  /// \param  amount The amount to offset by.
+  /// \tparam Dim    The type of the dimension specifier.
+  template <typename Dim>
+  ripple_host_device constexpr auto shift(Dim&& dim, int amount = 1) const 
+  -> void {
+    offsetter_t::offset(_data_ptr, _space, dim, amount);
   }
 };
 

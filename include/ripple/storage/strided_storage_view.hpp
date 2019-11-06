@@ -80,6 +80,41 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
   /// memory requirement for the storage for a spicifc spatial configuration, as
   /// well as to access into the storage space.
   struct Allocator {
+   private:
+    /// Returns the scaling factor when offsetting in the y dimenion.
+    /// \param  dim The dimension to base the scaling on.
+    /// \tparam I   The index of the component to get the scaling factor from.
+    template <std::size_t I>
+    static constexpr auto offset_scale(Num<I>, dimx_t) {
+      return 1;
+    }
+
+    /// Returns the scaling factor when offsetting in the y dimenion.
+    /// \param  dim The dimension to base the scaling on.
+    /// \tparam I   The index of the component to get the scaling factor from.
+    template <std::size_t I>
+    static constexpr auto offset_scale(Num<I>, dimy_t dim) {
+      return components[I];
+    }
+
+    /// Returns the scaling factor when offsetting in the z dimenion.
+    /// \param  dim The dimension to base the scaling on.
+    /// \tparam I   The index of the component to get the scaling factor from.
+    template <std::size_t I>
+    static constexpr auto offset_scale(Num<I>, dimz_t dim) {
+      return components[I];
+    }
+  
+    /// Returns the scaling factor when offsetting with a dimension which is a
+    /// size type.
+    /// \param  dim The dimension to base the scaling on.
+    /// \tparam I   The index of the component to get the scaling factor from.
+    template <std::size_t I>
+    static constexpr auto offset_scale(Num<I>, std::size_t dim) -> std::size_t {
+      return dim == 0 ? 1 : components[I];
+    }
+
+   public:
     /// Returns the number of bytes required to allocate a total of \p elements
     /// of the types defined by Ts.
     ///
@@ -132,6 +167,63 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
         );
       });
       return r;
+    }
+
+    /// Offsets the storage by the amount specified by \p amount in the
+    /// dimension \p dim.
+    ///
+    /// This returns a new StridedStorage, offset to the new indices in the
+    /// space.
+    ///
+    /// \param  storage   The storage to offset.
+    /// \param  space     The space for which the storage is defined.
+    /// \param  dim       The dimension to offset in.
+    /// \tparam SpaceImpl The implementation of the spatial interface.
+    /// \tparam Dim       The type of the dimension.
+    template <typename SpaceImpl, typename Dim, diff_enable_t<Dim, int> = 0>
+    ripple_host_device static auto offset(
+      const storage_t&                storage,
+      const MultidimSpace<SpaceImpl>& space,
+      Dim&&                           dim,
+      int                             amount
+    ) -> storage_t {
+      storage_t r;
+      r._stride = storage._stride;
+      unrolled_for<num_types>([&] (auto i) {
+        using type_t = nth_element_value_t<i>;
+        r._data[i]   = static_cast<void*>(
+          static_cast<type_t*>(storage._data[i]) + 
+          amount * space.step(dim) * offset_scale(i, dim)
+        );
+      });
+      return r;
+    }
+
+    /// Shifts the storage by the amount specified by \p amount in the
+    /// dimension \p dim.
+    ///
+    /// This returns a new StridedStorage, offset to the new indices in the
+    /// space.
+    ///
+    /// \param  storage   The storage to offset.
+    /// \param  space     The space for which the storage is defined.
+    /// \param  dim       The dimension to offset in.
+    /// \tparam SpaceImpl The implementation of the spatial interface.
+    /// \tparam Dim       The type of the dimension.
+    template <typename SpaceImpl, typename Dim>
+    ripple_host_device static auto shift(
+      storage_t&                      storage,
+      const MultidimSpace<SpaceImpl>& space,
+      Dim&&                           dim,
+      int                             amount
+    ) -> void {
+      unrolled_for<num_types>([&] (auto i) {
+        using type_t     = nth_element_value_t<i>;
+        storage._data[i] = static_cast<void*>(
+          static_cast<type_t*>(storage._data[i]) + 
+          amount * space.step(dim) * offset_scale(i, dim)
+        );
+      });
     }
 
     /// Creates the storage, initializing a StridedStorage instance which has

@@ -168,6 +168,56 @@ class ContiguousStorageView :
       return r;
     }
 
+    /// Offsets the storage by the amount specified by \p amount in the
+    /// dimension \p dim.
+    ///
+    /// This returns a new ContiguousStorage, offset to the new indices in the
+    /// space.
+    ///
+    /// \param  storage   The storage to offset.
+    /// \param  space     The space for which the storage is defined.
+    /// \param  dim       The dimension to offset in.
+    /// \tparam SpaceImpl The implementation of the spatial interface.
+    /// \tparam Dim       The type of the dimension.
+    template <typename SpaceImpl, typename Dim, diff_enable_t<Dim, int> = 0>
+    ripple_host_device static auto offset(
+      const storage_t&                storage,
+      const MultidimSpace<SpaceImpl>& space,
+      Dim&&                           dim,
+      int                             amount
+    ) -> storage_t {
+      storage_t r;
+      r._data = static_cast<void*>(
+        static_cast<char*>(storage._data) + 
+        amount * storage_byte_size_v * space.step(dim)
+      );
+      return r;
+    }
+
+    /// Shifts the storage by the amount specified by \p amount in the
+    /// dimension \p dim.
+    ///
+    /// This returns a new ContiguousStorage, offset to the new indices in the
+    /// space.
+    ///
+    /// \param  storage   The storage to offset.
+    /// \param  space     The space for which the storage is defined.
+    /// \param  dim       The dimension to offset in.
+    /// \tparam SpaceImpl The implementation of the spatial interface.
+    /// \tparam Dim       The type of the dimension.
+    template <typename SpaceImpl, typename Dim>
+    ripple_host_device static auto shift(
+      storage_t&                      storage,
+      const MultidimSpace<SpaceImpl>& space,
+      Dim&&                           dim,
+      int                             amount
+    ) -> void {
+      storage._data = static_cast<void*>(
+        static_cast<char*>(storage._data) + 
+        amount * storage_byte_size_v * space.step(dim)
+      );
+    }
+
     /// Creates the storage, initializing a ContiguousStorage instance which has
     /// its data pointer pointing to the location defined by the indices \p is.
     /// which is pointed to by \p ptr. The memory space should have a size which

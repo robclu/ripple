@@ -91,11 +91,8 @@ struct DynamicMultidimSpace :
   /// \param  width The width of the array if the space is for soa or soa.
   /// \tparam Dim   The type of the dimension.
   template <typename Dim>
-  ripple_host_device auto step(Dim dim, std::size_t width = 1) const
-  -> std::size_t {
-    if (dim == 0) { return 1; }
-
-    std::size_t res = width;
+  ripple_host_device auto step(Dim dim) const -> std::size_t {
+    std::size_t res = 1;
     for (auto d : range(static_cast<std::size_t>(dim))) {
       res *= _sizes[d];
     }

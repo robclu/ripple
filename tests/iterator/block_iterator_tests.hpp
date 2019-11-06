@@ -51,6 +51,10 @@ struct BlockIterTest : ripple::StridableLayout<BlockIterTest<T, Layout>> {
   BlockIterTest(const BlockIterTest<T, FriendLayout>& other)
   : _storage{other._storage} {}
 
+  auto storage() const {
+    return _storage;
+  }
+
   //==--- [interface] ------------------------------------------------------==//
 
   auto flag() -> int& {
@@ -156,6 +160,300 @@ TEST(iterator_block_iterator, can_make_copies_contig_types) {
         EXPECT_EQ(bi.v(2)  , 30);
       }
     }
+  }
+}
+
+//==--- [offsetting] -------------------------------------------------------==//
+
+TEST(iterator_block_iterator, can_offset_iterator_strided) {
+  ripple::host_block_3d_t<iter_strided_t> b(20, 15, 11);
+
+  // Set the block data:
+  for (auto k : ripple::range(b.size(ripple::dim_z))) {
+    for (auto j : ripple::range(b.size(ripple::dim_y))) {
+      for (auto i : ripple::range(b.size(ripple::dim_x))) {
+        auto bi = b(i, j, k);
+
+        bi->flag() = -1;
+        bi->v(0)   = 10.0f;
+        bi->v(1)   = 20.0f;
+        bi->v(2)   = 30.0f;
+      }
+    }
+  }
+
+  auto iter = b(0, 0, 0);
+  for (auto k : ripple::range(b.size(ripple::dim_z))) {
+    for (auto j : ripple::range(b.size(ripple::dim_y))) {
+      for (auto i : ripple::range(b.size(ripple::dim_x))) {
+        const auto bi       = b(i, j, k);
+        const auto iter_off = iter
+          .offset(ripple::dim_x, i)
+          .offset(ripple::dim_y, j)
+          .offset(ripple::dim_z, k);
+
+        EXPECT_EQ(bi->flag(), -1   );
+        EXPECT_EQ(bi->v(0)  , 10.0f);
+        EXPECT_EQ(bi->v(1)  , 20.0f);
+        EXPECT_EQ(bi->v(2)  , 30.0f);
+
+
+        EXPECT_EQ(iter_off->flag(), -1   );
+        EXPECT_EQ(iter_off->v(0)  , 10.0f);
+        EXPECT_EQ(iter_off->v(1)  , 20.0f);
+        EXPECT_EQ(iter_off->v(2)  , 30.0f);
+
+        EXPECT_EQ((*iter_off).flag(), -1   );
+        EXPECT_EQ((*iter_off).v(0)  , 10.0f);
+        EXPECT_EQ((*iter_off).v(1)  , 20.0f);
+        EXPECT_EQ((*iter_off).v(2)  , 30.0f);
+      }
+    }
+  }
+}
+
+TEST(iterator_block_iterator, can_offst_iterator_contig) {
+  ripple::host_block_3d_t<iter_contig_t> b(20, 30, 15);
+  for (auto k : ripple::range(b.size(ripple::dim_z))) {
+    for (auto j : ripple::range(b.size(ripple::dim_y))) {
+      for (auto i : ripple::range(b.size(ripple::dim_x))) {
+        auto bi = b(i, j, k);
+
+        bi->flag() = -1;
+        bi->v(0)   = 10;
+        bi->v(1)   = 20;
+        bi->v(2)   = 30;
+      }
+    }
+  }
+  auto iter = b(0, 0, 0);
+  for (auto k : ripple::range(b.size(ripple::dim_z))) {
+    for (auto j : ripple::range(b.size(ripple::dim_y))) {
+      for (auto i : ripple::range(b.size(ripple::dim_x))) {
+        const auto bi       = b(i, j, k);
+        const auto iter_off = iter
+          .offset(ripple::dim_x, i)
+          .offset(ripple::dim_y, j)
+          .offset(ripple::dim_z, k);
+
+        EXPECT_EQ(bi->flag(), -1);
+        EXPECT_EQ(bi->v(0)  , 10);
+        EXPECT_EQ(bi->v(1)  , 20);
+        EXPECT_EQ(bi->v(2)  , 30);
+
+        EXPECT_EQ((*iter_off).flag(), -1);
+        EXPECT_EQ((*iter_off).v(0)  , 10);
+        EXPECT_EQ((*iter_off).v(1)  , 20);
+        EXPECT_EQ((*iter_off).v(2)  , 30);
+      }
+    }
+  }
+}
+
+struct NormalTest {
+  auto get() -> float& {
+    return f;
+  }
+  auto get() const -> float {
+    return f;
+  }
+  float f = 0.0f;
+};
+
+TEST(iterator_block_iterator, can_offset_iterator_normal) {
+  ripple::host_block_3d_t<NormalTest> b(20, 30, 15);
+  for (auto k : ripple::range(b.size(ripple::dim_z))) {
+    for (auto j : ripple::range(b.size(ripple::dim_y))) {
+      for (auto i : ripple::range(b.size(ripple::dim_x))) {
+        b(i, j, k)->get() = 22.5f;
+      }
+    }
+  }
+  auto iter = b(0, 0, 0);
+  for (auto k : ripple::range(b.size(ripple::dim_z))) {
+    for (auto j : ripple::range(b.size(ripple::dim_y))) {
+      for (auto i : ripple::range(b.size(ripple::dim_x))) {
+        const auto bi       = b(i, j, k);
+        const auto iter_off = iter
+          .offset(ripple::dim_x, i)
+          .offset(ripple::dim_y, j)
+          .offset(ripple::dim_z, k);
+
+        EXPECT_EQ(bi->get()        , 22.5f);
+        EXPECT_EQ(iter_off->get()  , 22.5f);
+        EXPECT_EQ((*iter_off).get(), 22.5f);
+      }
+    }
+  }
+}
+
+TEST(iterator_block_iterator, can_offset_iterator_primitive) {
+  ripple::host_block_3d_t<double> b(20, 30, 15);
+  for (auto k : ripple::range(b.size(ripple::dim_z))) {
+    for (auto j : ripple::range(b.size(ripple::dim_y))) {
+      for (auto i : ripple::range(b.size(ripple::dim_x))) {
+        *b(i, j, k) = 31.0;
+      }
+    }
+  }
+  auto iter = b(0, 0, 0);
+  for (auto k : ripple::range(b.size(ripple::dim_z))) {
+    for (auto j : ripple::range(b.size(ripple::dim_y))) {
+      for (auto i : ripple::range(b.size(ripple::dim_x))) {
+        const auto bi       = b(i, j, k);
+        const auto iter_off = iter
+          .offset(ripple::dim_x, i)
+          .offset(ripple::dim_y, j)
+          .offset(ripple::dim_z, k);
+
+        EXPECT_EQ(*bi      , 31.0);
+        EXPECT_EQ(*iter_off, 31.0);
+      }
+    }
+  }
+}
+
+//===--- [shifting] --------------------------------------------------------==//
+
+TEST(iterator_block_iterator, can_shift_iterator_strided) {
+  ripple::host_block_3d_t<iter_strided_t> b(29, 17, 11);
+
+  // Set the block data:
+  for (auto k : ripple::range(b.size(ripple::dim_z))) {
+    for (auto j : ripple::range(b.size(ripple::dim_y))) {
+      for (auto i : ripple::range(b.size(ripple::dim_x))) {
+        auto bi = b(i, j, k);
+
+        bi->flag() = -1;
+        bi->v(0)   = 10.0f;
+        bi->v(1)   = 20.0f;
+        bi->v(2)   = 30.0f;
+      }
+    }
+  }
+
+  auto iter = b(0, 0, 0);
+  for (auto k : ripple::range(b.size(ripple::dim_z))) {
+    for (auto j : ripple::range(b.size(ripple::dim_y))) {
+      for (auto i : ripple::range(b.size(ripple::dim_x))) {
+        const auto bi       = b(i, j, k);
+        iter.shift(ripple::dim_x, 1);
+
+        EXPECT_EQ(bi->flag(), -1   );
+        EXPECT_EQ(bi->v(0)  , 10.0f);
+        EXPECT_EQ(bi->v(1)  , 20.0f);
+        EXPECT_EQ(bi->v(2)  , 30.0f);
+
+        EXPECT_EQ(iter->flag(), -1   );
+        EXPECT_EQ(iter->v(0)  , 10.0f);
+        EXPECT_EQ(iter->v(1)  , 20.0f);
+        EXPECT_EQ(iter->v(2)  , 30.0f);
+
+        EXPECT_EQ((*iter).flag(), -1   );
+        EXPECT_EQ((*iter).v(0)  , 10.0f);
+        EXPECT_EQ((*iter).v(1)  , 20.0f);
+        EXPECT_EQ((*iter).v(2)  , 30.0f);
+      }
+      iter.shift(ripple::dim_x, -1 * b.size(ripple::dim_x));
+      iter.shift(ripple::dim_y, 1);
+    }
+    iter.shift(ripple::dim_z, 1);
+  }
+}
+
+TEST(iterator_block_iterator, can_shift_iterator_contig) {
+  ripple::host_block_3d_t<iter_contig_t> b(32, 41, 7);
+  for (auto k : ripple::range(b.size(ripple::dim_z))) {
+    for (auto j : ripple::range(b.size(ripple::dim_y))) {
+      for (auto i : ripple::range(b.size(ripple::dim_x))) {
+        auto bi = b(i, j, k);
+
+        bi->flag() = -1;
+        bi->v(0)   = 10;
+        bi->v(1)   = 20;
+        bi->v(2)   = 30;
+      }
+    }
+  }
+  auto iter = b(0, 0, 0);
+  for (auto k : ripple::range(b.size(ripple::dim_z))) {
+    for (auto j : ripple::range(b.size(ripple::dim_y))) {
+      for (auto i : ripple::range(b.size(ripple::dim_x))) {
+        const auto bi       = b(i, j, k);
+        iter.shift(ripple::dim_x, 1);
+
+        EXPECT_EQ(bi->flag(), -1);
+        EXPECT_EQ(bi->v(0)  , 10);
+        EXPECT_EQ(bi->v(1)  , 20);
+        EXPECT_EQ(bi->v(2)  , 30);
+
+        EXPECT_EQ(iter->flag(), -1);
+        EXPECT_EQ(iter->v(0)  , 10);
+        EXPECT_EQ(iter->v(1)  , 20);
+        EXPECT_EQ(iter->v(2)  , 30);
+
+        EXPECT_EQ((*iter).flag(), -1);
+        EXPECT_EQ((*iter).v(0)  , 10);
+        EXPECT_EQ((*iter).v(1)  , 20);
+        EXPECT_EQ((*iter).v(2)  , 30);
+      }
+      iter.shift(ripple::dim_x, -1 * b.size(ripple::dim_x));
+      iter.shift(ripple::dim_y, 1);
+    }
+    iter.shift(ripple::dim_z, 1);
+  }
+}
+
+TEST(iterator_block_iterator, can_shift_iterator_normal) {
+  ripple::host_block_3d_t<NormalTest> b(20, 30, 15);
+  for (auto k : ripple::range(b.size(ripple::dim_z))) {
+    for (auto j : ripple::range(b.size(ripple::dim_y))) {
+      for (auto i : ripple::range(b.size(ripple::dim_x))) {
+        b(i, j, k)->get() = 22.5f;
+      }
+    }
+  }
+  auto iter = b(0, 0, 0);
+  for (auto k : ripple::range(b.size(ripple::dim_z))) {
+    for (auto j : ripple::range(b.size(ripple::dim_y))) {
+      for (auto i : ripple::range(b.size(ripple::dim_x))) {
+        const auto bi       = b(i, j, k);
+        iter.shift(ripple::dim_x, 1);
+
+        EXPECT_EQ(bi->get()        , 22.5f);
+        EXPECT_EQ(iter->get()  , 22.5f);
+        EXPECT_EQ((*iter).get(), 22.5f);
+      }
+      iter.shift(ripple::dim_x, -1 * b.size(ripple::dim_x));
+      iter.shift(ripple::dim_y, 1);
+    }
+    iter.shift(ripple::dim_z, 1);
+  }
+}
+
+TEST(iterator_block_iterator, can_shift_iterator_primitive) {
+  ripple::host_block_3d_t<double> b(20, 30, 15);
+  for (auto k : ripple::range(b.size(ripple::dim_z))) {
+    for (auto j : ripple::range(b.size(ripple::dim_y))) {
+      for (auto i : ripple::range(b.size(ripple::dim_x))) {
+        *b(i, j, k) = 31.0;
+      }
+    }
+  }
+  auto iter = b(0, 0, 0);
+  for (auto k : ripple::range(b.size(ripple::dim_z))) {
+    for (auto j : ripple::range(b.size(ripple::dim_y))) {
+      for (auto i : ripple::range(b.size(ripple::dim_x))) {
+        const auto bi       = b(i, j, k);
+        iter.shift(ripple::dim_x, i);
+
+        EXPECT_EQ(*bi  , 31.0);
+        EXPECT_EQ(*iter, 31.0);
+      }
+      iter.shift(ripple::dim_x, -1 * b.size(ripple::dim_x));
+      iter.shift(ripple::dim_y, 1);
+    }
+    iter.shift(ripple::dim_z, 1);
   }
 }
 

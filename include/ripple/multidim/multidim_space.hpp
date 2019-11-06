@@ -68,15 +68,12 @@ struct MultidimSpace {
   }
 
   /// Returns the step size to from one element in \p dim to the next element in
-  /// \p dim. If the space is used for AOS or SOA storage with \p width elements
-  /// in each array, then this will additionally factor in the width.
+  /// \p dim.
   /// \param  dim   The dimension to get the step size in.
-  /// \param  width The width of the array if the space is for soa or soa.
   /// \tparam Dim   The type of the dimension.
   template <typename Dim>
-  ripple_host_device constexpr auto step(Dim&& dim, std::size_t width = 1) const
-  -> std::size_t {
-    return impl()->step(std::forward<Dim>(dim), width);
+  ripple_host_device constexpr auto step(Dim&& dim) const -> std::size_t {
+    return impl()->step(std::forward<Dim>(dim));
   }
 };
 

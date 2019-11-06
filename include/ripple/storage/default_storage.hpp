@@ -26,10 +26,8 @@ namespace ripple {
 /// \tparam T The type for allocation.
 template <typename T>
 class DefaultStorage {
-  /// The pointer to the storage.
-  using ptr_t     = T*;
   /// The type of the storage.
-  using storage_t = DefaultStorage<T>;
+  using storage_t = T*;
 
   /// Allocator for default storage. This can be used to determine the memory
   /// requirement for the storage for different spatial configurations, as well
@@ -76,10 +74,52 @@ class DefaultStorage {
       Indices&&...                    is
     ) -> storage_t {
       storage_t r;
-      r._data = static_cast<T*>(
-        storage._data + offset_to_aos(space, 1, std::forward<Indices>(is)...)
-      );
+      r = storage + offset_to_aos(space, 1, std::forward<Indices>(is)...);
       return r;
+    }
+
+    /// Offsets the storage by the amount specified by \p amount in the
+    /// dimension \p dim.
+    ///
+    /// This returns a new DefaultStorage, offset to the new indices in the
+    /// space.
+    ///
+    /// \param  storage   The storage to offset.
+    /// \param  space     The space for which the storage is defined.
+    /// \param  dim       The dimension to offset in.
+    /// \tparam SpaceImpl The implementation of the spatial interface.
+    /// \tparam Dim       The type of the dimension.
+    template <typename SpaceImpl, typename Dim, diff_enable_t<Dim, int> = 0>
+    ripple_host_device static auto offset(
+      const storage_t&                storage,
+      const MultidimSpace<SpaceImpl>& space,
+      Dim&&                           dim,
+      int                             amount
+    ) -> storage_t {
+      storage_t r;
+      r = storage + amount * space.step(dim);
+      return r;
+    }
+
+    /// Offsets the storage by the amount specified by \p amount in the
+    /// dimension \p dim.
+    ///
+    /// This returns a new StridedStorage, offset to the new indices in the
+    /// space.
+    ///
+    /// \param  storage   The storage to offset.
+    /// \param  space     The space for which the storage is defined.
+    /// \param  dim       The dimension to offset in.
+    /// \tparam SpaceImpl The implementation of the spatial interface.
+    /// \tparam Dim       The type of the dimension.
+    template <typename SpaceImpl, typename Dim>
+    ripple_host_device static auto shift(
+      storage_t&                      storage,
+      const MultidimSpace<SpaceImpl>& space,
+      Dim&&                           dim,
+      int                             amount
+    ) -> storage_t {
+      storage += amount * space.step(dim);
     }
 
     /// Creates the storage, initializing a T instance which points to \p ptr,
@@ -99,9 +139,9 @@ class DefaultStorage {
       void*                           ptr,
       const MultidimSpace<SpaceImpl>& space,
       Indices&&...                    is
-    ) -> T* {
+    ) -> storage_t {
       return static_cast<T*>(ptr) 
-              + offset_to_aos(space, 1, std::forward<Indices>(is)...);
+        + offset_to_aos(space, 1, std::forward<Indices>(is)...);
     }
 
     /// Creates the storage, initializing a T instance which points to \p ptr.
@@ -112,7 +152,7 @@ class DefaultStorage {
     ripple_host_device static auto create(
       void*                           ptr,
       const MultidimSpace<SpaceImpl>& space
-    ) -> T* {
+    ) -> storage_t {
       return static_cast<T*>(ptr);
     }
 

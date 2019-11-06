@@ -64,7 +64,7 @@ ripple_host_device auto offset_to_soa(
   std::size_t    offset      = ids[0];
   unrolled_for<num_indices - 1>([&] (auto i) {
     constexpr auto dim = static_cast<std::size_t>(i) + 1;
-    offset += ids[dim] * space.step(dim, element_size); 
+    offset += ids[dim] * element_size * space.step(dim); 
   });
   return offset;
 }
@@ -144,7 +144,7 @@ ripple_host_device auto offset_to_aos(
   std::size_t    offset      = ids[0] * element_size;
   unrolled_for<num_indices - 1>([&] (auto i) {
     constexpr auto dim = static_cast<std::size_t>(i) + 1;
-    offset += ids[dim] * space.step(dim, element_size); 
+    offset += ids[dim] * element_size * space.step(dim);
   });
   return offset;
 }

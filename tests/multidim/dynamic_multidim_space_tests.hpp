@@ -29,13 +29,12 @@ TEST(multidim_dynamic_multidim_space, size_and_step_1d) {
   EXPECT_EQ(space.step(ripple::dim_x), size_t{1} );
 
   // Test that for dim 0 SOA makes no difference:
-  EXPECT_EQ(space.step(ripple::dim_x, 3), std::size_t{1});
+  EXPECT_EQ(space.step(ripple::dim_x), std::size_t{1});
 
   space[0] = 30;
-  EXPECT_EQ(space.size()                , size_t{30});
-  EXPECT_EQ(space.size(ripple::dim_x)   , size_t{30});
-  EXPECT_EQ(space.step(ripple::dim_x)   , size_t{1} );
-  EXPECT_EQ(space.step(ripple::dim_x, 3), size_t{1} );
+  EXPECT_EQ(space.size()             , size_t{30});
+  EXPECT_EQ(space.size(ripple::dim_x), size_t{30});
+  EXPECT_EQ(space.step(ripple::dim_x), size_t{1} );
 }
 
 TEST(multidim_dynamic_multidim_space, size_and_step_2d) {
@@ -48,12 +47,6 @@ TEST(multidim_dynamic_multidim_space, size_and_step_2d) {
   EXPECT_EQ(space.step(ripple::dim_x), size_t{1}  );
   EXPECT_EQ(space.step(ripple::dim_y), size_t{10} );
 
-  // Test step sizes for SOA:
-  EXPECT_EQ(space.step(ripple::dim_x, 3), size_t{1} );
-  EXPECT_EQ(space.step(ripple::dim_y, 3), size_t{30});
-  EXPECT_EQ(space.step(ripple::dim_x, 4), size_t{1} );
-  EXPECT_EQ(space.step(ripple::dim_y, 4), size_t{40});
-
   space[0] = 5;
   space[1] = 10;
   EXPECT_EQ(space.size()             , size_t{50});
@@ -61,12 +54,6 @@ TEST(multidim_dynamic_multidim_space, size_and_step_2d) {
   EXPECT_EQ(space.size(ripple::dim_y), size_t{10});
   EXPECT_EQ(space.step(ripple::dim_x), size_t{1} );
   EXPECT_EQ(space.step(ripple::dim_y), size_t{5} );
-
-  // Test step sizes for SOA:
-  EXPECT_EQ(space.step(ripple::dim_x, 2), size_t{1} );
-  EXPECT_EQ(space.step(ripple::dim_y, 2), size_t{10});
-  EXPECT_EQ(space.step(ripple::dim_x, 5), size_t{1} );
-  EXPECT_EQ(space.step(ripple::dim_y, 5), size_t{25});
 }
 
 TEST(multidim_dynamic_multidim_space, size_and_step_3d) {
@@ -81,14 +68,6 @@ TEST(multidim_dynamic_multidim_space, size_and_step_3d) {
   EXPECT_EQ(space.step(ripple::dim_y), size_t{10}  );
   EXPECT_EQ(space.step(ripple::dim_z), size_t{200} );
 
-  // Test step sizes for SOA:
-  EXPECT_EQ(space.step(ripple::dim_x, 3), size_t{1}  );
-  EXPECT_EQ(space.step(ripple::dim_y, 3), size_t{30} );
-  EXPECT_EQ(space.step(ripple::dim_z, 3), size_t{600});
-  EXPECT_EQ(space.step(ripple::dim_x, 4), size_t{1}  );
-  EXPECT_EQ(space.step(ripple::dim_y, 4), size_t{40} );
-  EXPECT_EQ(space.step(ripple::dim_z, 4), size_t{800});
-
   space[0] = 5;
   space[1] = 10;
   space[2] = 2;
@@ -99,14 +78,6 @@ TEST(multidim_dynamic_multidim_space, size_and_step_3d) {
   EXPECT_EQ(space.step(ripple::dim_x), size_t{1}  );
   EXPECT_EQ(space.step(ripple::dim_y), size_t{5}  );
   EXPECT_EQ(space.step(ripple::dim_z), size_t{50} );
-
-  // Test step sizes for SOA:
-  EXPECT_EQ(space.step(ripple::dim_x, 2), size_t{1}  );
-  EXPECT_EQ(space.step(ripple::dim_y, 2), size_t{10} );
-  EXPECT_EQ(space.step(ripple::dim_z, 2), size_t{100});
-  EXPECT_EQ(space.step(ripple::dim_x, 7), size_t{1}  );
-  EXPECT_EQ(space.step(ripple::dim_y, 7), size_t{35} );
-  EXPECT_EQ(space.step(ripple::dim_z, 7), size_t{350});
 }
 
 TEST(multidim_dynamic_multidim_space, padding_always_zero) {

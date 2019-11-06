@@ -119,6 +119,14 @@ using all_arithmetic_size_enable_t = std::enable_if_t<
   Size == sizeof...(Values) && all_arithmetic_v<Values...>, int
 >;
 
+/// Defines a valid type when the type T is not the same as the type U, when
+/// they are both decayed.
+/// \tparam T The first type for the comparison.
+/// \tparam U The second type for the comparison.
+template <typename T, typename U>
+using diff_enable_t =
+ std::enable_if_t<!std::is_same_v<std::decay_t<T>, std::decay_t<U>>, int>;
+
 /// Defines a valid type when the number of elements in the variadic pack
 /// matches the size defined by Size.
 /// \tparam Size   The size that the pack must be.
