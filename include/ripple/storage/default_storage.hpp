@@ -17,7 +17,7 @@
 #ifndef RIPPLE_STORAGE_DEFAULT_STORAGE_HPP
 #define RIPPLE_STORAGE_DEFAULT_STORAGE_HPP
 
-#include <ripple/multidim/multidim_space.hpp>
+#include <ripple/multidim/offset_to.hpp>
 #include <ripple/utility/portability.hpp>
 
 namespace ripple {
@@ -66,7 +66,10 @@ class DefaultStorage {
     /// \param  is        The indices to offset to in the space.
     /// \tparam SpaceImpl The implementation of the spatial interface.
     /// \tparam Indices   The types of the indices.
-    template <typename SpaceImpl, typename... Indices>
+    template <
+      typename    SpaceImpl,
+      typename... Indices  , variadic_ge_enable_t<1, Indices...> = 0
+    >
     ripple_host_device static auto offset(
       const storage_t&                storage,
       const MultidimSpace<SpaceImpl>& space  ,
@@ -79,22 +82,41 @@ class DefaultStorage {
       return r;
     }
 
+    /// Creates the storage, initializing a T instance which points to \p ptr,
+    /// and which is then offset the the location in memory defined by the \p
+    /// is. The memory space should have enough space allocated to offset to the
+    /// given location.
+    /// \param  ptr       A pointer to the beginning of the memory space.
+    /// \param  space     The multidimensional space which defines the domain.
+    /// \param  is        The indices of the element to create.
+    /// \tparam SpaceImpl The implementation of the spatial interface.
+    /// \tparam Indices   The indices to offset into to create the element.
+    template <
+      typename    SpaceImpl,
+      typename... Indices  , variadic_ge_enable_t<1, Indices...> = 0
+    >
+    ripple_host_device static auto create(
+      void*                           ptr,
+      const MultidimSpace<SpaceImpl>& space,
+      Indices&&...                    is
+    ) -> T* {
+      return static_cast<T*>(ptr) 
+              + offset_to_aos(space, 1, std::forward<Indices>(is)...);
+    }
+
     /// Creates the storage, initializing a T instance which points to \p ptr.
     /// \param  ptr       A pointer to the beginning of the memory space.
     /// \param  space     The multidimensional space which defines the domain.
     /// \tparam SpaceImpl The implementation of the spatial interface.
     template <typename SpaceImpl>
     ripple_host_device static auto create(
-      void* ptr,
+      void*                           ptr,
       const MultidimSpace<SpaceImpl>& space
-    ) -> T {
-      storage_t r;
-      r._data = ptr;
-      return r;
+    ) -> T* {
+      return static_cast<T*>(ptr);
     }
-  };
 
-  ptr_t _data = nullptr; //!< Pointer for the data.
+  };
 
  public:
   /// Defines the type of the allocator for the storage.

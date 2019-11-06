@@ -33,11 +33,6 @@ template <typename Impl> struct Array;
 /// \tparam Size  The size of the vector.
 template <typename T, std::size_t S> struct Vec;
 
-/// The SoaVec class implements the Array interface to store data in AoS format.
-/// \tparam T     The type of the data for the vector.
-/// \tparam Size  The size of the vector.
-template <typename T, std::size_t S> struct SoaVec;
-
 //==--- [traits] -----------------------------------------------------------==//
 
 /// The ArrayTraits structs defines traits that all classes which implement the
@@ -46,18 +41,14 @@ template <typename T, std::size_t S> struct SoaVec;
 template <typename T>
 struct ArrayTraits {
   /// The value type for the array.
-  using value_t   = std::decay_t<T>;
+  using value_t       = std::decay_t<T>;
   /// The type used to store data of type T in an array.
-  using storage_t = value_t*;
+  using storage_t     = Vec<T, 1>;
   /// Defines the type of the array.
-  using array_t   = Vec<T, 1>;
+  using array_t       = Vec<T, 1>;
   
   /// Returns the number of elements in the array.  
   static constexpr auto size            = 1;
-  /// Returns that the array data must not be stored as SOA on the CPU.
-  static constexpr auto is_soa_cpu      = false;
-  /// Returns that the array data must not cannot be stored as SOA on the GPU.
-  static constexpr auto is_soa_gpu      = false;
   /// Returns the number of bytes required to allocate an element.  
   static constexpr auto elem_alloc_size = sizeof(value_t);
 };
@@ -69,40 +60,14 @@ template <typename T, std::size_t Size>
 struct ArrayTraits<Vec<T, Size>> {
   /// The value type stored in the vector.
   using value_t   = std::decay_t<T>;
-  /// The type to use to store the vector data in an array.
+  /// The type to use to store the vector data in an array when not SoA.
   using storage_t = value_t;
   /// The array type.
   using array_t   = Vec<T, Size>;
 
   /// Returns the number of elements in the array.  
   static constexpr auto size            = Size;
-  /// Returns that the array data must not be stored as SOA on the CPU.
-  static constexpr auto is_soa_cpu      = false;
-  /// Returns that the array data must not be stored as SOA on the GPU.
-  static constexpr auto is_soa_gpu      = false;
   /// Returns the number of bytes required to allocate a Vec element.  
-  static constexpr auto elem_alloc_size = sizeof(value_t) * size;
-};
-
-/// Specialization of the ArrayTraits class for the SoaVec class.
-/// \tparam T    The type of the data for the vec.
-/// \tparam Size The size  of the vector.
-template <typename T, std::size_t Size>
-struct ArrayTraits<SoaVec<T, Size>> {
-  /// The value type of the vector.
-  using value_t   = std::decay_t<T>;
-  /// The type to use to store the vector data.
-  using storage_t = value_t*;
-  /// The type of the array implemenation.
-  using array_t   = SoaVec<T, Size>;
-
-  /// Returns the number of elements in the array.  
-  static constexpr auto size            = Size;
-  /// Returns that the array data can be stored as SOA on the CPU.
-  static constexpr auto is_soa_cpu      = true;
-  /// Returns that the array data can be storaed as SOA on the GPU.
-  static constexpr auto is_soa_gpu      = true;
-  /// Returns the number of bytes required to allocate a Soa element.
   static constexpr auto elem_alloc_size = sizeof(value_t) * size;
 };
 
@@ -116,19 +81,15 @@ private:
   /// Defines the type of the implementation traits.
   using impl_traits_t = ArrayTraits<Impl>;
 public:
-  /// Defines the type stored in the arrap.
-  using raw_t     = typename impl_traits_t::raw_t;
   /// Defines the value type of the array.
   using value_t   = typename impl_traits_t::value_t;
   /// Defines the storage type for the array.
   using storage_t = typename impl_traits_t::storage_t;
-    
+  /// The array type.
+  using array_t   = typename impl_traits_t::array_t;
+
   /// Returns the number of elements in the array.  
   static constexpr auto size            = impl_traits_t::size;
-  /// Returns true if the array is an SOA version for the CPU.
-  static constexpr auto is_soa_cpu      = impl_traits_t::is_soa_cpu;
-  /// Returns true if the array is an SOA version for the CPU.
-  static constexpr auto is_soa_gpu      = impl_traits_t::is_soa_gpu;
   /// Returns the number of bytes required to allocate an element.
   static constexpr auto elem_alloc_size = impl_traits_t::elem_alloc_size;
 };
