@@ -45,6 +45,8 @@ class BlockIterator {
   using ptr_t           = value_t*;
   /// Defines a const pointer type for the iterator.
   using const_ptr_t     = const value_t*;
+  /// Defines the type used when making a copy.
+  using copy_t          = typename layout_traits_t::copy_t;
   /// Defines the type of the space for the iterator.
   using space_t         = Space;
 
@@ -121,6 +123,14 @@ class BlockIterator {
     return _data_ptr;
   }
 
+  ripple_host_device auto unwrap_impl(stridable_overload_t) const -> copy_t {
+    return copy_t{_data_ptr};
+  }
+  ripple_host_device auto unwrap_impl(non_stridable_overload_t) const
+  -> copy_t {
+    return copy_t{*_data_ptr};
+  }
+
   storage_t _data_ptr;  //!< A pointer to the data.
   space_t   _space;     //!< The space over which to iterate.
 
@@ -159,6 +169,12 @@ class BlockIterator {
   /// object for the type T.
   ripple_host_device auto operator->() const -> const_ptr_t {
     return access_impl(is_stridable_overload_v);
+  }
+
+  /// Unwraps the iterator, returning a copy of the data to which the iterator
+  /// points.
+  ripple_host_device auto unwrap() const -> copy_t {
+    return unwrap_impl(is_stridable_overload_v);
   }
 };
 

@@ -198,6 +198,45 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
   /// Defines the type of the allocator for creating StridedStorage.
   using allocator_t = Allocator;
 
+  //==--- [construction] ---------------------------------------------------==//
+
+  /// Default constructor for the strided storage.
+  ripple_host_device StridedStorageView() = default;
+
+  /// Constructor to set the strided storage from another StorageAccessor.
+  /// \param  from The accessor to copy the data from.
+  /// \tparam Impl The implementation of the StorageAccessor.
+  template <typename Impl>
+  ripple_host_device StridedStorageView(const StorageAccessor<Impl>& from) {
+    unrolled_for<num_types>([&] (auto i) {
+      constexpr std::size_t type_idx = i;
+      constexpr auto        values   = 
+        element_components_v<nth_element_t<type_idx, Ts...>>;
+
+      copy_from_to<type_idx, values>(from, *this);
+    });
+  }
+
+  //==--- [operator overload] ----------------------------------------------==//
+  
+  /// Overload of operator= to set the data for the StridedStorageView from
+  /// another StorageAccessor. This returns the StridedStorageView with the
+  /// data copied from \p from.
+  /// \param  from The accessor to copy the data from.
+  /// \tparam Impl The implementation of the StorageAccessor.
+  template <typename Impl>
+  ripple_host_device auto operator=(const StorageAccessor<Impl>& from)
+  -> storage_t& {
+    unrolled_for<num_types>([&] (auto i) {
+      constexpr std::size_t type_idx = i;
+      constexpr auto        values   = 
+        element_components_v<nth_element_t<type_idx, Ts...>>;
+
+      copy_from_to<type_idx, values>(from, *this);
+    });
+    return *this;
+  }
+
   //==--- [interface] ------------------------------------------------------==//
 
   /// Returns the number of components in the Ith type being stored. For
@@ -301,26 +340,6 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
   >
   auto get(std::size_t j) const -> const element_value_t<T>& {
     return static_cast<const element_value_t<T>*>(_data[I])[j * _stride];
-  }
-
-  //==--- [operator overload] ----------------------------------------------==//
-  
-  /// Overload of operator= to set the data for the StridedStorageView from
-  /// another StorageAccessor. This returns the StridedStorageView with the
-  /// data copied from \p from.
-  /// \param  from The accessor to copy the data from.
-  /// \tparam Impl The implementation of the StorageAccessor.
-  template <typename Impl>
-  ripple_host_device auto operator=(const StorageAccessor<Impl>& from)
-  -> storage_t& {
-    unrolled_for<num_types>([&] (auto i) {
-      constexpr std::size_t type_idx = i;
-      constexpr auto        values   = 
-        element_components_v<nth_element_t<type_idx, Ts...>>;
-
-      copy_from_to<type_idx, values>(from, *this);
-    });
-    return *this;
   }
 };
 

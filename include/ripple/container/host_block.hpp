@@ -16,6 +16,7 @@
 #ifndef RIPPLE_CONTAINER_HOST_BLOCK_HPP
 #define RIPPLE_CONTAINER_HOST_BLOCK_HPP
 
+#include "block_traits.hpp"
 #include <ripple/iterator/block_iterator.hpp>
 #include <ripple/multidim/dynamic_multidim_space.hpp>
 #include <ripple/storage/storage_traits.hpp>

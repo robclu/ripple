@@ -1,4 +1,4 @@
-//==--- ripple/tests/multidim.cpp -------------------------- -*- C++ -*- ---==//
+//==--- ripple/tests/iterator/iterator_tests.hpp ----------- -*- C++ -*- ---==//
 //            
 //                                Ripple
 // 
@@ -8,15 +8,9 @@
 //
 //==------------------------------------------------------------------------==//
 //
-/// \file  multidim.cpp
-/// \brief This file contains the main function for multidim tests.
+/// \file  iterator_tests.hpp
+/// \brief This file contains all iterator tests.
 //
 //==------------------------------------------------------------------------==//
 
-#include "multidim/multidim_tests.hpp"
-#include <gtest/gtest.h>
-
-int main(int argc, char** argv) {
-  ::testing::InitGoogleTest(&argc, argv);
-  return RUN_ALL_TESTS();
-}
+#include "block_iterator_tests.hpp"

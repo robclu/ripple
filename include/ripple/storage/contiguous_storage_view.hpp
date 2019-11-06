@@ -224,6 +224,25 @@ class ContiguousStorageView :
   /// Defines the type of the allocator for creating StridedStorage.
   using allocator_t = Allocator;
 
+  //==--- [construction] ---------------------------------------------------==//
+
+  /// Default constructor for the contguous storage.
+  ripple_host_device ContiguousStorageView() = default;
+
+  /// Constructor to set the contiguous storage from another StorageAccessor.
+  /// \param  from The accessor to copy the data from.
+  /// \tparam Impl The implementation of the StorageAccessor.
+  template <typename Impl>
+  ripple_host_device ContiguousStorageView(const StorageAccessor<Impl>& from) {
+    unrolled_for<num_types>([&] (auto i) {
+      constexpr std::size_t type_idx = i;
+      constexpr auto        values   = 
+        element_components_v<nth_element_t<type_idx, Ts...>>;
+
+      copy_from_to<type_idx, values>(from, *this);
+    });
+  }
+
   //==--- [operator overload] ----------------------------------------------==//
 
   /// Overload of operator= to set the data for the ContiguousStorageView from

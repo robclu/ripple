@@ -1,4 +1,4 @@
-//==--- ripple/tests/multidim.cpp -------------------------- -*- C++ -*- ---==//
+//==--- ripple/tests/iterator.cpp -------------------------- -*- C++ -*- ---==//
 //            
 //                                Ripple
 // 
@@ -8,12 +8,12 @@
 //
 //==------------------------------------------------------------------------==//
 //
-/// \file  multidim.cpp
-/// \brief This file contains the main function for multidim tests.
+/// \file  iterator.cpp
+/// \brief This file contains the main function for iterator tests.
 //
 //==------------------------------------------------------------------------==//
 
-#include "multidim/multidim_tests.hpp"
+#include "iterator/iterator_tests.hpp"
 #include <gtest/gtest.h>
 
 int main(int argc, char** argv) {

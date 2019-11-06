@@ -23,7 +23,6 @@
 #include <ripple/utility/dim.hpp>
 #include <gtest/gtest.h>
 
-
 //==--- [creation] ---------------------------------------------------------==//
 
 TEST(container_block, can_create_block_1d) {

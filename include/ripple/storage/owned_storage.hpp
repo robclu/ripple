@@ -115,6 +115,44 @@ class OwnedStorage : public StorageAccessor<OwnedStorage<Ts...>> {
   buffer_t _data[storage_byte_size_v]; //!< Buffer for the storage.
 
  public:
+  //==--- [construction] ---------------------------------------------------==//
+
+  /// Default constructor for the storage.
+  ripple_host_device OwnedStorage() = default;
+
+  /// Constructor to set the owned storage from another StorageAccessor.
+  /// \param  from The accessor to copy the data from.
+  /// \tparam Impl The implementation of the StorageAccessor.
+  template <typename Impl>
+  ripple_host_device OwnedStorage(const StorageAccessor<Impl>& from) {
+    unrolled_for<num_types>([&] (auto i) {
+      constexpr std::size_t type_idx = i;
+      constexpr auto        values   = 
+        element_components_v<nth_element_t<type_idx, Ts...>>;
+
+      copy_from_to<type_idx, values>(from, *this);
+    });
+  }
+
+  //==--- [operator overload] ----------------------------------------------==//
+
+  /// Overload of operator= to set the data for the owned storage from another
+  /// StorageAccessor. This returns the owned storage with the data copied from
+  /// \p from.
+  /// \param  from The accessor to copy the data from.
+  /// \tparam Impl The implementation of the StorageAccessor.
+  template <typename Impl>
+  ripple_host_device auto operator=(const StorageAccessor<Impl>& from)
+  -> storage_t& {
+    unrolled_for<num_types>([&] (auto i) {
+      constexpr std::size_t type_idx = i;
+      constexpr auto        values   = 
+        element_components_v<nth_element_t<type_idx, Ts...>>;
+
+      copy_from_to<type_idx, values>(from, *this);
+    });
+    return *this;
+  }
 
   //==--- [interface] ------------------------------------------------------==//
 
@@ -237,27 +275,6 @@ class OwnedStorage : public StorageAccessor<OwnedStorage<Ts...>> {
     return reinterpret_cast<const element_value_t<T>*>(
       static_cast<const char*>(_data) + offset
     )[j];
-  }
-
-
-  //==--- [operator overload] ----------------------------------------------==//
-
-  /// Overload of operator= to set the data for the owned storage from another
-  /// StorageAccessor. This returns the owned storage with the data copied from
-  /// \p from.
-  /// \param  from The accessor to copy the data from.
-  /// \tparam Impl The implementation of the StorageAccessor.
-  template <typename Impl>
-  ripple_host_device auto operator=(const StorageAccessor<Impl>& from)
-  -> storage_t& {
-    unrolled_for<num_types>([&] (auto i) {
-      constexpr std::size_t type_idx = i;
-      constexpr auto        values   = 
-        element_components_v<nth_element_t<type_idx, Ts...>>;
-
-      copy_from_to<type_idx, values>(from, *this);
-    });
-    return *this;
   }
 };
 
