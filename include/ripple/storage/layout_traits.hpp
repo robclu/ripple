@@ -24,90 +24,65 @@
 namespace ripple {
 
 /// Defines layout traits for the the T. This is the default implementation for
-/// the case that the type T does not implement the AutoLayout interface.
-/// \tparam T             The type to get the layout traits for.
-/// \tparam IsAutoLayable If the type is an AutoLayout type.
-template <typename T, bool IsAutoLayable>
+/// the case that the type T does not implement the StridableLayout interface.
+/// \tparam T                 The type to get the layout traits for.
+/// \tparam IsStridableLayout If the type is an StridableLayout type.
+template <typename T, bool IsStridableLayable>
 struct LayoutTraits {
- private:
-  /// Defines the value type.
-  using value_t = std::decay_t<T>;
+  //==--- [constants] ------------------------------------------------------==//
 
-  /// The AllocationTraits struct defines traits which can be used to determine
-  /// properties of the allocation for the type T, for a speicific layout
-  /// Layout.
-  /// \tparam Layout The kind of the layout for the allocation.
-  template <LayoutKind Layout>
-  struct AllocationTraits { 
-    /// Defines the type of the allocator for the data.
-    using allocator_t = typename DefaultStorage<T>::allocator_t;
-    /// Defines the type for a reference to the data. This is the view type.
-    using ref_t       = value_t&;
-    /// Defines the type for a constant reference to the data.
-    using const_ref_t = const value_t&;
-    /// Defines the type for a copy.
-    using copy_t      = value_t;
-  };
+  /// Defines if the type T is a StridableLayout type.
+  static constexpr bool is_stridable_layout = false;
+  /// Defines the type of the layout for T.
+  static constexpr auto layout_kind         = LayoutKind::none;
+    /// True if the Layout is a LayoutKind::strided_view.
+  static constexpr auto is_strided_view     = false;
 
- public:
-  /// Defines the type of the allocation traits for type T, with layout Layout.
-  /// \tparam Layout The kind of the layout for the allocation traits. For
-  ///         normal (types which do not implement the AutoLayout interface),
-  ///         the Layout parameter does not have an effect.
-  template <LayoutKind Layout>
-  using alloc_traits_t = AllocationTraits<Layout>;
+  //==--- [traits] ---------------------------------------------------------==//
+
+  /// Defines the value type of T.
+  using value_t     = std::decay_t<T>;
+  /// Defines the type for making a copy of T.
+  using copy_t      = value_t;
+  /// Defines the type of the allocator for type T.
+  using allocator_t = typename DefaultStorage<T>::allocator_t;
 };
 
-/// Defines layout traits for the the T when the type is auto layable.
+/// Defines layout traits for the the T when the type implements the
+/// StridableLayout interface.
 /// \tparam T The type to get the layout traits for.
 template <typename T>
 struct LayoutTraits<T, true> {
  private:
-  /// Defines the type T with strided storage.
-  using strided_t    = typename detail::StorageAs<strided_view_t, T>::type;
-  /// Defines the type T with contiguous storage.
-  using contiguous_t = typename detail::StorageAs<contiguous_view_t, T>::type;
-  /// Defines the type T with owned storage.
-  using owned_t      = typename detail::StorageAs<contiguous_owned_t, T>::type;
   /// Defines the type of the descriptor for the type T.
-  using descriptor_t = typename T::descriptor_t;
-
-  /// The AllocationTraits struct defines traits which can be used to determine
-  /// properties of the allocation for the type T, for a speicific layout
-  /// Layout.
-  /// \tparam Layout The kind of the layout for the allocation.
-  template <LayoutKind Layout>
-  struct AllocationTraits {
-   private:
-    /// Defines the type for allocation. For AutoLayout types, this will always
-    /// use a view type, either strided or contiguous.
-    using allocation_t = std::conditional_t<
-      Layout == LayoutKind::strided_view,
-      typename descriptor_t::strided_view_storage_t,
-      typename descriptor_t::contig_view_storage_t
-    >;
-
-   public:
-    /// Defines the type of the allocator for allocating type T types.
-    using allocator_t = typename allocation_t::allocator_t;
-    /// Defines the type to use when making a copy of T.
-    using copy_t      = owned_t;
-    /// Defines a type for a reference to type T.
-    using ref_t       = std::conditional_t<
-      Layout == LayoutKind::strided_view, strided_t, contiguous_t
-    >;
-    /// Definesa a type for a constant reference to type T.
-    using const_ref_t = std::conditional_t<
-      Layout == LayoutKind::strided_view,
-      const strided_t, const contiguous_t
-    >;
-  };
+  using descriptor_t   = typename T::descriptor_t;
+  /// Defines the type for strided view storage.
+  using strided_view_t = typename descriptor_t::strided_view_storage_t;
+    /// Defines the type for contiguous view storage.
+  using contig_view_t  = typename descriptor_t::contig_view_storage_t;
 
  public:
-  /// Defines the type of the allocation traits for type T.
-  /// \tparam Layout The layout for the allocation traits.
-  template <LayoutKind Layout>
-  using alloc_traits_t = AllocationTraits<Layout>;
+  //==--- [constants] ------------------------------------------------------==//
+
+  /// Defines if the type T is a StridableLayout type.
+  static constexpr bool is_stridable_layout = true;
+  /// Defines the type of the layout for T.
+  static constexpr auto layout_kind         =
+    detail::StorageLayoutKind<T>::value;
+    /// True if the Layout is a LayoutKind::strided_view.
+  static constexpr auto is_strided_view     =
+    layout_kind == LayoutKind::strided_view;
+
+  //==--- [traits] ---------------------------------------------------------==//
+
+  /// Defines the value type for the layout.
+  using value_t     = std::decay_t<T>;
+  /// Defines the type T with owned storage for copying.
+  using copy_t      = typename detail::StorageAs<contiguous_owned_t, T>::type;
+  /// Defines the type of the allocator for type T.
+  using allocator_t = typename std::conditional_t<
+    is_strided_view, strided_view_t, contig_view_t
+  >::allocator_t;
 };
 
 } // namespace ripple

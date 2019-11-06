@@ -29,9 +29,11 @@ template <typename... Ts>
 class ContiguousStorageView : 
     public StorageAccessor<ContiguousStorageView<Ts...>> {
   /// Defines the data type for the buffer.
-  using ptr_t     = void*;
+  using ptr_t           = void*;
   /// Defines the type of the storage.
-  using storage_t = ContiguousStorageView<Ts...>;
+  using storage_t       = ContiguousStorageView<Ts...>;
+  /// Defines the type of owned storage.
+  using owned_storage_t = OwnedStorage<Ts...>;
 
   //==--- [traits] ---------------------------------------------------------==//
 
@@ -148,7 +150,10 @@ class ContiguousStorageView :
     /// \param  is        The indices to offset to in the space.
     /// \tparam SpaceImpl The implementation of the spatial interface.
     /// \tparam Indices   The types of the indices.
-    template <typename SpaceImpl, typename... Indices>
+    template <
+      typename SpaceImpl,
+      typename... Indices, variadic_ge_enable_t<1, Indices...> = 0
+    >
     ripple_host_device static auto offset(
       const storage_t&                storage,
       const MultidimSpace<SpaceImpl>& space  ,
@@ -164,16 +169,43 @@ class ContiguousStorageView :
     }
 
     /// Creates the storage, initializing a ContiguousStorage instance which has
-    /// its data pointer pointing to the correc location in the memory space
+    /// its data pointer pointing to the location defined by the indices \p is.
     /// which is pointed to by \p ptr. The memory space should have a size which
     /// is returned by the `allocation_size()` method, otherwise this may index
     /// into undefined memory.
     /// \param  ptr       A pointer to the beginning of the memory space.
     /// \param  space     The multidimensional space which defines the domain.
+    /// \param  is        The indices of the element in the space to create.
     /// \tparam SpaceImpl The implementation of the spatial interface.
-    template <typename SpaceImpl>
+    /// \tparam Indices   The type of the indices.
+    template <
+      typename    SpaceImpl,
+      typename... Indices  , variadic_ge_enable_t<1, Indices...> = 0
+    > 
     ripple_host_device static auto create(
-      void* ptr,
+      void*                           ptr  ,
+      const MultidimSpace<SpaceImpl>& space,
+      Indices&&...                    is
+    ) -> storage_t {
+      storage_t r;
+      r._data = static_cast<void*>(
+        static_cast<char*>(ptr) + offset_to_aos(
+          space, storage_byte_size_v, std::forward<Indices>(is)...  
+        )  
+      );
+      return r;
+    }
+
+    /// Creates the storage, initializing a ContiguousStorage instance which has
+    /// its data pointer pointing to the \p ptr. The memory space should have a
+    /// size which is returned by the `allocation_size()` method, otherwise this
+    /// may index into undefined memory.
+    /// \param  ptr       A pointer to the beginning of the memory space.
+    /// \param  space     The multidimensional space which defines the domain.
+    /// \tparam SpaceImpl The implementation of the spatial interface.
+    template <typename SpaceImpl> 
+    ripple_host_device static auto create(
+      void*                           ptr,
       const MultidimSpace<SpaceImpl>& space
     ) -> storage_t {
       storage_t r;
@@ -191,6 +223,26 @@ class ContiguousStorageView :
 
   /// Defines the type of the allocator for creating StridedStorage.
   using allocator_t = Allocator;
+
+  //==--- [operator overload] ----------------------------------------------==//
+
+  /// Overload of operator= to set the data for the ContiguousStorageView from
+  /// another StorageAccessor. This returns the contiguousStorageView with the
+  /// data copied from \p from.
+  /// \param  from The accessor to copy the data from.
+  /// \tparam Impl The implementation of the StorageAccessor.
+  template <typename Impl>
+  ripple_host_device auto operator=(const StorageAccessor<Impl>& from)
+  -> storage_t& {
+    unrolled_for<num_types>([&] (auto i) {
+      constexpr std::size_t type_idx = i;
+      constexpr auto        values   = 
+        element_components_v<nth_element_t<type_idx, Ts...>>;
+
+      copy_from_to<type_idx, values>(from, *this);
+    });
+    return *this;
+  }
 
   //==--- [interface] ------------------------------------------------------==//
 
@@ -313,26 +365,6 @@ class ContiguousStorageView :
     return reinterpret_cast<const element_value_t<T>*>(
       static_cast<const char*>(_data) + offset
     )[j];
-  }
-
-  //==--- [operator overload] ----------------------------------------------==//
-
-  /// Overload of operator= to set the data for the ContiguousStorageView from
-  /// another StorageAccessor. This returns the contiguousStorageView with the
-  /// data copied from \p from.
-  /// \param  from The accessor to copy the data from.
-  /// \tparam Impl The implementation of the StorageAccessor.
-  template <typename Impl>
-  ripple_host_device auto operator=(const StorageAccessor<Impl>& from)
-  -> storage_t& {
-    unrolled_for<num_types>([&] (auto i) {
-      constexpr std::size_t type_idx = i;
-      constexpr auto        values   = 
-        element_components_v<nth_element_t<type_idx, Ts...>>;
-
-      copy_from_to<type_idx, values>(from, *this);
-    });
-    return *this;
   }
 };
 

@@ -173,6 +173,57 @@ struct StorageAs<Storage, T<Ts...>> {
   using type = typename MakeStorageType<type_list_t>::type;
 };
 
+//==--- [storage layout kind] ----------------------------------------------==//
+
+namespace {
+/// Declaration of a class to determine the type of a StorageLayout from a list
+/// of types.
+/// \tparam Ts The types to find the StorageLayout type in.
+template <typename... Ts>
+struct StorageLayoutKindImpl;
+
+/// Specialization for the case that there are multiple types in the type list.
+/// \tparam T   The type to compare.
+/// \tparam Ts  The rest of the types to compare.
+template <typename T, typename... Ts>
+struct StorageLayoutKindImpl<T, Ts...> {
+  /// Defines the type of the StorageLayout type.
+  using type = std::conditional_t<IsStorageLayout<T>::value,
+    T, typename StorageLayoutKindImpl<Ts...>::type
+  >;
+
+  /// Defines the value of the storage layout kind.
+  static constexpr auto value = type::value;
+};
+
+/// Specialization for the base case where there are no types to compare. This
+/// just returns that there is no storage layout specified.
+template <>
+struct StorageLayoutKindImpl<> {
+  /// Defines the type of the storage layout.
+  using type = StorageLayout<LayoutKind::none>;
+};
+
+} // namespace annon
+
+/// Determines the LayoutKind for the type T, if it has a StorageLayout<> as
+/// one of its template parameters.
+/// \tparam T The type to find the storage layout kind for.
+template <typename T>
+struct StorageLayoutKind {
+  /// The value of the LayoutKind for type T.
+  static constexpr auto value = StorageLayoutKindImpl<T>::value;
+};
+
+/// Specialization for the case that T is a class with template parameters.
+/// \tparam T The type to find the LayoutKind of.
+/// \tparam Ts The template types for T.
+template <template <typename...> typename T, typename... Ts>
+struct StorageLayoutKind<T<Ts...>> {
+  /// Defines the value of the LayoutKind for T.
+  static constexpr auto value = StorageLayoutKindImpl<Ts...>::value;
+};
+
 }} // namespace ripple::detail
 
 #endif // RIPPLE_STORAGE_STORAGE_TRAITS_HPP

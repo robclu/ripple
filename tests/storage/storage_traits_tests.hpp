@@ -17,9 +17,9 @@
 #define RIPPLE_TESTS_STORAGE_STORAGE_TRAITS_TESTS_HPP
 
 #include <ripple/multidim/dynamic_multidim_space.hpp>
-#include <ripple/storage/auto_layout.hpp>
 #include <ripple/storage/storage_descriptor.hpp>
 #include <ripple/storage/storage_traits.hpp>
+#include <ripple/storage/stridable_layout.hpp>
 #include <ripple/utility/number.hpp>
 #include <gtest/gtest.h>
 
@@ -73,12 +73,37 @@ TEST(storage_storage_traits, can_determine_if_type_has_storage_layout) {
   EXPECT_TRUE(b6);
 }
 
+TEST(storage_storage_traits, can_determine_storage_layout_type) {
+  using mult_2_t   = Params<int, ripple::contiguous_view_t>;
+  using mult_3_t   = Params<ripple::strided_view_t, int, float>;
+  using default_t  = Default<int>;
+  using with_int_t = WithInt<4, float, ripple::strided_view_t>;
+  using int_wrap_t = Params<ripple::Int64<4>, ripple::contiguous_owned_t>;
+
+  auto norm_none         = ripple::storage_layout_kind_v<Normal>;
+  auto mult_contig_view  = ripple::storage_layout_kind_v<mult_2_t>;
+  auto mult_strided_view = ripple::storage_layout_kind_v<mult_3_t>;
+  auto def_contig_view   = ripple::storage_layout_kind_v<default_t>;
+  auto ct_int_owned      = ripple::storage_layout_kind_v<int_wrap_t>;
+
+  // Can't determine the type when there are non template type parameters.
+  auto int_none = ripple::storage_layout_kind_v<with_int_t>;
+
+
+  EXPECT_TRUE(norm_none         == ripple::LayoutKind::none            );
+  EXPECT_TRUE(mult_contig_view  == ripple::LayoutKind::contiguous_view );
+  EXPECT_TRUE(mult_strided_view == ripple::LayoutKind::strided_view    );
+  EXPECT_TRUE(def_contig_view   == ripple::LayoutKind::contiguous_view );
+  EXPECT_TRUE(int_none          == ripple::LayoutKind::none            );
+  EXPECT_TRUE(ct_int_owned      == ripple::LayoutKind::contiguous_owned);
+}
+
 //==--- [descritptor traits] -----------------------------------------------==//
 
 // Dummy class that implements the AutoLayout interface, which allows the
 // differently laid out storage types to be generated at compile time.
 template <typename T, typename S = ripple::contiguous_owned_t>
-struct Test : ripple::AutoLayout<Test<T, S>> {
+struct Test : ripple::StridableLayout<Test<T, S>> {
   using descriptor_t = ripple::StorageDescriptor<
     S, ripple::StorageElement<int, 3>, float
   >;
@@ -87,8 +112,8 @@ struct Test : ripple::AutoLayout<Test<T, S>> {
 using test_strided_t = Test<int, ripple::strided_view_t>;
 using test_contig_t  = Test<int, ripple::contiguous_view_t>;
 using test_owned_t   = Test<int, ripple::contiguous_owned_t>;
-
-TEST(storage_storage_traits, can_get_strided_alloc_traits_for_auto_layout) {
+/*
+TEST(storage_storage_traits, can_get_alloc_traits_for_stridable_layout){
   // Get strided allocation traits:
   using traits_t = 
     typename ripple::layout_traits_t<test_contig_t>::
@@ -129,5 +154,6 @@ TEST(storage_storage_traits, can_get_contig_alloc_traits_for_auto_layout) {
   EXPECT_FALSE(ref_diff);
   EXPECT_TRUE(copy_same);
 };
+*/
 
 #endif // RIPPLE_TESTS_STORAGE_STORAGE_TRAITS_TESTS_HPP

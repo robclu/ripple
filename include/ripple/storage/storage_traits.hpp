@@ -118,14 +118,16 @@ template <typename... Ts> class StridedStorageView;
 
 //==--- [interfaces] -------------------------------------------------------==//
 
-/// The AutoLayout class defines a static interface for classes which define the
-/// classes to layout, but which allow the allocation and layout of bulk data
-/// for the type to be automatically performed by the container. This is useful
-/// for types on which computationally intense processing will be performed so
-/// that the storage can be allocated and laid out optimally for the processing
-/// platform.
+/// The StridableLayout class defines a static interface for classes to implement
+/// for which is might be beneficial to allocate the class data in a strided
+/// layout -- essentially any class which might be used for processing on either
+/// the GPU or using AVX -- which is more performant.
+///
+/// Inheriting this static interface will allow any containers which can use the
+/// strided allocators to do so where appropriate.
+///
 /// \tparam Impl The implementation of the interface.
-template <typename Impl> struct AutoLayout;
+template <typename Impl> struct StridableLayout;
 
 /// The StorageAccessor struct defines an interface for all classes which
 /// access storage using compile time indices, where the compile time indices
@@ -138,8 +140,9 @@ template <typename Impl> struct StorageAccessor;
 
 /// Returns true if the type I implements the StridableLayout interface.
 /// \tparam T The type to determine if implements the interface.
-template <typename T, typename DT = std::decay_t<T>>
-static constexpr auto is_auto_layable_v = std::is_base_of_v<AutoLayout<DT>, DT>;
+template <typename T>
+static constexpr auto is_stridable_layout_v 
+  = std::is_base_of_v<StridableLayout<std::decay_t<T>>, std::decay_t<T>>;
 
 /// Returns true if the type T is a StorageLayout type, otherwise returns false.
 /// \tparam T The type to determine if is a StoageLayout type.
@@ -164,7 +167,13 @@ static constexpr auto is_storage_element_v =
 /// \tparam T The type to determine if has a storage layout parameter.
 template <typename T>
 static constexpr auto has_storage_layout_v =
-  detail::HasStorageLayout<std::decay_t<T>>::value;    
+  detail::HasStorageLayout<std::decay_t<T>>::value;
+
+/// Returns the type of storage layout for the type T, if is has one.
+/// \tparam T The type to get the storage layout for.
+template <typename T>
+static constexpr auto storage_layout_kind_v =
+  detail::StorageLayoutKind<T>::value;
 
 //==-- [aliases] -----------------------------------------------------------==//
 
@@ -177,7 +186,7 @@ using storage_element_traits_t = StorageElementTraits<std::decay_t<T>>;
 /// \tparam T The type to get the traits for.
 template <typename T>
 using layout_traits_t = 
-  LayoutTraits<std::decay_t<T>, is_auto_layable_v<std::decay_t<T>>>;
+  LayoutTraits<std::decay_t<T>, is_stridable_layout_v<std::decay_t<T>>>;
 
 //==--- [enables] ----------------------------------------------------------==//
 
@@ -193,6 +202,18 @@ using storage_element_enable_t = std::enable_if_t<is_storage_element_v<T>, int>;
 template <typename T>
 using non_storage_element_enable_t =
   std::enable_if_t<!is_storage_element_v<T>, int>;
+
+//==--- [overloading] ------------------------------------------------------==//
+
+/// The StridableOverloader struct can be used to overload functions for types
+/// which are Stridable.
+/// \tparam IsStridable If the class is stridable.
+template <bool IsStridable> struct StridableOverloader {};
+
+/// Defines an alias for an overload type for stridable types.
+using stridable_overload_t     = StridableOverloader<true>;
+/// Defines an alias for an overload type for non stridable types.
+using non_stridable_overload_t = StridableOverloader<false>;
 
 } // namespace ripple
 

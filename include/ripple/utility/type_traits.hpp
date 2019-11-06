@@ -127,6 +127,22 @@ template <std::size_t Size, typename... Values>
 using variadic_size_enable_t =
   std::enable_if_t<Size == sizeof...(Values), int>;
 
+/// Defines a valid type when the number of elements in the variadic pack
+/// is greater than or equal to  the size defined by Size.
+/// \tparam Size   The size that the pack must be.
+/// \tparam Values The values in the pack.
+template <std::size_t Size, typename... Values>
+using variadic_ge_enable_t =
+  std::enable_if_t<(sizeof...(Values) >= Size), int>;
+
+/// Defines a valid type when the number of elements in the variadic pack
+/// is less than the size defined by Size.
+/// \tparam Size   The size that the pack must be.
+/// \tparam Values The values in the pack.
+template <std::size_t Size, typename... Values>
+using variadic_lt_enable_t =
+  std::enable_if_t<(sizeof...(Values) < Size), int>;
+
 /// Defines a valid type when the type T is a pointer type.
 /// \tparam T The type to base the enable on.
 template <typename T>

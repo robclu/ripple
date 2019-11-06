@@ -101,34 +101,6 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
       return storage_byte_size_v * Elements;
     }
 
-    /// Creates the storage, initializing a StridedStorage instance which has
-    /// its data pointers pointing to the correc locations in the memory space
-    /// which is pointed to by \p ptr. The memory space should have a size which
-    /// is returned by the `allocation_size()` method, otherwise this may index
-    /// into undefined memory.
-    /// \param  ptr       A pointer to the beginning of the memory space.
-    /// \param  space     The multidimensional space which defines the domain.
-    /// \tparam SpaceImpl The implementation of the spatial interface.
-    template <typename SpaceImpl>
-    ripple_host_device static auto create(
-      void* ptr,
-      const MultidimSpace<SpaceImpl>& space
-    ) -> storage_t {
-      storage_t r;
-      r._stride       = space.size(dim_x);
-      r._data[0]      = ptr;
-      const auto size = space.size();
-      auto offset     = 0;
-      unrolled_for<num_types - 1>([&] (auto prev_index) {
-        constexpr auto curr_index = prev_index + 1;
-        offset += components[prev_index] * size * byte_sizes[prev_index];
-        r._data[curr_index] = static_cast<void*>(
-          static_cast<char*>(ptr) + offset
-        );
-      });
-      return r;
-    }
-
     /// Offsets the storage by the amount specified by the indices \p is. This
     /// assumes that the data into which the storage can offset is valid, which
     /// is the case if the storage was created through the allocator.
@@ -141,10 +113,13 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
     /// \param  is        The indices to offset to in the space.
     /// \tparam SpaceImpl The implementation of the spatial interface.
     /// \tparam Indices   The types of the indices.
-    template <typename SpaceImpl, typename... Indices>
+    template <
+      typename    SpaceImpl,
+      typename... Indices  , variadic_ge_enable_t<1, Indices...> = 0
+    >
     ripple_host_device static auto offset(
       const storage_t&                storage,
-      const MultidimSpace<SpaceImpl>& space  ,
+      const MultidimSpace<SpaceImpl>& space,
       Indices&&...                    is
     ) -> storage_t {
       storage_t r;
@@ -154,6 +129,58 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
         r._data[i]   = static_cast<void*>(
           static_cast<type_t*>(storage._data[i]) + 
           offset_to_soa(space, components[i], std::forward<Indices>(is)...)
+        );
+      });
+      return r;
+    }
+
+    /// Creates the storage, initializing a StridedStorage instance which has
+    /// its data pointers pointing to the \p ptr, and then offset by the \p is
+    /// amounts in the memory space. The memory space should have a size which
+    /// is returned by the `allocation_size()` method, otherwise this may index
+    /// into undefined memory. This returns a new StridedStorage, offset to the
+    /// new indices in the space.
+    ///
+    /// \param  ptr       A pointer to the data to create the storage in.
+    /// \param  space     The space for which the storage is defined.
+    /// \param  is        The indices to offset to in the space.
+    /// \tparam SpaceImpl The implementation of the spatial interface.
+    /// \tparam Indices   The types of the indices.
+    template <
+      typename    SpaceImpl,
+      typename... Indices  , variadic_ge_enable_t<1, Indices...> = 0
+    >
+    ripple_host_device static auto create(
+      void*                           ptr    ,
+      const MultidimSpace<SpaceImpl>& space  ,
+      Indices&&...                    is
+    ) -> storage_t {
+      storage_t r = create(ptr, space);
+      return offset(r, space, is...);
+    }
+
+    /// Creates the storage, initializing a StridedStorage instance which has
+    /// its data pointers pointing to the \p ptr. The memory space should have
+    /// a size which is returned by the `allocation_size()` method, otherwise
+    /// this may index into undefined memory.
+    /// \param  ptr       A pointer to the beginning of the memory space.
+    /// \param  space     The multidimensional space which defines the domain.
+    /// \tparam SpaceImpl The implementation of the spatial interface.
+    template <typename SpaceImpl>
+    ripple_host_device static auto create(
+      void*                           ptr,
+      const MultidimSpace<SpaceImpl>& space
+    ) -> storage_t {
+      storage_t r;
+      r._stride       = space.size(dim_x);
+      r._data[0]      = ptr;
+      const auto size = space.size();
+      auto offset     = 0;
+      unrolled_for<num_types - 1>([&] (auto prev_index) {
+        constexpr auto curr_index = prev_index + 1;
+        offset += components[prev_index] * size * byte_sizes[prev_index];
+        r._data[curr_index] = static_cast<void*>(
+          static_cast<char*>(ptr) + offset
         );
       });
       return r;

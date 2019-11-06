@@ -16,13 +16,16 @@
 #ifndef RIPPLE_STORAGE_STORAGE_LAYOUT_HPP
 #define RIPPLE_STORAGE_STORAGE_LAYOUT_HPP
 
+#include <ripple/utility/portability.hpp>
+
 namespace ripple {
 
 /// The LayoutKind enum defines the possible types of layouts.
 enum class LayoutKind : uint8_t {
 	contiguous_view  = 0,   //!< Contiguous, viewed (not owned) layout.
   strided_view     = 1,   //!< Strided, viewed (not owned) layout.
-  contiguous_owned = 2    //!< Contiguous, owned layout.
+  contiguous_owned = 2,   //!< Contiguous, owned layout.
+  none             = 3    //!< No storage layout specified.
 };
 
 /// The StorageLayout struct defines a type which represents the the layout for
@@ -40,6 +43,8 @@ using contiguous_view_t  = StorageLayout<LayoutKind::contiguous_view>;
 using strided_view_t     = StorageLayout<LayoutKind::strided_view>;
 /// Alias for a type which defines contiguous owned storage.
 using contiguous_owned_t = StorageLayout<LayoutKind::contiguous_owned>;
+/// Alias for a type which defines no storage layout.
+using no_layout_t        = StorageLayout<LayoutKind::none>;    
 
 } // namespace ripple
 
