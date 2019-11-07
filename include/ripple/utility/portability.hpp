@@ -17,8 +17,10 @@
 #define RIPPLE_UTILITY_PORTABILITY_HPP
 
 #include <cstddef>
+#include <cstdio>
 #include <cuda.h>
 #include <cuda_runtime.h>
+#include <exception>
 
 /// Definitions for host, device, and host device functions
 /// if CUDA is supported.
@@ -72,5 +74,36 @@
   /// Defines the max depth for compile time unrolling.
   #define ripple_max_unroll_depth MAX_UNROLL_DEPTH
 #endif
+
+namespace ripple {
+namespace cuda   {
+namespace debug  {
+
+/// Checks if a cuda error code was a success, and if not, prints the error
+/// message.
+/// \param[in] err_code The cuda error code.
+/// \param[in] file     The file where the error was detected.
+/// \param[in] line     The line in the file where the error was detected.
+inline auto check_cuda_error(cudaError_t err_code, const char* file, int line)
+-> void {
+  if (err_code != cudaSuccess) {
+    printf("\nCuda Error : %s\nFile       : %s\nLine       :  %i\n\n",
+      cudaGetErrorString(err_code), file, line
+    );
+    std::terminate();
+  }
+}
+
+}}} // namespace ripple::cuda::debug
+
+#if defined(NDEBUG)
+  /// Defines a macro for checking a cuda error in release mode. This does not
+  /// do anything so that there is no performance cost in release mode.
+  #define ripple_check_cuda_result(result) (result)
+#else
+  /// Defines a macro to check the result of cuda calls in debug mode.
+  #define ripple_check_cuda_result(result) \
+    ::ripple::cuda::debug::check_cuda_error((result), __FILE__, __LINE__)
+#endif // NDEBUG
 
 #endif // RIPPLE_UTILITY_PORTABILITY_HPP

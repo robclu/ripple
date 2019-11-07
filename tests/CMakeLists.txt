@@ -41,7 +41,6 @@ ripple_library_directories(${CUDA_LIB_DIRS} ${GTEST_LIB_DIRS})
 
 #==--- Tests ----------------------------------------------------------------==#
 
-
 ripple_add_executable(
   all_tests ${ripple_SOURCE_DIR}/tests/all.cpp
 )
@@ -65,6 +64,15 @@ ripple_add_executable(
 )
 ripple_target_link_libraries(
   container_tests ${GTEST_BOTH_LIBRARIES}
+)
+
+#==--------------------------------------------------------------------------==#
+
+ripple_add_executable(
+  container_device_tests ${ripple_SOURCE_DIR}/tests/container_device.cu
+)
+ripple_target_link_libraries(
+  container_device_tests ${GTEST_BOTH_LIBRARIES} ${CUDA_LIBRARIES}
 )
 
 #==--------------------------------------------------------------------------==#
