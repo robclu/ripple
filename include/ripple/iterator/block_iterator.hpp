@@ -203,6 +203,21 @@ class BlockIterator {
   -> void {
     offsetter_t::offset(_data_ptr, _space, dim, amount);
   }
+
+  //==--- [size] -----------------------------------------------------------==//
+
+  /// Returns the total size of the iteration space.
+  ripple_host_device constexpr auto size() const -> std::size_t {
+    return _space.size();
+  }
+
+  /// Returns the size of the iteration space in the given dimension \p dim.
+  /// \param  dim The dimension to get the size of.
+  /// \tparam Dim The type of the dimension specifier.
+  template <typename Dim>
+  ripple_host_device constexpr auto size(Dim&& dim) const -> std::size_t {
+    return _space.size(std::forward<Dim>(dim));
+  }
 };
 
 } // namespace ripple

@@ -76,6 +76,22 @@ struct BlockIterTest : ripple::StridableLayout<BlockIterTest<T, Layout>> {
 
 using iter_strided_t = BlockIterTest<float>;
 
+//==--- [size] -------------------------------------------------------------==//
+
+TEST(iterator_block_iterator, can_get_correct_sizes) {
+  using space_t = ripple::DynamicMultidimSpace<3>;
+  using iter_t  = ripple::BlockIterator<float, space_t>;
+
+  float f = 1.0f;
+  space_t space(10, 11, 12);
+  iter_t  iter(&f, space);
+
+  EXPECT_EQ(iter.size()             , std::size_t{10 * 11 * 12});
+  EXPECT_EQ(iter.size(ripple::dim_x), std::size_t{10});
+  EXPECT_EQ(iter.size(ripple::dim_y), std::size_t{11});
+  EXPECT_EQ(iter.size(ripple::dim_z), std::size_t{12});
+}
+
 //==--- [copy] -------------------------------------------------------------==//
 
 TEST(iterator_block_iterator, can_make_copies_non_stridable_types) {
