@@ -63,6 +63,32 @@ struct DynamicMultidimSpace :
   }
 
   //==--- [size] -----------------------------------------------------------==//
+  
+  /// Returns the number of dimensions for the space.
+  ripple_host_device auto dimensions() const -> std::size_t {
+    return dims;
+  }
+
+  /// Resizes each of the dimensions specified by the \p size. If 
+  /// sizeof...(Sizes) < dims, the first sizeof...(Sizes) dimensions are
+  /// resized. If sizeof...(Sizes) > dims, then a compile time error is
+  /// generated.
+  /// \param  sizes The sizes to resize the dimensions to.
+  /// \tparam Sizes The type of the sizes.
+  template <typename... Sizes>
+  ripple_host_device auto resize(Sizes&&... sizes) -> void {
+    constexpr auto num_sizes = sizeof...(Sizes);
+    static_assert(
+      num_sizes <= dims, "Too many sizes specified in resize."
+    );
+
+    const std::size_t dim_sizes[num_sizes] = { 
+      static_cast<std::size_t>(sizes)...
+    };
+    unrolled_for<num_sizes>([&] (auto i) {
+      _sizes[i] = dim_sizes[i];
+    });
+  }
 
   /// Returns the size of the \p dim dimension.
   /// \param  dim  The dimension to get the size of.

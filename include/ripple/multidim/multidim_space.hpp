@@ -61,6 +61,11 @@ struct MultidimSpace {
     return impl()->size(std::forward<Dim>(dim));
   }
 
+  /// Returns the number of dimensions in the space.
+  ripple_host_device constexpr auto dimensions() const -> std::size_t {
+    return impl()->dimensions();
+  }
+
   /// Returns the total size of the N dimensional space i.e the total number of
   /// elements in the space. This is the product sum of the dimension sizes.
   ripple_host_device constexpr auto size() const -> std::size_t {
@@ -74,6 +79,17 @@ struct MultidimSpace {
   template <typename Dim>
   ripple_host_device constexpr auto step(Dim&& dim) const -> std::size_t {
     return impl()->step(std::forward<Dim>(dim));
+  }
+
+  /// Resizes the space to the \p sizes. If sizeof...(Sizes) is less than the
+  /// number of dimensions in the space, then the first sizeof...(Sizes) will be
+  /// resized. If sizeof...(Sizes) > the number of dimensions, a compile time
+  /// errir will be generated.
+  /// \param  sizes The sizes to resize the dimensions to.
+  /// \tparam Sizes The type of the sizes. 
+  template <typename... Sizes>
+  ripple_host_device constexpr auto resize(Sizes&&... sizes) -> void {
+    return impl()->resize(std::forward<Sizes>(sizes)...);
   }
 };
 

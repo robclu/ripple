@@ -1,4 +1,4 @@
-//==--- ripple/container/host_box.hpp ---------------------- -*- C++ -*- ---==//
+//==--- ripple/container/host_block.hpp -------------------- -*- C++ -*- ---==//
 //            
 //                                Ripple
 // 
@@ -8,8 +8,8 @@
 //
 //==------------------------------------------------------------------------==//
 //
-/// \file  host_box.hpp
-/// \brief This file imlements a host side box class which holds some data.
+/// \file  host_block.hpp
+/// \brief This file imlements a host side block class which holds some data.
 //
 //==------------------------------------------------------------------------==//
 
@@ -20,6 +20,7 @@
 #include <ripple/iterator/block_iterator.hpp>
 #include <ripple/multidim/dynamic_multidim_space.hpp>
 #include <ripple/storage/storage_traits.hpp>
+#include <cstring>
 
 namespace ripple {
 
@@ -84,6 +85,45 @@ class HostBlock {
     allocate();
   }
 
+  /// Constructor to create the block from another block.
+  /// \param[ other The other block to create this block from.
+  ripple_host_device HostBlock(const self_t& other)
+  : _space{other._space} {
+    allocate();
+    const auto bytes = allocator_t::allocation_size(_space.size());
+    std::memcpy(_data, other._data, bytes);
+  }
+
+  /// Constructor to move the \p other block into this one. The \p other will no
+  /// longer have valid data, and it's size is meaningless.
+  /// \param other The other block to move to this one.
+  ripple_host_device HostBlock(self_t&& other)
+  : _space{other._space} {
+    _data       = other._data;
+    other._data = nullptr;
+  }
+
+  //==--- [operator overloading] -------------------------------------------==//
+
+  /// Overload of assignment operator to copy a block.
+  /// \param[in] other The other block to create this block from.
+  ripple_host_device auto operator=(const self_t& other) -> self_t& {
+    _space = other._space;
+    allocate();
+    const auto bytes = allocator_t::allocation_size(_space.size());
+    std::memcpy(_data, other._data, bytes);
+    return *this;
+  }
+
+  /// Overload of assignment operator to copy a block.
+  /// \param[in] other The other block to create this block from.
+  ripple_host_device auto operator=(self_t&& other) -> self_t& {
+    _space      = other._space;
+    _data       = other._data;
+    other._data = nullptr;
+    return *this;
+  }
+
   //==--- [access] ---------------------------------------------------------==//
 
   /// Overload of operator() to get an iterator to the element at the location
@@ -109,6 +149,38 @@ class HostBlock {
   }
 
   //==--- [interface] ------------------------------------------------------==//
+
+  /// Reallocates the data.
+  auto reallocate() -> void {
+    cleanup();
+    allocate();
+  }
+
+  /// Resizes the \p dim dimension to \p dim_size.
+  /// 
+  /// \note This __does not__ reallocate, since multiple resizings would then
+  ///       then make multiple allocations. Call reallocate to reallocate after
+  ///       resizing.
+  ///
+  /// \param dim  The dimension to resize.
+  /// \param size The size to resize the dimension to.
+  /// \tparm Dim  The type of the dimension specifier.
+  template <typename Dim>
+  auto resize_dim(Dim&& dim, std::size_t size) -> void {
+    _space[dim] = size;
+  }
+
+  /// Resizes each of the dimensions specified by the \p sizes, reallocating the
+  /// data after the resizing. If less sizes are provided than there are
+  /// dimensions in the block, the the first sizeof...(Sizes) dimensions will
+  /// be resized.
+  /// \param  sizes The sizes to resize the dimensions to.
+  /// \tparam Sizes The type of the sizes.
+  template <typename... Sizes>
+  auto resize(Sizes&&... sizes) -> void {
+    _space.resize(std::forward<Sizes>(sizes)...);
+    reallocate();
+  }
 
   /// Returns the total number of elements in the tensor.
   auto size() -> std::size_t {

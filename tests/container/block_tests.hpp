@@ -272,5 +272,332 @@ TEST(container_block, can_access_vec_elements_3d) {
   }
 }
 
+//==--- [copying] ----------------------------------------------------------==//
+
+TEST(container_block, can_copy_strided) {
+  ripple::host_block_3d_t<test_t> b(20, 30, 15);
+  for (auto k : ripple::range(b.size(ripple::dim_z))) {
+    for (auto j : ripple::range(b.size(ripple::dim_y))) {
+      for (auto i : ripple::range(b.size(ripple::dim_x))) {
+        auto bi = b(i, j, k);
+
+        bi->flag() = -1;
+        bi->v(0)   = 10.0f;
+        bi->v(1)   = 20.0f;
+        bi->v(2)   = 30.0f;
+      }
+    }
+  }
+
+  auto b1(b);
+  auto b2 = b;
+  for (auto k : ripple::range(b.size(ripple::dim_z))) {
+    for (auto j : ripple::range(b.size(ripple::dim_y))) {
+      for (auto i : ripple::range(b.size(ripple::dim_x))) {
+        const auto bi  = b(i, j, k);
+        const auto bi1 = b1(i, j, k);
+        const auto bi2 = b2(i, j, k);
+
+        EXPECT_EQ(bi->flag(), -1   );
+        EXPECT_EQ(bi->v(0)  , 10.0f);
+        EXPECT_EQ(bi->v(1)  , 20.0f);
+        EXPECT_EQ(bi->v(2)  , 30.0f);
+
+        EXPECT_EQ(bi1->flag(), -1   );
+        EXPECT_EQ(bi1->v(0)  , 10.0f);
+        EXPECT_EQ(bi1->v(1)  , 20.0f);
+        EXPECT_EQ(bi1->v(2)  , 30.0f);
+
+        EXPECT_EQ(bi2->flag(), -1   );
+        EXPECT_EQ(bi2->v(0)  , 10.0f);
+        EXPECT_EQ(bi2->v(1)  , 20.0f);
+        EXPECT_EQ(bi2->v(2)  , 30.0f);
+      }
+    }
+  }
+}
+
+TEST(container_block, can_copy_vec) {
+  using vec_t = ripple::Vec<float, 3>;
+  ripple::host_block_3d_t<vec_t> b(20, 20, 10);
+
+  for (auto k : ripple::range(b.size(ripple::dim_z))) {
+    for (auto j : ripple::range(b.size(ripple::dim_y))) {
+      for (auto i : ripple::range(b.size(ripple::dim_x))) {
+        auto v = b(i, j, k);
+        for (auto element : ripple::range(v->size())) {
+          (*v)[element] = static_cast<float>(element) * j;
+        }
+      }
+    }
+  }
+
+  auto b1(b);
+  auto b2 = b;
+  for (auto k : ripple::range(b.size(ripple::dim_z))) {
+    for (auto j : ripple::range(b.size(ripple::dim_y))) {
+      for (auto i : ripple::range(b.size(ripple::dim_x))) {
+        const auto v1 = b1(i, j, k);
+        const auto v2 = b2(i, j, k);
+        for (auto element : ripple::range(v1->size())) {
+          EXPECT_EQ((*v1)[element] , static_cast<float>(element) * j);
+          EXPECT_EQ((*v2)[element] , static_cast<float>(element) * j);
+        }
+      }
+    }
+  }
+}
+
+TEST(container_block, can_copy_simple) {
+  ripple::host_block_3d_t<float> b(20, 20, 20);
+  for (auto k : ripple::range(b.size(ripple::dim_z))) {
+    for (auto j : ripple::range(b.size(ripple::dim_y))) {
+      for (auto i : ripple::range(b.size(ripple::dim_x))) {
+        *b(i, j, k) = static_cast<float>(i);
+      }
+    }
+  }
+  auto b1(b);
+  auto b2 = b;
+  for (auto k : ripple::range(b.size(ripple::dim_z))) {
+    for (auto j : ripple::range(b.size(ripple::dim_y))) {
+      for (auto i : ripple::range(b.size(ripple::dim_x))) {
+        EXPECT_EQ(*b1(i, j, k), static_cast<float>(i));
+        EXPECT_EQ(*b2(i, j, k), static_cast<float>(i));
+      }
+    }
+  }
+}
+
+//==--- [moving] -----------------------------------------------------------==//
+
+TEST(container_block, can_move_strided) {
+  ripple::host_block_3d_t<test_t> b(20, 30, 15);
+  for (auto k : ripple::range(b.size(ripple::dim_z))) {
+    for (auto j : ripple::range(b.size(ripple::dim_y))) {
+      for (auto i : ripple::range(b.size(ripple::dim_x))) {
+        auto bi = b(i, j, k);
+
+        bi->flag() = -1;
+        bi->v(0)   = 10.0f;
+        bi->v(1)   = 20.0f;
+        bi->v(2)   = 30.0f;
+      }
+    }
+  }
+
+  auto b1(std::move(b));
+  for (auto k : ripple::range(b1.size(ripple::dim_z))) {
+    for (auto j : ripple::range(b1.size(ripple::dim_y))) {
+      for (auto i : ripple::range(b1.size(ripple::dim_x))) {
+        const auto bi  = b1(i, j, k);
+
+        EXPECT_EQ(bi->flag(), -1   );
+        EXPECT_EQ(bi->v(0)  , 10.0f);
+        EXPECT_EQ(bi->v(1)  , 20.0f);
+        EXPECT_EQ(bi->v(2)  , 30.0f);
+      }
+    }
+  }
+  auto b2 = std::move(b1);
+  for (auto k : ripple::range(b2.size(ripple::dim_z))) {
+    for (auto j : ripple::range(b2.size(ripple::dim_y))) {
+      for (auto i : ripple::range(b2.size(ripple::dim_x))) {
+        const auto bi  = b2(i, j, k);
+
+        EXPECT_EQ(bi->flag(), -1   );
+        EXPECT_EQ(bi->v(0)  , 10.0f);
+        EXPECT_EQ(bi->v(1)  , 20.0f);
+        EXPECT_EQ(bi->v(2)  , 30.0f);
+      }
+    }
+  }
+}
+
+TEST(container_block, can_move_vec) {
+  using vec_t = ripple::Vec<float, 3>;
+  ripple::host_block_3d_t<vec_t> b(20, 20, 10);
+
+  for (auto k : ripple::range(b.size(ripple::dim_z))) {
+    for (auto j : ripple::range(b.size(ripple::dim_y))) {
+      for (auto i : ripple::range(b.size(ripple::dim_x))) {
+        auto v = b(i, j, k);
+        for (auto element : ripple::range(v->size())) {
+          (*v)[element] = static_cast<float>(element) * j;
+        }
+      }
+    }
+  }
+
+  auto b1(std::move(b));
+  for (auto k : ripple::range(b1.size(ripple::dim_z))) {
+    for (auto j : ripple::range(b1.size(ripple::dim_y))) {
+      for (auto i : ripple::range(b1.size(ripple::dim_x))) {
+        const auto v1 = b1(i, j, k);
+        for (auto element : ripple::range(v1->size())) {
+          EXPECT_EQ((*v1)[element] , static_cast<float>(element) * j);
+        }
+      }
+    }
+  }
+  auto b2 = std::move(b1);
+  for (auto k : ripple::range(b2.size(ripple::dim_z))) {
+    for (auto j : ripple::range(b2.size(ripple::dim_y))) {
+      for (auto i : ripple::range(b2.size(ripple::dim_x))) {
+        const auto v1 = b2(i, j, k);
+        for (auto element : ripple::range(v1->size())) {
+          EXPECT_EQ((*v1)[element] , static_cast<float>(element) * j);
+        }
+      }
+    }
+  }
+}
+
+TEST(container_block, can_move_simple) {
+  ripple::host_block_3d_t<float> b(20, 20, 20);
+  for (auto k : ripple::range(b.size(ripple::dim_z))) {
+    for (auto j : ripple::range(b.size(ripple::dim_y))) {
+      for (auto i : ripple::range(b.size(ripple::dim_x))) {
+        *b(i, j, k) = static_cast<float>(i);
+      }
+    }
+  }
+  auto b1(std::move(b));
+  for (auto k : ripple::range(b1.size(ripple::dim_z))) {
+    for (auto j : ripple::range(b1.size(ripple::dim_y))) {
+      for (auto i : ripple::range(b1.size(ripple::dim_x))) {
+        EXPECT_EQ(*b1(i, j, k), static_cast<float>(i));
+      }
+    }
+  }
+  auto b2 = std::move(b1);
+  for (auto k : ripple::range(b2.size(ripple::dim_z))) {
+    for (auto j : ripple::range(b2.size(ripple::dim_y))) {
+      for (auto i : ripple::range(b2.size(ripple::dim_x))) {
+        EXPECT_EQ(*b2(i, j, k), static_cast<float>(i));
+      }
+    }
+  }
+}
+
+//==--- [resize] -----------------------------------------------------------==//
+
+TEST(container_block, can_resize_block) {
+  ripple::host_block_3d_t<test_t> b(20, 30, 15);
+  for (auto k : ripple::range(b.size(ripple::dim_z))) {
+    for (auto j : ripple::range(b.size(ripple::dim_y))) {
+      for (auto i : ripple::range(b.size(ripple::dim_x))) {
+        auto bi = b(i, j, k);
+
+        bi->flag() = -1;
+        bi->v(0)   = 10.0f;
+        bi->v(1)   = 20.0f;
+        bi->v(2)   = 30.0f;
+      }
+    }
+  }
+  for (auto k : ripple::range(b.size(ripple::dim_z))) {
+    for (auto j : ripple::range(b.size(ripple::dim_y))) {
+      for (auto i : ripple::range(b.size(ripple::dim_x))) {
+        const auto bi = b(i, j, k);
+
+        EXPECT_EQ(bi->flag(), -1   );
+        EXPECT_EQ(bi->v(0)  , 10.0f);
+        EXPECT_EQ(bi->v(1)  , 20.0f);
+        EXPECT_EQ(bi->v(2)  , 30.0f);
+      }
+    }
+  }
+
+  b.resize(15, 20, 22);
+
+  for (auto k : ripple::range(b.size(ripple::dim_z))) {
+    for (auto j : ripple::range(b.size(ripple::dim_y))) {
+      for (auto i : ripple::range(b.size(ripple::dim_x))) {
+        auto bi = b(i, j, k);
+
+        bi->flag() = 17;;
+        bi->v(0)   = 12.0f;
+        bi->v(1)   = 21.0f;
+        bi->v(2)   = 37.0f;
+      }
+    }
+  }
+  for (auto k : ripple::range(b.size(ripple::dim_z))) {
+    for (auto j : ripple::range(b.size(ripple::dim_y))) {
+      for (auto i : ripple::range(b.size(ripple::dim_x))) {
+        const auto bi = b(i, j, k);
+
+        EXPECT_EQ(bi->flag(), 17   );
+        EXPECT_EQ(bi->v(0)  , 12.0f);
+        EXPECT_EQ(bi->v(1)  , 21.0f);
+        EXPECT_EQ(bi->v(2)  , 37.0f);
+      }
+    }
+  }
+
+  b.resize(13, 20);
+  EXPECT_EQ(b.size(ripple::dim_x), std::size_t{13});
+  EXPECT_EQ(b.size(ripple::dim_y), std::size_t{20});
+
+  for (auto k : ripple::range(b.size(ripple::dim_z))) {
+    for (auto j : ripple::range(b.size(ripple::dim_y))) {
+      for (auto i : ripple::range(b.size(ripple::dim_x))) {
+        auto bi = b(i, j, k);
+
+        bi->flag() = 14;;
+        bi->v(0)   = 13.0f;
+        bi->v(1)   = 22.0f;
+        bi->v(2)   = 77.0f;
+      }
+    }
+  }
+  for (auto k : ripple::range(b.size(ripple::dim_z))) {
+    for (auto j : ripple::range(b.size(ripple::dim_y))) {
+      for (auto i : ripple::range(b.size(ripple::dim_x))) {
+        const auto bi = b(i, j, k);
+
+        EXPECT_EQ(bi->flag(), 14   );
+        EXPECT_EQ(bi->v(0)  , 13.0f);
+        EXPECT_EQ(bi->v(1)  , 22.0f);
+        EXPECT_EQ(bi->v(2)  , 77.0f);
+      }
+    }
+  }
+
+  b.resize_dim(ripple::dim_x, 20);
+  b.resize_dim(ripple::dim_y, 120);
+  b.resize_dim(ripple::dim_z, 31);
+  b.reallocate();
+  EXPECT_EQ(b.size(ripple::dim_x), std::size_t{20});
+  EXPECT_EQ(b.size(ripple::dim_y), std::size_t{120});
+  EXPECT_EQ(b.size(ripple::dim_z), std::size_t{31});
+
+  for (auto k : ripple::range(b.size(ripple::dim_z))) {
+    for (auto j : ripple::range(b.size(ripple::dim_y))) {
+      for (auto i : ripple::range(b.size(ripple::dim_x))) {
+        auto bi = b(i, j, k);
+
+        bi->flag() = 12;;
+        bi->v(0)   = 13.0f;
+        bi->v(1)   = 27.0f;
+        bi->v(2)   = 77.0f;
+      }
+    }
+  }
+  for (auto k : ripple::range(b.size(ripple::dim_z))) {
+    for (auto j : ripple::range(b.size(ripple::dim_y))) {
+      for (auto i : ripple::range(b.size(ripple::dim_x))) {
+        const auto bi = b(i, j, k);
+
+        EXPECT_EQ(bi->flag(), 12   );
+        EXPECT_EQ(bi->v(0)  , 13.0f);
+        EXPECT_EQ(bi->v(1)  , 27.0f);
+        EXPECT_EQ(bi->v(2)  , 77.0f);
+      }
+    }
+  }
+}
+
 #endif // RIPPLE_TESTS_CONTAINER_BLOCK_TESTS_HPP
 
