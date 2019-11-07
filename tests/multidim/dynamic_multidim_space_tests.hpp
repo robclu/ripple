@@ -80,6 +80,37 @@ TEST(multidim_dynamic_multidim_space, size_and_step_3d) {
   EXPECT_EQ(space.step(ripple::dim_z), size_t{50} );
 }
 
+TEST(multidim_dynamic_multidim_space, can_resize) {
+  using space_t = ripple::DynamicMultidimSpace<3>;
+
+  auto space = space_t{10, 20, 5};
+  EXPECT_EQ(space.size()             , size_t{1000});
+  EXPECT_EQ(space.size(ripple::dim_x), size_t{10}  );
+  EXPECT_EQ(space.size(ripple::dim_y), size_t{20}  );
+  EXPECT_EQ(space.size(ripple::dim_z), size_t{5}   );
+  EXPECT_EQ(space.step(ripple::dim_x), size_t{1}   );
+  EXPECT_EQ(space.step(ripple::dim_y), size_t{10}  );
+  EXPECT_EQ(space.step(ripple::dim_z), size_t{200} );
+
+  space.resize(5, 10, 2);
+  EXPECT_EQ(space.size()             , size_t{100});
+  EXPECT_EQ(space.size(ripple::dim_x), size_t{5}  );
+  EXPECT_EQ(space.size(ripple::dim_y), size_t{10} );
+  EXPECT_EQ(space.size(ripple::dim_z), size_t{2}  );
+  EXPECT_EQ(space.step(ripple::dim_x), size_t{1}  );
+  EXPECT_EQ(space.step(ripple::dim_y), size_t{5}  );
+  EXPECT_EQ(space.step(ripple::dim_z), size_t{50} );
+
+  space.resize(22, 3);
+  EXPECT_EQ(space.size()             , size_t{132});
+  EXPECT_EQ(space.size(ripple::dim_x), size_t{22} );
+  EXPECT_EQ(space.size(ripple::dim_y), size_t{3} );
+  EXPECT_EQ(space.size(ripple::dim_z), size_t{2}  );
+  EXPECT_EQ(space.step(ripple::dim_x), size_t{1}  );
+  EXPECT_EQ(space.step(ripple::dim_y), size_t{22} );
+  EXPECT_EQ(space.step(ripple::dim_z), size_t{66} );
+}
+
 TEST(multidim_dynamic_multidim_space, padding_always_zero) {
   using space_t = ripple::DynamicMultidimSpace<3>;
   auto space    = space_t{10, 20, 5};
