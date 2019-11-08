@@ -65,7 +65,7 @@ struct DynamicMultidimSpace :
   //==--- [size] -----------------------------------------------------------==//
   
   /// Returns the number of dimensions for the space.
-  ripple_host_device auto dimensions() const -> std::size_t {
+  ripple_host_device constexpr auto dimensions() const -> std::size_t {
     return dims;
   }
 

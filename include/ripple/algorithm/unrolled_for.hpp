@@ -1,4 +1,4 @@
-//==--- ripple/algorithm/unrolled-for.hpp ------------------ -*- C++ -*- ---==//
+//==--- ripple/algorithm/unrolled_for.hpp ------------------ -*- C++ -*- ---==//
 //            
 //                                Ripple
 // 

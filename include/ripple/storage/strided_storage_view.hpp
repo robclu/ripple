@@ -85,7 +85,8 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
     /// \param  dim The dimension to base the scaling on.
     /// \tparam I   The index of the component to get the scaling factor from.
     template <std::size_t I>
-    static constexpr auto offset_scale(Num<I>, dimx_t) {
+    ripple_host_device static constexpr auto offset_scale(Num<I>, dimx_t) 
+    -> std::size_t {
       return 1;
     }
 
@@ -93,7 +94,8 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
     /// \param  dim The dimension to base the scaling on.
     /// \tparam I   The index of the component to get the scaling factor from.
     template <std::size_t I>
-    static constexpr auto offset_scale(Num<I>, dimy_t dim) {
+    ripple_host_device static constexpr auto offset_scale(Num<I>, dimy_t dim) 
+    -> std::size_t {
       return components[I];
     }
 
@@ -101,7 +103,8 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
     /// \param  dim The dimension to base the scaling on.
     /// \tparam I   The index of the component to get the scaling factor from.
     template <std::size_t I>
-    static constexpr auto offset_scale(Num<I>, dimz_t dim) {
+    ripple_host_device static constexpr auto offset_scale(Num<I>, dimz_t dim) 
+    -> std::size_t {
       return components[I];
     }
   
@@ -110,7 +113,9 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
     /// \param  dim The dimension to base the scaling on.
     /// \tparam I   The index of the component to get the scaling factor from.
     template <std::size_t I>
-    static constexpr auto offset_scale(Num<I>, std::size_t dim) -> std::size_t {
+    ripple_host_device static constexpr auto offset_scale(
+      Num<I>, std::size_t dim
+    ) -> std::size_t {
       return dim == 0 ? 1 : components[I];
     }
 
@@ -349,7 +354,7 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
     typename    T = nth_element_t<I, Ts...>,
     non_storage_element_enable_t<T> = 0
   >
-  auto get() -> element_value_t<T>& {
+  ripple_host_device auto get() -> element_value_t<T>& {
     return *static_cast<element_value_t<T>*>(_data[I]);
   }
 
@@ -362,7 +367,7 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
     typename    T = nth_element_t<I, Ts...>,
     non_storage_element_enable_t<T> = 0
   >
-  auto get() const -> const element_value_t<T>& {
+  ripple_host_device auto get() const -> const element_value_t<T>& {
     return *static_cast<const element_value_t<T>*>(_data[I]); 
   }
 
@@ -378,7 +383,7 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
     typename    T = nth_element_t<I, Ts...>,
     storage_element_enable_t<T> = 0
   >
-  auto get() -> element_value_t<T>& {
+  ripple_host_device auto get() -> element_value_t<T>& {
     static_assert(
       J < element_components_v<T>, "Out of range acess for storage element!"
     );
@@ -397,7 +402,7 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
     typename    T = nth_element_t<I, Ts...>,
     storage_element_enable_t<T> = 0
   >
-  auto get() const -> const element_value_t<T>& {
+  ripple_host_device auto get() const -> const element_value_t<T>& {
     static_assert(
       J < element_components_v<T>, "Out of range acess for storage element!"
     );
@@ -415,7 +420,7 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
     typename    T = nth_element_t<I, Ts...>,
     storage_element_enable_t<T> = 0
   >
-  auto get(std::size_t j) -> element_value_t<T>& {
+  ripple_host_device auto get(std::size_t j) -> element_value_t<T>& {
     return static_cast<element_value_t<T>*>(_data[I])[j * _stride];
   }
 
@@ -430,7 +435,7 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
     typename    T = nth_element_t<I, Ts...>,
     storage_element_enable_t<T> = 0
   >
-  auto get(std::size_t j) const -> const element_value_t<T>& {
+  ripple_host_device auto get(std::size_t j) const -> const element_value_t<T>& {
     return static_cast<const element_value_t<T>*>(_data[I])[j * _stride];
   }
 };

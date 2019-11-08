@@ -18,8 +18,6 @@
 
 #include "block_traits.hpp"
 #include <ripple/iterator/block_iterator.hpp>
-#include <ripple/multidim/dynamic_multidim_space.hpp>
-#include <ripple/storage/storage_traits.hpp>
 #include <ripple/utility/cuda.hpp>
 
 namespace ripple {
@@ -35,24 +33,24 @@ namespace ripple {
 template <typename T, std::size_t Dimensions>
 class DeviceBlock {
   //==--- [traits] ---------------------------------------------------------==//
-
   /// Defines the type of this tensor.
   using self_t          = DeviceBlock<T, Dimensions>;
+  /// Defines the type of the traits for the tensor.
+  using traits_t        = BlockTraits<self_t>;
+  /// Defines the type of allocator for the tensor.
+  using allocator_t     = typename traits_t::allocator_t;
+  /// Defines the the of the dimension information for the tensor.
+  using space_t         = typename traits_t::space_t;
   /// Defines the type of the pointer to the data.
   using ptr_t           = void*;
-  /// Defines the the of the dimension information for the tensor.
-  using space_t         = DynamicMultidimSpace<Dimensions>;
-  /// Defines the allocation traits for the type.
-  using layout_traits_t = layout_traits_t<T>;
-  /// Defines the type of allocator for the tensor.
-  using allocator_t     = typename layout_traits_t::allocator_t;
   /// Defines the type for a reference to an element.
-  using value_t         = typename layout_traits_t::value_t;
-
+  using value_t         = typename traits_t::value_t;
   /// Defines the type of the iterator for the tensor.
   using iter_t          = BlockIterator<value_t, space_t>;
   /// Defines the type of a contant iterator.
   using const_iter_t    = const iter_t;
+  /// Defines the type of a host block with the same parameters.
+  using host_block_t    = HostBlock<T, Dimensions>;
 
  public:
   //==--- [construction] ---------------------------------------------------==//
@@ -60,21 +58,18 @@ class DeviceBlock {
   /// Default constructor which just initializes the storage. This constructor
   /// is available so that an unsized tensor can be instanciated and then
   /// resized at runtime.
-  ripple_host_device DeviceBlock() = default;
+  DeviceBlock() = default;
 
   /// Destructor to clean up the tensor resources.
-  ripple_host_device ~DeviceBlock() {
+  ~DeviceBlock() {
     cleanup();
   }
 
-  /// Initializes the size of each of the dimensions of the tensor. This is only
+  /// Initializes the size of each of the dimensions of the block. This is only
   /// enabled when the number of arguments matches the dimensionality of the
-  /// tensor, and the sizes are numeric types.
+  /// block, and the sizes are numeric types.
   ///
-  /// \param size_0 The size of the zero dimension for the tensor.
-  /// \param sizes  The sizes of the other dimensions of the tensor, if there
-  ///               are additional dimensions.
-  /// \tparam Size  The type of the zero dimension size.
+  /// \param sizes  The sizes of the dimensions for the block.
   /// \tparam Sizes The types of other dimension sizes.
   template <
     typename... Sizes,
@@ -86,18 +81,56 @@ class DeviceBlock {
   }
 
   /// Constructor to create the block from another block.
-  /// \param[in] other The other block to create this block from.
+  /// \param other The other block to create this block from.
   DeviceBlock(const self_t& other)
   : _space{other._space} {
     allocate();
     cuda::memcpy_device_to_device(
-      _data,
-      other._data,
-      allocator_t::allocation_size(_space.size())
+      _data, other._data, allocator_t::allocation_size(_space.size())
     );
   }
 
+  /// Constructor to create the block from a host block. This copies the memory
+  /// from the host block into the device memory for this block.
+  ///
+  DeviceBlock(const host_block& other)
+  : _space{other.space} {
+    allocate();
+    cuda::memcpy_host_to_device(
+      _data, other._data, allocator_t::allocation_size(_space.size())
+    );
+  }
+
+  //==--- [operator overloading] -------------------------------------------==//
+
+  /// Constructor to create the block from another block.
+  /// \param other The other block to create this block from.
+  auto operator=(const self_t& other) -> self_t& {
+    _space = other._space;
+    allocate();
+    cuda::memcpy_device_to_device(
+      _data, other._data, allocator_t::allocation_size(_space.size())
+    );
+    return *this;
+  }
+
+  /// Constructor to create the block from another block.
+  /// \param other The other block to create this block from.
+  auto operator=(const host_block_t& other) -> self_t& {
+    _space = other._space;
+    allocate();
+    cuda::memcpy_host_to_device(
+      _data, other._data, allocator_t::allocation_size(_space.size())
+    );
+    return *this;
+  }
+
   //==--- [access] ---------------------------------------------------------==//
+  
+  /// Gets an iterator to the beginning of the block.
+  ripple_host_device auto begin() -> iter_t {
+    return iter_t{allocator_t::create(_data, _space), _space};
+  }
 
   /// Overload of operator() to get an iterator to the element at the location
   /// specified by the \p is indices.
@@ -169,9 +202,9 @@ class DeviceBlock {
   }
 
  private:
-  ptr_t   _data = nullptr;    //!< Storage for the tensor.
-  space_t _space;             //!< Spatial information for the tensor.
-  bool    _must_free = false; //!< If the block must free its data.
+  ptr_t   _data      = nullptr; //!< Storage for the tensor.
+  space_t _space;               //!< Spatial information for the tensor.
+  bool    _must_free = true;    //!< If the block must free its data.
 
   /// Allocates data for the tensor.
   auto allocate() -> void {

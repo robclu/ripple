@@ -21,6 +21,8 @@
 
 namespace ripple::cuda::kernel {
 
+#if defined(__CUDACC__)
+
 /// Copies each data element from \p in to \p out.
 /// \param  in       A pointer to the input data.
 /// \param  out      A pointer to the output data.
@@ -33,6 +35,8 @@ ripple_global auto copy(Ptr* out, const Ptr* in, std::size_t elements) -> void {
     out[idx] = in[idx];
   }
 }
+
+#endif // __CUDACC__
 
 } // namespace ripple::cuda::kernel
 

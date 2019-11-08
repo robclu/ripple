@@ -41,7 +41,6 @@ struct MultidimSpace {
   }
 
  public:
-
   /// Returns the amount of padding in dimension \p dim for the space. The 
   /// padding is the number of elements at the beginning and end of the space,
   /// which are not used for computation. This must returns the padding at one

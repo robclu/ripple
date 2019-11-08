@@ -18,8 +18,7 @@
 
 #include "block_traits.hpp"
 #include <ripple/iterator/block_iterator.hpp>
-#include <ripple/multidim/dynamic_multidim_space.hpp>
-#include <ripple/storage/storage_traits.hpp>
+#include <ripple/utility/cuda.hpp>
 #include <cstring>
 
 namespace ripple {
@@ -35,24 +34,24 @@ namespace ripple {
 template <typename T, std::size_t Dimensions>
 class HostBlock {
   //==--- [traits] ---------------------------------------------------------==//
-
   /// Defines the type of this tensor.
   using self_t          = HostBlock<T, Dimensions>;
+  /// Defines the type of the traits for the block.
+  using traits_t        = BlockTraits<self_t>;
+  /// Defines the type of allocator for the tensor.
+  using allocator_t     = typename traits_t::allocator_t;
+  /// Defines the the of the dimension information for the tensor.
+  using space_t         = typename traits_t::space_t;
   /// Defines the type of the pointer to the data.
   using ptr_t           = void*;
-  /// Defines the the of the dimension information for the tensor.
-  using space_t         = DynamicMultidimSpace<Dimensions>;
-  /// Defines the allocation traits for the type.
-  using layout_traits_t = layout_traits_t<T>;
-  /// Defines the type of allocator for the tensor.
-  using allocator_t     = typename layout_traits_t::allocator_t;
   /// Defines the type for a reference to an element.
-  using value_t         = typename layout_traits_t::value_t;
-
+  using value_t         = typename traits_t::value_t;
   /// Defines the type of the iterator for the tensor.
   using iter_t          = BlockIterator<value_t, space_t>;
   /// Defines the type of a contant iterator.
   using const_iter_t    = const iter_t;
+  /// Defines the type of a host block with the same parameters.
+  using device_block_t  = DeviceBlock<T, Dimensions>;
 
  public:
   //==--- [construction] ---------------------------------------------------==//
@@ -86,8 +85,8 @@ class HostBlock {
   }
 
   /// Constructor to create the block from another block.
-  /// \param[ other The other block to create this block from.
-  ripple_host_device HostBlock(const self_t& other)
+  /// \param other The other block to create this block from.
+  HostBlock(const self_t& other)
   : _space{other._space} {
     allocate();
     const auto bytes = allocator_t::allocation_size(_space.size());
@@ -97,17 +96,27 @@ class HostBlock {
   /// Constructor to move the \p other block into this one. The \p other will no
   /// longer have valid data, and it's size is meaningless.
   /// \param other The other block to move to this one.
-  ripple_host_device HostBlock(self_t&& other)
+  HostBlock(self_t&& other)
   : _space{other._space} {
     _data       = other._data;
     other._data = nullptr;
+  }
+
+  /// Constructor to create the block from a device block.
+  /// \param other The other block to create this block from.
+  HostBlock(const device_block_t& other)
+  : _space{other._space} {
+    allocate();
+    cuda::memcpy_device_to_host(
+      _data, other._data, allocator_t::allocation_size(_space.size())
+    );
   }
 
   //==--- [operator overloading] -------------------------------------------==//
 
   /// Overload of assignment operator to copy a block.
   /// \param[in] other The other block to create this block from.
-  ripple_host_device auto operator=(const self_t& other) -> self_t& {
+  auto operator=(const self_t& other) -> self_t& {
     _space = other._space;
     allocate();
     const auto bytes = allocator_t::allocation_size(_space.size());
@@ -117,14 +126,30 @@ class HostBlock {
 
   /// Overload of assignment operator to copy a block.
   /// \param[in] other The other block to create this block from.
-  ripple_host_device auto operator=(self_t&& other) -> self_t& {
+  auto operator=(self_t&& other) -> self_t& {
     _space      = other._space;
     _data       = other._data;
     other._data = nullptr;
     return *this;
   }
 
+  /// Overload of assignment operator to copy a block.
+  /// \param[in] other The other block to create this block from.
+  auto operator=(const device_block_t& other) -> self_t& {
+    _space = other._space;
+    allocate();
+    cuda::memcpy_device_to_host(
+      _data, other._data, allocator_t::allocation_size(_space.size())
+    );
+    return *this;
+  }
+
   //==--- [access] ---------------------------------------------------------==//
+
+  /// Gets an iterator to the beginning of the block.
+  auto begin() -> iter_t {
+    return iter_t{allocator_t::create(_data, _space), _space};
+  }
 
   /// Overload of operator() to get an iterator to the element at the location
   /// specified by the \p is indices.

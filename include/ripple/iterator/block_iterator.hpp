@@ -204,6 +204,13 @@ class BlockIterator {
     offsetter_t::offset(_data_ptr, _space, dim, amount);
   }
 
+  //==--- [dimensions] -----------------------------------------------------==//
+
+  /// Returns the number of dimensions for the iterator.
+  ripple_host_device constexpr auto dimensions() {
+    return _space.dimensions();
+  }
+
   //==--- [size] -----------------------------------------------------------==//
 
   /// Returns the total size of the iteration space.
