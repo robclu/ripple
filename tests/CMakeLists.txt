@@ -31,7 +31,6 @@ else()
   set(CUDA_LIBRARIES -lcudart_static -ldl -lrt -lcudadevrt -pthread)
 endif()
 
-#fluid_add_definitions(${CMAKE_CUDA_FLAGS})
 ripple_include_directories(
   ${CUDA_INCLUDE_DIR}
   ${ripple_SOURCE_DIR}/include
@@ -39,7 +38,7 @@ ripple_include_directories(
 )
 ripple_library_directories(${CUDA_LIB_DIRS} ${GTEST_LIB_DIRS})
 
-#==--- Tests ----------------------------------------------------------------==#
+#==--- [tests] --------------------------------------------------------------==#
 
 ripple_add_executable(
   all_tests ${ripple_SOURCE_DIR}/tests/all.cpp
@@ -63,7 +62,7 @@ ripple_add_executable(
   container_tests ${ripple_SOURCE_DIR}/tests/container.cpp
 )
 ripple_target_link_libraries(
-  container_tests ${GTEST_BOTH_LIBRARIES}
+  container_tests ${GTEST_BOTH_LIBRARIES} ${CUDA_LIBRARIES}
 )
 
 #==--------------------------------------------------------------------------==#
@@ -101,8 +100,6 @@ ripple_add_executable(
 ripple_target_link_libraries(
   storage_tests ${GTEST_BOTH_LIBRARIES}
 )
-
-
 
 #------------------------------------------------------------------------------#
 

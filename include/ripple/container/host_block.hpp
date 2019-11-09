@@ -17,6 +17,7 @@
 #define RIPPLE_CONTAINER_HOST_BLOCK_HPP
 
 #include "block_traits.hpp"
+#include "device_block.hpp"
 #include <ripple/iterator/block_iterator.hpp>
 #include <ripple/utility/cuda.hpp>
 #include <cstring>
@@ -52,6 +53,10 @@ class HostBlock {
   using const_iter_t    = const iter_t;
   /// Defines the type of a host block with the same parameters.
   using device_block_t  = DeviceBlock<T, Dimensions>;
+
+  /// Declare device blocks to be friends, so that we can create host blocks
+  /// from device blocks.
+  friend device_block_t;
 
  public:
   //==--- [construction] ---------------------------------------------------==//
@@ -144,6 +149,13 @@ class HostBlock {
     return *this;
   }
 
+  //==--- [conversion to device] -------------------------------------------==//
+
+  /// Returns the host block as a device block.
+  auto as_device() const -> device_block_t {
+    return device_block_t{*this};
+  }
+
   //==--- [access] ---------------------------------------------------------==//
 
   /// Gets an iterator to the beginning of the block.
@@ -208,7 +220,7 @@ class HostBlock {
   }
 
   /// Returns the total number of elements in the tensor.
-  auto size() -> std::size_t {
+  auto size() const -> std::size_t {
     return _space.size();
   }
 
@@ -216,7 +228,7 @@ class HostBlock {
   /// \param dim The dimension to get the size of.
   /// \param Dim The type of the dimension specifier.
   template <typename Dim>
-  auto size(Dim&& dim) -> std::size_t {
+  auto size(Dim&& dim) const -> std::size_t {
     return _space.size(std::forward<Dim>(dim));
   }
 

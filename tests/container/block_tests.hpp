@@ -272,6 +272,22 @@ TEST(container_block, can_access_vec_elements_3d) {
   }
 }
 
+//==--- [access begin] -----------------------------------------------------==//
+
+TEST(container_block, can_access_block_beginning) {
+  using vec_t = ripple::Vec<float, 3>;
+  ripple::host_block_3d_t<vec_t> b(20, 20, 10);
+
+  (*b(0, 0, 0))[0] = 22.5f;
+  (*b(0, 0, 0))[1] = 32.5f;
+  (*b(0, 0, 0))[2] = 42.5f;
+
+  auto start = b.begin();
+  EXPECT_EQ((*start)[0], (*b(0, 0, 0))[0]);
+  EXPECT_EQ((*start)[1], (*b(0, 0, 0))[1]);
+  EXPECT_EQ((*start)[2], (*b(0, 0, 0))[2]);
+}
+
 //==--- [copying] ----------------------------------------------------------==//
 
 TEST(container_block, can_copy_strided) {
@@ -594,6 +610,38 @@ TEST(container_block, can_resize_block) {
         EXPECT_EQ(bi->v(0)  , 13.0f);
         EXPECT_EQ(bi->v(1)  , 27.0f);
         EXPECT_EQ(bi->v(2)  , 77.0f);
+      }
+    }
+  }
+}
+
+//==--- [move host to device] ----------------------------------------------==//
+
+TEST(container_block, can_copy_host_to_device) {
+  ripple::host_block_3d_t<float> b(20, 20, 20);
+  for (auto k : ripple::range(b.size(ripple::dim_z))) {
+    for (auto j : ripple::range(b.size(ripple::dim_y))) {
+      for (auto i : ripple::range(b.size(ripple::dim_x))) {
+        *b(i, j, k) = static_cast<float>(i);
+      }
+    }
+  }
+  for (auto k : ripple::range(b.size(ripple::dim_z))) {
+    for (auto j : ripple::range(b.size(ripple::dim_y))) {
+      for (auto i : ripple::range(b.size(ripple::dim_x))) {
+        EXPECT_EQ(*b(i, j, k), static_cast<float>(i));
+      }
+    }
+  }
+
+  // Copy to device, and then back, to make sure it can go both ways:
+  auto b_dev  = b.as_device();
+  auto b_host = b_dev.as_host();
+
+  for (auto k : ripple::range(b_host.size(ripple::dim_z))) {
+    for (auto j : ripple::range(b_host.size(ripple::dim_y))) {
+      for (auto i : ripple::range(b_host.size(ripple::dim_x))) {
+        EXPECT_EQ(*b_host(i, j, k), static_cast<float>(i));
       }
     }
   }

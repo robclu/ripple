@@ -333,7 +333,7 @@ class ContiguousStorageView :
     typename    T = nth_element_t<I, Ts...>,
     non_storage_element_enable_t<T> = 0
   >
-  auto get() -> element_value_t<T>& {
+  ripple_host_device auto get() -> element_value_t<T>& {
     constexpr auto offset = offset_to<I>();
     return *reinterpret_cast<element_value_t<T>*>(
       static_cast<char*>(_data) + offset
@@ -349,7 +349,7 @@ class ContiguousStorageView :
     typename    T = nth_element_t<I, Ts...>,
     non_storage_element_enable_t<T> = 0
   >
-  auto get() const -> const element_value_t<T>& {
+  ripple_host_device auto get() const -> const element_value_t<T>& {
     constexpr auto offset = offset_to<I>();
     return *reinterpret_cast<const element_value_t<T>*>(
       static_cast<const char*>(_data) + offset
@@ -368,7 +368,7 @@ class ContiguousStorageView :
     typename    T = nth_element_t<I, Ts...>,
     storage_element_enable_t<T> = 0
   >
-  auto get() -> element_value_t<T>& {
+  ripple_host_device auto get() -> element_value_t<T>& {
     static_assert(
       J < element_components_v<T>, "Out of range acess for storage element!"
     );
@@ -390,7 +390,7 @@ class ContiguousStorageView :
     typename    T = nth_element_t<I, Ts...>,
     storage_element_enable_t<T> = 0
   >
-  auto get() const -> const element_value_t<T>& {
+  ripple_host_device auto get() const -> const element_value_t<T>& {
     static_assert(
       J < element_components_v<T>, "Out of range acess for storage element!"
     );
@@ -411,7 +411,7 @@ class ContiguousStorageView :
     typename    T = nth_element_t<I, Ts...>,
     storage_element_enable_t<T> = 0
   >
-  auto get(std::size_t j) -> element_value_t<T>& {
+  ripple_host_device auto get(std::size_t j) -> element_value_t<T>& {
     constexpr auto offset = offset_to<I>();
     return reinterpret_cast<element_value_t<T>*>(
       static_cast<char*>(_data) + offset
@@ -429,7 +429,7 @@ class ContiguousStorageView :
     typename    T = nth_element_t<I, Ts...>,
     storage_element_enable_t<T> = 0
   >
-  auto get(std::size_t j) const -> const element_value_t<T>& {
+  ripple_host_device auto get(std::size_t j) const -> const element_value_t<T>& {
     constexpr auto offset = offset_to<I>();
     return reinterpret_cast<const element_value_t<T>*>(
       static_cast<const char*>(_data) + offset

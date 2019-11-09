@@ -17,6 +17,7 @@
 #define RIPPLE_CONTAINER_DEVICE_BLOCK_HPP
 
 #include "block_traits.hpp"
+#include "host_block.hpp"
 #include <ripple/iterator/block_iterator.hpp>
 #include <ripple/utility/cuda.hpp>
 
@@ -51,6 +52,10 @@ class DeviceBlock {
   using const_iter_t    = const iter_t;
   /// Defines the type of a host block with the same parameters.
   using host_block_t    = HostBlock<T, Dimensions>;
+
+  /// Declare host blocks to be friends, so that we can create device blocks
+  /// from host blocks.
+  friend host_block_t;
 
  public:
   //==--- [construction] ---------------------------------------------------==//
@@ -93,8 +98,8 @@ class DeviceBlock {
   /// Constructor to create the block from a host block. This copies the memory
   /// from the host block into the device memory for this block.
   ///
-  DeviceBlock(const host_block& other)
-  : _space{other.space} {
+  DeviceBlock(const host_block_t& other)
+  : _space{other._space} {
     allocate();
     cuda::memcpy_host_to_device(
       _data, other._data, allocator_t::allocation_size(_space.size())
@@ -123,6 +128,13 @@ class DeviceBlock {
       _data, other._data, allocator_t::allocation_size(_space.size())
     );
     return *this;
+  }
+
+  //==--- [conversion to host] ---------------------------------------------==//
+
+  /// Returns the device block as a host block.
+  auto as_host() const -> host_block_t {
+    return host_block_t{*this};
   }
 
   //==--- [access] ---------------------------------------------------------==//
@@ -189,7 +201,7 @@ class DeviceBlock {
   }
 
   /// Returns the total number of elements in the tensor.
-  auto size() -> std::size_t {
+  auto size() const -> std::size_t {
     return _space.size();
   }
 
@@ -197,7 +209,7 @@ class DeviceBlock {
   /// \param dim The dimension to get the size of.
   /// \param Dim The type of the dimension specifier.
   template <typename Dim>
-  auto size(Dim&& dim) -> std::size_t {
+  auto size(Dim&& dim) const -> std::size_t {
     return _space.size(std::forward<Dim>(dim));
   }
 

@@ -175,6 +175,23 @@ using unroll_disabled_t =
 template <std::size_t N, typename... Ts>
 using nth_element_t = typename detail::NthElement<N, Ts...>::type;
 
+//==--- [dimension enables] ------------------------------------------------==//
+
+/// Defines a valid type for a single dimension (i.e Dims == 1).
+/// \tparam Dims The number of dimensions to base the enable on.
+template <std::size_t Dims>
+using dim_1d_enable_t = std::enable_if_t<Dims == 1, int>;
+
+/// Defines a valid type for two dimensions (i.e Dims == 2).
+/// \tparam Dims The number of dimensions to base the enable on.
+template <std::size_t Dims>
+using dim_2d_enable_t = std::enable_if_t<Dims == 2, int>;
+
+/// Defines a valid type for three dimensions (i.e Dims == 3).
+/// \tparam Dims The number of dimensions to base the enable on.
+template <std::size_t Dims>
+using dim_3d_enable_t = std::enable_if_t<Dims == 3, int>;
+
 } // namespace ripple
 
 #endif // RIPPLE_UTILITY_TYPE_TRAITS_HPP
