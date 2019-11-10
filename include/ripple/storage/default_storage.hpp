@@ -118,7 +118,7 @@ class DefaultStorage {
       const MultidimSpace<SpaceImpl>& space,
       Dim&&                           dim,
       int                             amount
-    ) -> storage_t {
+    ) -> void {
       storage += amount * space.step(dim);
     }
 

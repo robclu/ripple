@@ -199,9 +199,9 @@ class BlockIterator {
   /// \param  amount The amount to offset by.
   /// \tparam Dim    The type of the dimension specifier.
   template <typename Dim>
-  ripple_host_device constexpr auto shift(Dim&& dim, int amount = 1) const 
+  ripple_host_device constexpr auto shift(Dim&& dim, int amount = 1)
   -> void {
-    offsetter_t::offset(_data_ptr, _space, dim, amount);
+    offsetter_t::shift(_data_ptr, _space, dim, amount);
   }
 
   //==--- [dimensions] -----------------------------------------------------==//

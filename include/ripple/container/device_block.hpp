@@ -112,7 +112,7 @@ class DeviceBlock {
   /// \param other The other block to create this block from.
   auto operator=(const self_t& other) -> self_t& {
     _space = other._space;
-    allocate();
+    reallocate();
     cuda::memcpy_device_to_device(
       _data, other._data, allocator_t::allocation_size(_space.size())
     );
@@ -123,7 +123,7 @@ class DeviceBlock {
   /// \param other The other block to create this block from.
   auto operator=(const host_block_t& other) -> self_t& {
     _space = other._space;
-    allocate();
+    reallocate();
     cuda::memcpy_host_to_device(
       _data, other._data, allocator_t::allocation_size(_space.size())
     );

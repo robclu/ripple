@@ -111,7 +111,7 @@ class HostBlock {
   /// \param other The other block to create this block from.
   HostBlock(const device_block_t& other)
   : _space{other._space} {
-    allocate();
+    reallocate();
     cuda::memcpy_device_to_host(
       _data, other._data, allocator_t::allocation_size(_space.size())
     );
@@ -123,7 +123,7 @@ class HostBlock {
   /// \param[in] other The other block to create this block from.
   auto operator=(const self_t& other) -> self_t& {
     _space = other._space;
-    allocate();
+    reallocate();
     const auto bytes = allocator_t::allocation_size(_space.size());
     std::memcpy(_data, other._data, bytes);
     return *this;
@@ -142,7 +142,7 @@ class HostBlock {
   /// \param[in] other The other block to create this block from.
   auto operator=(const device_block_t& other) -> self_t& {
     _space = other._space;
-    allocate();
+    reallocate();
     cuda::memcpy_device_to_host(
       _data, other._data, allocator_t::allocation_size(_space.size())
     );
