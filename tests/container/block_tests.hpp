@@ -18,6 +18,7 @@
 
 #include <ripple/container/block_traits.hpp>
 #include <ripple/container/host_block.hpp>
+#include <ripple/functional/invoke.hpp>
 #include <ripple/storage/storage_descriptor.hpp>
 #include <ripple/storage/stridable_layout.hpp>
 #include <ripple/utility/dim.hpp>
@@ -267,6 +268,74 @@ TEST(container_block, can_access_vec_elements_3d) {
         for (auto element : ripple::range(v->size())) {
           EXPECT_EQ((*v)[element] , static_cast<float>(element) * j);
         }
+      }
+    }
+  }
+}
+
+//==--- [invoke] -----------------------------------------------------------==//
+
+TEST(container_block, can_invoke_1d) {
+  ripple::host_block_1d_t<test_t> b(4121);
+
+  ripple::invoke(b, [] (auto bi) {
+    bi->flag() = -1;
+    bi->v(0)   = 10.0f;
+    bi->v(1)   = 20.0f;
+    bi->v(2)   = 30.0f;
+  });
+
+  for (auto i : ripple::range(b.size(ripple::dim_x))) {
+    const auto bi = b(i);
+
+    EXPECT_EQ(bi->flag(), -1   );
+    EXPECT_EQ(bi->v(0)  , 10.0f);
+    EXPECT_EQ(bi->v(1)  , 20.0f);
+    EXPECT_EQ(bi->v(2)  , 30.0f);
+  }
+}
+
+TEST(container_block, can_invoke_2d) {
+  ripple::host_block_2d_t<test_t> b(412, 371);
+
+  ripple::invoke(b, [] (auto bi) {
+    bi->flag() = -1;
+    bi->v(0)   = 10.0f;
+    bi->v(1)   = 20.0f;
+    bi->v(2)   = 30.0f;
+  });
+
+  for (auto j : ripple::range(b.size(ripple::dim_y))) {
+    for (auto i : ripple::range(b.size(ripple::dim_x))) {
+      const auto bi = b(i, j);
+
+      EXPECT_EQ(bi->flag(), -1   );
+      EXPECT_EQ(bi->v(0)  , 10.0f);
+      EXPECT_EQ(bi->v(1)  , 20.0f);
+      EXPECT_EQ(bi->v(2)  , 30.0f);
+    }
+  }
+}
+
+TEST(container_block, can_invoke_3d) {
+  ripple::host_block_3d_t<test_t> b(41, 37, 22);
+
+  ripple::invoke(b, [] (auto bi) {
+    bi->flag() = -1;
+    bi->v(0)   = 10.0f;
+    bi->v(1)   = 20.0f;
+    bi->v(2)   = 30.0f;
+  });
+
+  for (auto k : ripple::range(b.size(ripple::dim_z))) {
+    for (auto j : ripple::range(b.size(ripple::dim_y))) {
+      for (auto i : ripple::range(b.size(ripple::dim_x))) {
+        const auto bi = b(i, j, k);
+
+        EXPECT_EQ(bi->flag(), -1   );
+        EXPECT_EQ(bi->v(0)  , 10.0f);
+        EXPECT_EQ(bi->v(1)  , 20.0f);
+        EXPECT_EQ(bi->v(2)  , 30.0f);
       }
     }
   }

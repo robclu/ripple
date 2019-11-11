@@ -67,9 +67,11 @@ ripple_global auto invoke(Iterator it, Callable callable, Args... args)
 template <typename T, std::size_t Dims, typename Callable, typename... Args>
 auto invoke(DeviceBlock<T, Dims>& block, Callable&& callable, Args&&... args)
 -> void {
+#if defined(__CUDACC__)
   auto [threads, blocks] = exec::get_exec_size(block);
   detail::invoke<<<blocks, threads>>>(block.begin(), callable, args...);
   ripple_check_cuda_result(cudaDeviceSynchronize());
+#endif // __CUDACC__
 }
 
 } // namespace ripple::kernel::cuda

@@ -16,6 +16,7 @@
 #ifndef RIPPLE_FUNCTIONAL_INVOKE_HPP
 #define RIPPLE_FUNCTIONAL_INVOKE_HPP
 
+#include "kernel/invoke_cpp_.hpp"
 #include "kernel/invoke_cuda_.cuh"
 
 namespace ripple {
@@ -41,7 +42,11 @@ namespace ripple {
 template <typename T, std::size_t Dims, typename Callable, typename... Args>
 auto invoke(HostBlock<T, Dims>& block, Callable&& callable, Args&&... args)
 -> void {
-
+  kernel::invoke(
+    block,
+    std::forward<Callable>(callable),
+    std::forward<Args>(args)...
+  );
 }
 
 /// This forwards the \p callable and the \p block to the cuda implemtation to

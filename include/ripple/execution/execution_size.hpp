@@ -19,6 +19,7 @@
 
 #include <ripple/container/device_block.hpp>
 #include <ripple/utility/type_traits.hpp>
+#include <cmath>
 #include <tuple>
 
 namespace ripple::exec {
