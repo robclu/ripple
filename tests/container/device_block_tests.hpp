@@ -64,9 +64,8 @@ TEST(container_device_block, can_access_simple_elements_1d) {
   }
 }
 
-
 TEST(container_device_block, can_access_simple_elements_2d) {
-  ripple::device_block_2d_t<float> b_dev(250, 250);
+  ripple::device_block_2d_t<float> b_dev(2500, 2500);
 
   ripple::invoke(b_dev, [] ripple_host_device (auto e) {
     *e = 123.45f;
@@ -76,6 +75,23 @@ TEST(container_device_block, can_access_simple_elements_2d) {
   for (auto j : ripple::range(b.size(ripple::dim_y))) {
     for (auto i : ripple::range(b.size(ripple::dim_x))) {
       EXPECT_EQ(*b(i, j), 123.45f);
+    }
+  }
+}
+
+TEST(container_device_block, can_access_simple_elements_3d) {
+  ripple::device_block_3d_t<float> b_dev(250, 250, 250);
+
+  ripple::invoke(b_dev, [] ripple_host_device (auto e) {
+    *e = 123.45f;
+  });
+
+  auto b = b_dev.as_host();
+  for (auto k : ripple::range(b.size(ripple::dim_z))) {
+    for (auto j : ripple::range(b.size(ripple::dim_y))) {
+      for (auto i : ripple::range(b.size(ripple::dim_x))) {
+        EXPECT_EQ(*b(i, j, k), 123.45f);
+      }
     }
   }
 }
@@ -137,6 +153,52 @@ TEST(container_device_block, can_access_stridable_layout_elements_1d) {
     EXPECT_EQ(bi->v(0)  , 4.4f);
     EXPECT_EQ(bi->v(1)  , 5.5f);
     EXPECT_EQ(bi->v(2)  , 6.6f);
+  }
+}
+
+TEST(container_device_block, can_access_stridable_layout_elements_2d) {
+  ripple::device_block_2d_t<dev_block_test_t> b_dev(312, 3571);
+  ripple::invoke(b_dev, [] ripple_host_device (auto bi) {
+    bi->flag() = -1;
+    bi->v(0)   = 10.0f;
+    bi->v(1)   = 20.0f;
+    bi->v(2)   = 30.0f;
+  });
+
+  const auto b = b_dev.as_host();
+  for (auto j : ripple::range(b.size(ripple::dim_y))) {
+    for (auto i : ripple::range(b.size(ripple::dim_x))) {
+      const auto bi = b(i, j);
+
+      EXPECT_EQ(bi->flag(), -1   );
+      EXPECT_EQ(bi->v(0)  , 10.0f);
+      EXPECT_EQ(bi->v(1)  , 20.0f);
+      EXPECT_EQ(bi->v(2)  , 30.0f);
+    }
+  }
+}
+
+TEST(container_device_block, can_access_stridable_layout_elements_3d) {
+  ripple::device_block_3d_t<dev_block_test_t> b_dev(312, 171, 254);
+  ripple::invoke(b_dev, [] ripple_host_device (auto bi) {
+    bi->flag() = -11;
+    bi->v(0)   = 11.0f;
+    bi->v(1)   = 29.0f;
+    bi->v(2)   = 30.4f;
+  });
+
+  const auto b = b_dev.as_host();
+  for (auto k : ripple::range(b.size(ripple::dim_z))) {
+    for (auto j : ripple::range(b.size(ripple::dim_y))) {
+      for (auto i : ripple::range(b.size(ripple::dim_x))) {
+        const auto bi = b(i, j, k);
+
+        EXPECT_EQ(bi->flag(), -11   );
+        EXPECT_EQ(bi->v(0)  , 11.0f);
+        EXPECT_EQ(bi->v(1)  , 29.0f);
+        EXPECT_EQ(bi->v(2)  , 30.4f);
+      }
+    }
   }
 }
 

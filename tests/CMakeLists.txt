@@ -44,7 +44,7 @@ ripple_add_executable(
   all_tests ${ripple_SOURCE_DIR}/tests/all.cpp
 )
 ripple_target_link_libraries(
-  all_tests ${GTEST_BOTH_LIBRARIES}
+  all_tests ${GTEST_BOTH_LIBRARIES} ${CUDA_LIBRARIES}
 )
 
 #==--------------------------------------------------------------------------==#

@@ -64,6 +64,12 @@ class OwnedStorage : public StorageAccessor<OwnedStorage<Ts...>> {
   static constexpr std::size_t components[num_types] = {
     element_components_v<Ts>...
   };
+
+  /// Gets the number of components for the nth element.
+  /// \tparam I The index of the component to get the number of elements for.
+  template <std::size_t I>
+  static constexpr auto nth_element_components_v =
+    element_components_v<nth_element_t<I, Ts...>>;
   
   /// Returns the effective byte size of all elements to store, including any
   /// required padding. This should not be called, other than to define
@@ -162,7 +168,7 @@ class OwnedStorage : public StorageAccessor<OwnedStorage<Ts...>> {
   /// \tparam I The index of the type to get the number of components for.
   template <std::size_t I>
   ripple_host_device constexpr auto components_of() const -> std::size_t {
-    return components[I];
+    return nth_element_components_v<I>;
   }
 
   /// Gets a reference to the Ith data type. This will only be enabled when the

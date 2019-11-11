@@ -74,6 +74,12 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
     element_components_v<Ts>...
   };
 
+  /// Gets the number of components for the nth element.
+  /// \tparam I The index of the component to get the number of elements for.
+  template <std::size_t I>
+  static constexpr auto nth_element_components_v =
+    element_components_v<nth_element_t<I, Ts...>>;
+
   //==--- [allocator] ------------------------------------------------------==//
 
   /// Allocator for the strided storage. This can be used to determine the
@@ -82,7 +88,6 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
   struct Allocator {
    private:
     /// Returns the scaling factor when offsetting in the y dimenion.
-    /// \param  dim The dimension to base the scaling on.
     /// \tparam I   The index of the component to get the scaling factor from.
     template <std::size_t I>
     ripple_host_device static constexpr auto offset_scale(Num<I>, dimx_t) 
@@ -91,10 +96,9 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
     }
 
     /// Returns the scaling factor when offsetting in the y dimenion.
-    /// \param  dim The dimension to base the scaling on.
     /// \tparam I   The index of the component to get the scaling factor from.
     template <std::size_t I>
-    ripple_host_device static constexpr auto offset_scale(Num<I>, dimy_t dim) 
+    ripple_host_device static constexpr auto offset_scale(Num<I>, dimy_t) 
     -> std::size_t {
       return components[I];
     }
@@ -103,7 +107,7 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
     /// \param  dim The dimension to base the scaling on.
     /// \tparam I   The index of the component to get the scaling factor from.
     template <std::size_t I>
-    ripple_host_device static constexpr auto offset_scale(Num<I>, dimz_t dim) 
+    ripple_host_device static constexpr auto offset_scale(Num<I>, dimz_t) 
     -> std::size_t {
       return components[I];
     }
@@ -116,7 +120,7 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
     ripple_host_device static constexpr auto offset_scale(
       Num<I>, std::size_t dim
     ) -> std::size_t {
-      return dim == 0 ? 1 : components[I];
+      return dim == 0 ? 1 : nth_element_components_v<I>;
     }
 
    public:
@@ -342,7 +346,7 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
   /// \tparam I The index of the type to get the number of components for.
   template <std::size_t I>
   ripple_host_device constexpr auto components_of() const -> std::size_t {
-    return components[I];
+    return nth_element_components_v<I>;
   }
 
   /// Gets a reference to the Ith data type. This will only be enabled when the

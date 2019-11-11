@@ -108,7 +108,7 @@ auto get_exec_size(const DeviceBlock<T, Dims>& block)
 template <typename T, std::size_t Dims, dim_3d_enable_t<Dims> = 0>
 auto get_exec_size(const DeviceBlock<T, Dims>& block) 
 -> std::tuple<dim3, dim3> {
-  constexpr auto threads_x = 16;
+  constexpr auto threads_x = 8;
   constexpr auto threads_y = 8;
   constexpr auto threads_z = 8;
   const auto     elems_x   = block.size(dim_x);

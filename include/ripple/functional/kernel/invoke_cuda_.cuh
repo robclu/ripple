@@ -38,10 +38,17 @@ template <typename Iterator, typename Callable, typename... Args>
 ripple_global auto invoke(Iterator it, Callable callable, Args... args)
 -> void {
   constexpr auto dims = it.dimensions();
+  bool in_range = true;
   unrolled_for<dims>([&] (auto dim) {
-    it.shift(dim, flattened_idx(dim));
+    if (flattened_idx(dim) < it.size(dim) && in_range) {
+      it.shift(dim, flattened_idx(dim));
+    } else {
+      in_range = false;
+    }
   });
-  callable(it, args...);
+  if (in_range) {
+    callable(it, args...);
+  }
 }
 
 } // namespace detail
