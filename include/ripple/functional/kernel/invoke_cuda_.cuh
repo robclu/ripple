@@ -17,9 +17,10 @@
 #ifndef RIPPLE_FUNCTIONAL_KERNEL_INVOKE_CUDA__HPP
 #define RIPPLE_FUNCTIONAL_KERNEL_INVOKE_CUDA__HPP
 
+#include <ripple/container/device_block.hpp>
 #include <ripple/execution/execution_size.hpp>
 #include <ripple/multidim/thread_index.hpp>
-#include <ripple/container/device_block.hpp>
+#include <ripple/time/event.hpp>
 
 namespace ripple::kernel::cuda {
 namespace detail {
@@ -71,6 +72,42 @@ auto invoke(DeviceBlock<T, Dims>& block, Callable&& callable, Args&&... args)
   auto [threads, blocks] = exec::get_exec_size(block);
   detail::invoke<<<blocks, threads>>>(block.begin(), callable, args...);
   ripple_check_cuda_result(cudaDeviceSynchronize());
+#endif // __CUDACC__
+}
+
+//==--- [event invoke] -----------------------------------------------------==//
+
+/// Invokes the \p callale on each element in the \p block, profiling the
+/// kernel filling the \p event with profiling information.
+///
+/// \param  block     The block to invoke the callable on.
+/// \param  event     The event to fill with the profiling information.
+/// \param  callable  The callable object.
+/// \param  args      Arguments for the callable.
+/// \tparam T         The type of the data in the block.
+/// \tparam Dims      The number of dimensions in the block.
+/// \tparam Callable  The callable object to invoke.
+/// \tparam Args      The type of the arguments for the invocation.
+template <typename T, std::size_t Dims, typename Callable, typename... Args>
+auto invoke(
+  DeviceBlock<T, Dims>& block,
+  Event&                event,
+  Callable&&            callable,
+  Args&&...             args
+) -> void {
+#if defined(__CUDACC__)
+  cudaEvent_t start, stop;
+  cudaEventCreate(&start);
+  cudaEventCreate(&stop);
+
+  auto [threads, blocks] = exec::get_exec_size(block);
+
+  cudaEventRecord(start);
+  detail::invoke<<<blocks, threads>>>(block.begin(), callable, args...);
+  cudaEventRecord(stop);
+  ripple_check_cuda_result(cudaDeviceSynchronize());
+  cudaEventSynchronize(stop);
+  cudaEventElapsedTime(&event.elapsed_time_ms, start, stop);
 #endif // __CUDACC__
 }
 
