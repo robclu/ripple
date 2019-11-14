@@ -30,7 +30,7 @@ namespace ripple::cuda::kernel {
 /// \tparam Ptr      The type of the pointers.
 template <typename Ptr>
 ripple_global auto copy(Ptr* out, const Ptr* in, std::size_t elements) -> void {
-  const auto idx = flattened_idx(dim_x);
+  const auto idx = grid_idx(dim_x);
   if (idx < elements) {
     out[idx] = in[idx];
   }

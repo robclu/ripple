@@ -20,15 +20,26 @@
 
 namespace ripple {
 
-/// Returns the value of the flattened thread index in a given dimension. The
-/// dimension must be one of dim_x, dim_y, dim_z, or else a compile time error
-/// will be generated. This returns the global flattened index -- i.e, as if the
-/// data were laid out in a single dimension, one dimension after the other.
-/// \param  dim The dimension to get the thread index for.
-/// \tparam Dim The type of the dimension specifier.
+/// Returns the value of the thread index in the grid in a given dimension. The
+/// dimension must be one of dim_x, dim_y, dim_z, or a value specifting the
+/// index of the dimension.
+/// \param  dim the dimension to get the thread index for.
+/// \tparam Dim the type of the dimension specifier.
 template <typename Dim>
-ripple_host_device inline auto flattened_idx(Dim&& dim) -> std::size_t {
-  return detail::flattened_idx(std::forward<Dim>(dim));
+ripple_host_device inline auto grid_idx(Dim&& dim) -> std::size_t {
+  return detail::grid_idx(std::forward<Dim>(dim));
+}
+
+/// Returns the value of the thread index in the grid for the dimension \p dim,
+/// where the execution space of the grid is defined by the execution \p params.
+/// \param  dim    The dimension to get the thread index for.
+/// \param  params Parameters which define the execution space.
+/// \tparam Dim    The type of the dimension specifier.
+/// \tparam Params The type of the execution parameters.
+template <typename Dim, typename Params>
+ripple_host_device inline auto grid_idx(Dim&& dim, Params&& params)
+-> std::size_t {
+  return detail::grid_idx(std::forward<Dim>(dim), std::forward<Params>(params));
 }
 
 } // namespace ripple

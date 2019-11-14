@@ -59,6 +59,50 @@ struct InvokeImpl {
     ::ripple::detail::thread_idx_y = 0;
     ::ripple::detail::thread_idx_z = 0;
   }
+
+  /// Invokes the \p callable on the \p it iterator with the \p args, and the
+  /// execution \p params.
+  /// \param  it        The iterator to pass to the callable.
+  /// \param  params    The execution parameters.
+  /// \param  callable  The callable object.
+  /// \param  args      Arguments for the callable.
+  /// \tparam Iterator  The type of the iterator.
+  /// \tparam Params    The type of the execution params.
+  /// \tparam Callable  The callable object to invoke.
+  /// \tparam Args      The type of the arguments for the invocation.
+  template <
+    typename    Iterator,
+    typename    Params  ,
+    typename    Callable,
+    typename... Args
+  >
+  static auto invoke(
+    Iterator&& it,
+    Params&&   params,
+    Callable&& callable,
+    Args&&...  args
+  ) -> void {
+    constexpr auto dim = Num<I>();
+    for (auto i : range(it.size(dim))) {
+      if constexpr (I == 1) {
+        ::ripple::detail::thread_idx_y = i;
+      }
+      if constexpr (I == 2) {
+        ::ripple::detail::thread_idx_z = i;
+      }
+
+      InvokeImpl<I - 1>::invoke(
+        it.offset(dim, i),
+        std::forward<Params>(params),
+        std::forward<Callable>(callable),
+        std::forward<Args>(args)...
+      );
+    }
+    ::ripple::detail::thread_idx_x = 0;
+    ::ripple::detail::thread_idx_y = 0;
+    ::ripple::detail::thread_idx_z = 0;
+  }
+
 };
 
 /// Specialization for the last dimension dimension.
@@ -77,6 +121,34 @@ struct InvokeImpl<0> {
     for (auto i : range(it.size(dim_x))) {
       ::ripple::detail::thread_idx_x = i;
       callable(it.offset(dim_x, i), std::forward<Args>(args)...);
+    }
+  }
+
+  /// Invokes the \p callable on the \p it iterator with the \p args and the \p
+  /// execution params.
+  /// \param  it        The iterator to pass to the callable.
+  /// \param  params    The execution params.
+  /// \param  callable  The callable object.
+  /// \param  args      Arguments for the callable.
+  /// \tparam Iterator  The type of the iterator.
+  /// \tparam Params    The type of the execution parameters.
+  /// \tparam Callable  The callable object to invoke.
+  /// \tparam Args      The type of the arguments for the invocation.
+  template <
+    typename    Iterator,
+    typename    Params  ,
+    typename    Callable,
+    typename... Args
+  >
+  static auto invoke(
+    Iterator&& it,
+    Params&&   params,
+    Callable&& callable,
+    Args&&...  args
+  ) -> void {
+    for (auto i : range(it.size(dim_x))) {
+      ::ripple::detail::thread_idx_x = i;
+      callable(it.offset(dim_x, i), params, std::forward<Args>(args)...);
     }
   }
 };
@@ -136,6 +208,41 @@ auto invoke(
   event.elapsed_time_ms = 
     std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count()
     / 1000000.0f;
+}
+
+//==--- [execution params invoke] ------------------------------------------==//
+
+/// Invokes the \p callale on each element in the \p block, using the \p params
+/// execution params to order the invocation.
+///
+/// \param  block     The block to invoke the callable on.
+/// \param  params    Execution params for the invocation.
+/// \param  callable  The callable object.
+/// \param  args      Arguments for the callable.
+/// \tparam T         The type of the data in the block.
+/// \tparam Dims      The number of dimensions in the block.
+/// \tparam Params    The type of the execution parameters.
+/// \tparam Callable  The callable object to invoke.
+/// \tparam Args      The type of the arguments for the invocation.
+template <
+  typename    T,
+  std::size_t Dims,
+  typename    Params,
+  typename    Callable,
+  typename... Args
+>
+auto invoke(
+  HostBlock<T, Dims>& block,
+  Params&&            params,
+  Callable&&          callable,
+  Args&&...           args
+) -> void {
+  detail::InvokeImpl<Dims - 1>::invoke(
+    block.begin(),
+    std::forward<Params>(params),
+    std::forward<Callable>(callable),
+    std::forward<Args>(args)...
+  );   
 }
 
 } // namespace ripple
