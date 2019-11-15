@@ -14,4 +14,5 @@
 //==------------------------------------------------------------------------==//
 
 #include "dynamic_multidim_space_tests.hpp"
+#include "static_multidim_space_tests.hpp"
 #include "offset_to_tests.hpp"

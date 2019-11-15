@@ -216,5 +216,17 @@ TEST(multidim_dynamic_multidim_space, size_and_step_with_padding_3d) {
 }
 
 
+TEST(multidim_dynamic_multidim_space, works_with_custom_padding) {
+  using space_t         = ripple::DynamicMultidimSpace<3>;
+  constexpr auto space  = space_t{3, 10, 20, 5};
+  const auto size       = size_t{(10 + 6) * (20 + 6) * (5 + 6)};
+  EXPECT_EQ(space.padding()          , size_t{3});
+  EXPECT_EQ(space.size()             , size);
+  EXPECT_EQ(space.size(ripple::dim_x), size_t{10 + 6});
+  EXPECT_EQ(space.size(ripple::dim_y), size_t{20 + 6});
+  EXPECT_EQ(space.size(ripple::dim_z), size_t{5 + 6});
+}
+
+
 #endif // RIPPLE_TESTS_MULTIDIM_DYNAMIC_MULTIDIM_SPACE_TESTS_HPP
 

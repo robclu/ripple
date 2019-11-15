@@ -43,13 +43,13 @@ struct DynamicMultidimSpace :
   //==--- [construction] ---------------------------------------------------==//
 
   /// Default constructor -- enables creation of empty spatial information.
-  DynamicMultidimSpace() = default;
+  constexpr DynamicMultidimSpace() {};
 
   /// Sets the sizes of the dimensions for the space.
   /// \param  sizes The sizes of the dimensions. 
   /// \tparam Sizes The type of the sizes.
   template <typename... Sizes, all_arithmetic_size_enable_t<dims, Sizes...> = 0>
-  ripple_host_device DynamicMultidimSpace(Sizes&&... sizes)
+  ripple_host_device constexpr DynamicMultidimSpace(Sizes&&... sizes)
   : _sizes{static_cast<std::size_t>(sizes)...} {}
 
   /// Sets the sizes of the dimensions for the space and the amount of padding
@@ -59,7 +59,8 @@ struct DynamicMultidimSpace :
   /// \param  sizes   The sizes of the dimensions. 
   /// \tparam Sizes   The type of the sizes.
   template <typename... Sizes, all_arithmetic_size_enable_t<dims, Sizes...> = 0>
-  ripple_host_device DynamicMultidimSpace(std::size_t padding, Sizes&&... sizes)
+  ripple_host_device constexpr 
+  DynamicMultidimSpace(std::size_t padding, Sizes&&... sizes)
   : _padding{padding}, _sizes{static_cast<std::size_t>(sizes)...} {}
 
   //==--- [padding] --------------------------------------------------------==//
@@ -114,13 +115,13 @@ struct DynamicMultidimSpace :
   /// \param  dim  The dimension to get the size of.
   /// \tparam Dim  The type of the dimension.
   template <typename Dim>
-  ripple_host_device auto size(Dim&& dim) const -> std::size_t {
+  ripple_host_device constexpr auto size(Dim&& dim) const -> std::size_t {
     return _sizes[dim] + dim_padding();
   }
 
   /// Returns the total size of the N dimensional space i.e the total number of
   /// elements in the space. This is the product sum of the dimension sizes.
-  ripple_host_device auto size() const -> std::size_t {
+  ripple_host_device constexpr auto size() const -> std::size_t {
     std::size_t prod_sum = 1;
     unrolled_for<dims>([&] (auto dim) {
       prod_sum *= (_sizes[dim] + dim_padding());
@@ -132,13 +133,14 @@ struct DynamicMultidimSpace :
   /// \param  dim  The dimension to get the size of.
   /// \tparam Dim  The type of the dimension.
   template <typename Dim>
-  ripple_host_device auto internal_size(Dim&& dim) const -> std::size_t {
+  ripple_host_device constexpr auto internal_size(Dim&& dim) const 
+  -> std::size_t {
     return _sizes[dim];
   }
 
   /// Returns the total size of the N dimensional space i.e the total number of
   /// elements in the space. This is the product sum of the dimension sizes.
-  ripple_host_device auto internal_size() const -> std::size_t {
+  ripple_host_device constexpr auto internal_size() const -> std::size_t {
     std::size_t prod_sum = 1;
     unrolled_for<dims>([&] (auto dim) {
       prod_sum *= _sizes[dim];
@@ -154,7 +156,7 @@ struct DynamicMultidimSpace :
   /// \param  width The width of the array if the space is for soa or soa.
   /// \tparam Dim   The type of the dimension.
   template <typename Dim>
-  ripple_host_device auto step(Dim dim) const -> std::size_t {
+  ripple_host_device constexpr auto step(Dim dim) const -> std::size_t {
     std::size_t res = 1;
     for (auto d : range(static_cast<std::size_t>(dim))) {
       res *= _sizes[d] + dim_padding();
@@ -168,7 +170,7 @@ struct DynamicMultidimSpace :
   /// set the size of the dimension.
   /// \param[in] dim The dimension size to get a refernece to.
   template <typename Dim>
-  ripple_host_device auto operator[](Dim&& dim) -> std::size_t& {
+  ripple_host_device constexpr auto operator[](Dim&& dim) -> std::size_t& {
     return _sizes[dim];
   }
 
