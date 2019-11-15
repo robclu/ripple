@@ -41,23 +41,22 @@ struct MultidimSpace {
   }
 
  public:
-  /// Returns the amount of padding in dimension \p dim for the space. The 
-  /// padding is the number of elements at the beginning and end of the space,
-  /// which are not used for computation. This must returns the padding at one
-  /// side of the dimension in the space, which is the same on the other size of
-  /// the dimension for the space.
-  /// \param[in] dim The dimension to get the padding for.
-  template <typename Dim>
-  ripple_host_device constexpr auto padding(Dim&& dim) -> std::size_t {
-    return impl()->padding(std::forward<Dim>(dim));
+  /// Returns a reference to the amount of padding for each side of each
+  /// dimension in the space.
+  ripple_host_device constexpr auto padding() -> std::size_t& {
+    return impl()->padding();
   }
 
-  /// Returns the size of the \p dim dimension.
-  /// \param  dim  The dimension to get the size of.
-  /// \tparam Dim  The type of the dimension.
-  template <typename Dim>
-  ripple_host_device constexpr auto size(Dim&& dim) const -> std::size_t {
-    return impl()->size(std::forward<Dim>(dim));
+  /// Returns the amount of padding for each side of each dimension in the
+  /// space.
+  ripple_host_device constexpr auto padding() const -> std::size_t {
+    return impl()->padding();
+  }
+
+  /// Returns the total amount of padding for each dimension, which is the sum
+  /// of the padding on each side of the dimension.
+  ripple_host_device constexpr auto dim_padding() const -> std::size_t {
+    return impl()->dim_padding();
   }
 
   /// Returns the number of dimensions in the space.
@@ -65,10 +64,33 @@ struct MultidimSpace {
     return impl()->dimensions();
   }
 
+  /// Returns the size of the \p dim dimension, including the padding.
+  /// \param  dim  The dimension to get the size of.
+  /// \tparam Dim  The type of the dimension.
+  template <typename Dim>
+  ripple_host_device constexpr auto size(Dim&& dim) const -> std::size_t {
+    return impl()->size(std::forward<Dim>(dim));
+  }
+
   /// Returns the total size of the N dimensional space i.e the total number of
-  /// elements in the space. This is the product sum of the dimension sizes.
+  /// elements in the space, including the padding for each of the dimensions.
   ripple_host_device constexpr auto size() const -> std::size_t {
     return impl()->size();
+  }
+
+  /// Returns the size of the \p dim dimension, without padding.
+  /// \param  dim  The dimension to get the size oAf.
+  /// \tparam Dim  The type of the dimension.
+  template <typename Dim>
+  ripple_host_device constexpr auto internal_size(Dim&& dim) const 
+  -> std::size_t {
+    return impl()->internal_size(std::forward<Dim>(dim));
+  }
+
+  /// Returns the total internal size of the N dimensional space i.e the total
+  /// number of elements in the space without padding.A
+  ripple_host_device constexpr auto internal_size() const -> std::size_t {
+    return impl()->internal_size();
   }
 
   /// Returns the step size to from one element in \p dim to the next element in
@@ -78,17 +100,6 @@ struct MultidimSpace {
   template <typename Dim>
   ripple_host_device constexpr auto step(Dim&& dim) const -> std::size_t {
     return impl()->step(std::forward<Dim>(dim));
-  }
-
-  /// Resizes the space to the \p sizes. If sizeof...(Sizes) is less than the
-  /// number of dimensions in the space, then the first sizeof...(Sizes) will be
-  /// resized. If sizeof...(Sizes) > the number of dimensions, a compile time
-  /// errir will be generated.
-  /// \param  sizes The sizes to resize the dimensions to.
-  /// \tparam Sizes The type of the sizes. 
-  template <typename... Sizes>
-  ripple_host_device constexpr auto resize(Sizes&&... sizes) -> void {
-    return impl()->resize(std::forward<Sizes>(sizes)...);
   }
 };
 

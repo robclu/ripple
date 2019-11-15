@@ -52,14 +52,34 @@ struct DynamicMultidimSpace :
   ripple_host_device DynamicMultidimSpace(Sizes&&... sizes)
   : _sizes{static_cast<std::size_t>(sizes)...} {}
 
+  /// Sets the sizes of the dimensions for the space and the amount of padding
+  /// for the space.
+  /// \param  padding The amount of padding for each of the sides of each of the
+  ///                 dimensions.
+  /// \param  sizes   The sizes of the dimensions. 
+  /// \tparam Sizes   The type of the sizes.
+  template <typename... Sizes, all_arithmetic_size_enable_t<dims, Sizes...> = 0>
+  ripple_host_device DynamicMultidimSpace(std::size_t padding, Sizes&&... sizes)
+  : _padding{padding}, _sizes{static_cast<std::size_t>(sizes)...} {}
+
   //==--- [padding] --------------------------------------------------------==//
 
-  /// Returns the amount of padding in dimension \p dim. This implementation of
-  /// the multidimensional space has no padding.
-  /// \param[in] dim The dimension to get the padding for.
-  template <typename Dim>
-  ripple_host_device constexpr auto padding(Dim&& dim) -> std::size_t {
-    return 0;
+  /// Returns the amount of padding for each side of each dimension for the
+  /// space.
+  ripple_host_device constexpr auto padding() -> std::size_t& {
+    return _padding;
+  }
+
+  /// Returns the amount of padding for each side of each dimension for the
+  /// space.
+  ripple_host_device constexpr auto padding() const -> std::size_t {
+    return _padding;
+  }
+
+  /// Returns the total amounnt of padding for the dimesion, which is twice the
+  /// dimension per side.
+  ripple_host_device constexpr auto dim_padding() const -> std::size_t {
+    return _padding * 2;
   }
 
   //==--- [size] -----------------------------------------------------------==//
@@ -95,12 +115,30 @@ struct DynamicMultidimSpace :
   /// \tparam Dim  The type of the dimension.
   template <typename Dim>
   ripple_host_device auto size(Dim&& dim) const -> std::size_t {
-    return _sizes[dim];
+    return _sizes[dim] + dim_padding();
   }
 
   /// Returns the total size of the N dimensional space i.e the total number of
   /// elements in the space. This is the product sum of the dimension sizes.
   ripple_host_device auto size() const -> std::size_t {
+    std::size_t prod_sum = 1;
+    unrolled_for<dims>([&] (auto dim) {
+      prod_sum *= (_sizes[dim] + dim_padding());
+    });
+    return prod_sum;
+  }
+
+  /// Returns the size of the \p dim dimension.
+  /// \param  dim  The dimension to get the size of.
+  /// \tparam Dim  The type of the dimension.
+  template <typename Dim>
+  ripple_host_device auto internal_size(Dim&& dim) const -> std::size_t {
+    return _sizes[dim];
+  }
+
+  /// Returns the total size of the N dimensional space i.e the total number of
+  /// elements in the space. This is the product sum of the dimension sizes.
+  ripple_host_device auto internal_size() const -> std::size_t {
     std::size_t prod_sum = 1;
     unrolled_for<dims>([&] (auto dim) {
       prod_sum *= _sizes[dim];
@@ -111,8 +149,7 @@ struct DynamicMultidimSpace :
   //==--- [step] -----------------------------------------------------------==//
 
   /// Returns the step size to from one element in \p dim to the next element in
-  /// \p dim. If the space is used for AOS or SOA storage with \p width elements
-  /// in each array, then this will additionally factor in the width.
+  /// \p dim. 
   /// \param  dim   The dimension to get the step size in.
   /// \param  width The width of the array if the space is for soa or soa.
   /// \tparam Dim   The type of the dimension.
@@ -120,7 +157,7 @@ struct DynamicMultidimSpace :
   ripple_host_device auto step(Dim dim) const -> std::size_t {
     std::size_t res = 1;
     for (auto d : range(static_cast<std::size_t>(dim))) {
-      res *= _sizes[d];
+      res *= _sizes[d] + dim_padding();
     }
     return res;
   }
@@ -136,7 +173,8 @@ struct DynamicMultidimSpace :
   }
 
  private:
-  container_t _sizes; //!< Sizes of the dimensions.
+  std::size_t _padding = 0; //!< Amount of padding for each side of each dim.
+  container_t _sizes;       //!< Sizes of the dimensions.
 };
 
 } // namespace ripple
