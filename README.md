@@ -7,6 +7,5 @@ of cores to achieve state of the art realism and performance.
 # Upcoming features/todo list
 
 - Integrate padding into blocks
-- Compile time size multidim space
 - Shared/cache memory blocks for certain types
 - Tiling based on cache size for CPU invoke

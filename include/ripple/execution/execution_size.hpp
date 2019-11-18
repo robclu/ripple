@@ -17,6 +17,7 @@
 #ifndef RIPPLE_EXECUTION_EXECUTION_SIZE_HPP
 #define RIPPLE_EXECUTION_EXECUTION_SIZE_HPP
 
+#include "execution_params.hpp"
 #include <ripple/container/device_block.hpp>
 #include <ripple/utility/dim.hpp>
 #include <ripple/utility/type_traits.hpp>
@@ -58,64 +59,64 @@ auto get_dim_num_threads(T elements, U max_threads) -> std::size_t {
 
 /// Returns the number of threads and blocks required to launch a kernel for the
 /// \p block on the device, with the execution space parameters defined by the
-/// \p params.
+/// \p exec_params.
 ///
 /// This overload is only enabled if the \p block is one dimensional.
 ///
-/// \param  block  The block to generate the execution size for.
-/// \param  params The execution parameters for the grid.
-/// \tparam T      The data type for the block.
-/// \tparam Dims   The number of dimensions for the block.
-/// \tparam Params The type of the execution parameters.
+/// \param  block       The block to generate the execution size for.
+/// \param  exec_params The execution parameters.
+/// \tparam T           The data type for the block.
+/// \tparam Dims        The number of dimensions for the block.
+/// \tparam ExeImpl     The type of the execution parameter implementation.
 template <
   typename    T,
   std::size_t Dims,
-  typename    Params,
+  typename    ExeImpl,
   dim_1d_enable_t<Dims> = 0
 >
-auto get_exec_size(const DeviceBlock<T, Dims>& block, Params&& params) 
--> std::tuple<dim3, dim3> { 
-  using params_t     = std::decay_t<Params>;
+auto get_exec_size(
+  const DeviceBlock<T, Dims>& block, const ExecParams<ExeImpl>& exec_params
+) -> std::tuple<dim3, dim3> { 
   const auto elems_x = block.size(dim_x);
 
   auto threads = dim3(1, 1, 1);
   auto blocks  = dim3(1, 1, 1);
   
-  threads.x = get_dim_num_threads(elems_x, params_t::size(dim_x));
-  blocks.x  = get_dim_num_blocks(elems_x, threads.x * params_t::grain);
+  threads.x = get_dim_num_threads(elems_x, exec_params.size(dim_x));
+  blocks.x  = get_dim_num_blocks(elems_x, threads.x * exec_params.grain_size());
 
   return std::make_tuple(threads, blocks);
 }
 
 /// Returns the number of threads and blocks required to launch a kernel for the
 /// \p block on the device, with the execution space parameters defined by the
-/// \p params.
+/// \p exec_params.
 ///
 /// This overload is only enabled if the \p block is two dimensional.
 ///
-/// \param  block  The block to generate the execution size for.
-/// \param  params The execution parameters for the grid.
-/// \tparam T      The data type for the block.
-/// \tparam Dims   The number of dimensions for the block.
-/// \tparam Params The type of the execution parameters.
+/// \param  block       The block to generate the execution size for.
+/// \param  exec_params The execution parameters
+/// \tparam T           The data type for the block.
+/// \tparam Dims        The number of dimensions for the block.
+/// \tparam ExeImpl     The type of the execution parameter implementation.
 template <
   typename    T,
   std::size_t Dims,
-  typename    Params,
+  typename    ExeImpl,
   dim_2d_enable_t<Dims> = 0
 >
-auto get_exec_size(const DeviceBlock<T, Dims>& block, Params&& params) 
--> std::tuple<dim3, dim3> { 
-  using params_t = std::decay_t<Params>;
+auto get_exec_size(
+  const DeviceBlock<T, Dims>& block, const ExecParams<ExeImpl>& exec_params
+) -> std::tuple<dim3, dim3> { 
   const auto elems_x = block.size(dim_x);
   const auto elems_y = block.size(dim_y);
 
   auto threads = dim3(1, 1, 1);
   auto blocks  = dim3(1, 1, 1);
 
-  threads.x = get_dim_num_threads(elems_x, params_t::size(dim_x));
-  threads.y = get_dim_num_threads(elems_y, params_t::size(dim_y));
-  blocks.x  = get_dim_num_blocks(elems_x, threads.x * params_t::grain);
+  threads.x = get_dim_num_threads(elems_x, exec_params.size(dim_x));
+  threads.y = get_dim_num_threads(elems_y, exec_params.size(dim_y));
+  blocks.x  = get_dim_num_blocks(elems_x, threads.x * exec_params.grain_size());
   blocks.y  = get_dim_num_blocks(elems_y, threads.y);
 
   return std::make_tuple(threads, blocks);
@@ -123,24 +124,24 @@ auto get_exec_size(const DeviceBlock<T, Dims>& block, Params&& params)
 
 /// Returns the number of threads and blocks required to launch a kernel for the
 /// \p block on the device, with the execution space parameters defined by the
-/// \p params.
+/// \p exec_params.
 ///
 /// This overload is only enabled if the \p block is three dimensional.
 ///
-/// \param  block  The block to generate the execution size for.
-/// \param  params The execution parameters for the grid.
-/// \tparam T      The data type for the block.
-/// \tparam Dims   The number of dimensions for the block.
-/// \tparam Params The type of the execution parameters.
+/// \param  block       The block to generate the execution size for.
+/// \param  exec_params The execution parameters.
+/// \tparam T           The data type for the block.
+/// \tparam Dims        The number of dimensions for the block.
+/// \tparam ExeImpl     The type of the execution parameter implementation.
 template <
   typename    T,
   std::size_t Dims,
-  typename    Params,
+  typename    ExeImpl,
   dim_3d_enable_t<Dims> = 0
 >
-auto get_exec_size(const DeviceBlock<T, Dims>& block, Params&& params) 
--> std::tuple<dim3, dim3> {
-  using params_t = std::decay_t<Params>;
+auto get_exec_size(
+  const DeviceBlock<T, Dims>& block, const ExecParams<ExeImpl>& exec_params
+) -> std::tuple<dim3, dim3> {
   const auto  elems_x = block.size(dim_x);
   const auto  elems_y = block.size(dim_y);
   const auto  elems_z = block.size(dim_z);
@@ -148,10 +149,10 @@ auto get_exec_size(const DeviceBlock<T, Dims>& block, Params&& params)
   auto threads = dim3(1, 1, 1);
   auto blocks  = dim3(1, 1, 1);
 
-  threads.x = get_dim_num_threads(elems_x, params_t::size(dim_x));
-  threads.y = get_dim_num_threads(elems_y, params_t::size(dim_y));
-  threads.z = get_dim_num_threads(elems_z, params_t::size(dim_z));
-  blocks.x  = get_dim_num_blocks(elems_x, threads.x * params_t::grain);
+  threads.x = get_dim_num_threads(elems_x, exec_params.size(dim_x));
+  threads.y = get_dim_num_threads(elems_y, exec_params.size(dim_y));
+  threads.z = get_dim_num_threads(elems_z, exec_params.size(dim_z));
+  blocks.x  = get_dim_num_blocks(elems_x, threads.x * exec_params.grain_size());
   blocks.y  = get_dim_num_blocks(elems_y, threads.y);
   blocks.z  = get_dim_num_blocks(elems_z, threads.z);
 
