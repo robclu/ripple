@@ -21,7 +21,8 @@
 namespace ripple {
 
 /// The BlockIterator class defines a iterator over a block, for a given space
-/// which defines the region of the block.
+/// which defines the region of the block. The iterator only iterates over the
+/// internal space of the block, not over the padding.
 ///
 /// The type T for the iterator can be either a normal type, or type which
 /// implements the StridableLayout interface. Regardless, the use is the same,
@@ -216,7 +217,7 @@ class BlockIterator {
 
   /// Returns the total size of the iteration space.
   ripple_host_device constexpr auto size() const -> std::size_t {
-    return _space.size();
+    return _space.internal_size();
   }
 
   /// Returns the size of the iteration space in the given dimension \p dim.
@@ -224,7 +225,7 @@ class BlockIterator {
   /// \tparam Dim The type of the dimension specifier.
   template <typename Dim>
   ripple_host_device constexpr auto size(Dim&& dim) const -> std::size_t {
-    return _space.size(std::forward<Dim>(dim));
+    return _space.internal_size(std::forward<Dim>(dim));
   }
 
   /// Returns the amount of padding for the iteration space.

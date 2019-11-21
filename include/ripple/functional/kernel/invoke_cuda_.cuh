@@ -48,7 +48,7 @@ ripple_global auto invoke(Iterator it, Callable callable, Args... args)
     constexpr auto dim = d;
     const auto     idx = global_idx(dim);
     if (idx < it.size(dim) && in_range) {
-      it.shift(dim, idx + it.padding());
+      it.shift(dim, idx);
     } else {
       in_range = false;
     }
@@ -97,7 +97,7 @@ ripple_device_only auto invoke_shared(
     constexpr auto dim = Dims - 1 - d;
     const auto     idx = global_idx(dim);
     if (idx < it.size(dim) && in_range) {
-      it.shift(dim, idx + it.padding());
+      it.shift(dim, idx);
       shared_it.shift(dim, thread_idx(dim) + shared_it.padding());
     } else {
       in_range = false;

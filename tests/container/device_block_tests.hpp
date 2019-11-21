@@ -276,6 +276,30 @@ TEST(container_device_block, can_access_stridable_layout_elements_3d) {
   }
 }
 
+TEST(container_device_block, can_access_stridable_layout_elements_padding_3d) {
+  ripple::device_block_3d_t<dev_block_test_t> b_dev(2, 312, 171, 254);
+  ripple::invoke(b_dev, [] ripple_host_device (auto bi) {
+    bi->flag() = -11;
+    bi->v(0)   = 11.0f;
+    bi->v(1)   = 29.0f;
+    bi->v(2)   = 30.4f;
+  });
+
+  const auto b = b_dev.as_host();
+  for (auto k : ripple::range(b.size(ripple::dim_z))) {
+    for (auto j : ripple::range(b.size(ripple::dim_y))) {
+      for (auto i : ripple::range(b.size(ripple::dim_x))) {
+        const auto bi = b(i, j, k);
+
+        EXPECT_EQ(bi->flag(), -11   );
+        EXPECT_EQ(bi->v(0)  , 11.0f);
+        EXPECT_EQ(bi->v(1)  , 29.0f);
+        EXPECT_EQ(bi->v(2)  , 30.4f);
+      }
+    }
+  }
+}
+
 //==--- [stridable exec params] --------------------------------------------==//
 
 TEST(container_device_block, exec_params_stridable_elements_1d) {
@@ -389,10 +413,10 @@ TEST(container_device_block, exec_params_shared_stridable_elements_3d) {
 }
 
 TEST(container_device_block, exec_params_shared_pad_stridable_elements_3d) {
-  ripple::device_block_3d_t<dev_block_test_t> b_dev(2, 2, 2);
-  constexpr auto padding = 2;
-  constexpr auto tol     = 1e-4;
-  ripple::StaticExecParams<8, 4, 2, padding, dev_block_test_t> params;
+  ripple::device_block_3d_t<dev_block_test_t> b_dev(23, 11, 19);
+  constexpr std::size_t padding = 2;
+  constexpr float       tol     = 1e-4;
+  ripple::StaticExecParams<8, 8, 8, padding, dev_block_test_t> params;
   ripple::invoke(b_dev, params, [] ripple_host_device (auto bi, auto si) {
     const auto idx = static_cast<float>(global_idx(ripple::dim_x));
     si->flag() = -11;
@@ -402,7 +426,7 @@ TEST(container_device_block, exec_params_shared_pad_stridable_elements_3d) {
 
     // Set the padding data:
     ripple::unrolled_for<3>([&] (auto dim) {
-      if (first_thread_in_block(dim)) {
+      if (ripple::first_thread_in_block(dim)) {
         for (auto i = std::size_t{1}; i <= si.padding(); ++i) {
           auto s = si.offset(dim, -1 * i);
           s->flag() = -11;
@@ -410,7 +434,10 @@ TEST(container_device_block, exec_params_shared_pad_stridable_elements_3d) {
           s->v(1)   = 29.0f;
           s->v(2)   = 30.4f;
         }
-      } else if (ripple::last_thread_in_block(dim)) {
+      } else if (
+          ripple::last_thread_in_block(dim) ||
+          ripple::global_idx(dim) == bi.size(dim) - 1
+        ) {
         for (auto i = std::size_t{1}; i <= si.padding(); ++i) {
           auto s = si.offset(dim, i);
           s->flag() = -11;
@@ -420,11 +447,11 @@ TEST(container_device_block, exec_params_shared_pad_stridable_elements_3d) {
         }
       }
     });
+    __syncthreads();
     bi->flag() = si->flag();
     bi->v(0)   = si->v(0);
     bi->v(1)   = si->v(1);
     bi->v(2)   = si->v(2);
-    __syncthreads();
         
     // Accumulate:
     ripple::unrolled_for<3>([&] (auto dim) {

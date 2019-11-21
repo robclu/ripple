@@ -74,7 +74,7 @@ class DeviceBlock {
   /// enabled when the number of arguments matches the dimensionality of the
   /// block, and the sizes are numeric types.
   ///
-  /// \param sizes  The sizes of the dimensions for the block.
+  /// \param  sizes The sizes of the dimensions for the block.
   /// \tparam Sizes The types of other dimension sizes.
   template <
     typename... Sizes,
@@ -82,6 +82,23 @@ class DeviceBlock {
   >
   DeviceBlock(Sizes&&... sizes)
   : _space{std::forward<Sizes>(sizes)...} {
+    allocate();
+  }
+
+  /// Initializes the size of each of the dimensions of the tensor, as well as
+  /// the padding for the tensor. This is only enabled when the number of
+  /// size arguments matches the dimensionality of the tensor, and the sizes
+  /// are numeric types.
+  ///
+  /// \param  padding The amount of padding for the tensor.
+  /// \param  sizes   The sizes of the dimensions for the tensor.
+  /// \tparam Sizes   The types of other dimension sizes.
+  template <
+    typename... Sizes,
+    all_arithmetic_size_enable_t<Dimensions, Sizes...> = 0
+  >
+  DeviceBlock(std::size_t padding, Sizes&&... sizes)
+  : _space{padding, std::forward<Sizes>(sizes)...} {
     allocate();
   }
 
@@ -141,7 +158,11 @@ class DeviceBlock {
   
   /// Gets an iterator to the beginning of the block.
   ripple_host_device auto begin() -> iter_t {
-    return iter_t{allocator_t::create(_data, _space), _space};
+    auto it = iter_t{allocator_t::create(_data, _space), _space};
+    unrolled_for<Dimensions>([&] (auto dim) {
+      it.shift(dim, _space.padding());
+    });
+    return it;
   }
 
   /// Overload of operator() to get an iterator to the element at the location
@@ -151,7 +172,10 @@ class DeviceBlock {
   template <typename... Indices>
   ripple_host_device auto operator()(Indices&&... is) -> iter_t {
     return iter_t{
-      allocator_t::create(_data, _space, std::forward<Indices>(is)...), _space
+      allocator_t::create(
+        _data, _space, std::forward<Indices>(is) + _space.padding()...
+      ),
+      _space
     };
   }
 
@@ -162,7 +186,10 @@ class DeviceBlock {
   template <typename... Indices>
   ripple_host_device auto operator()(Indices&&... is) const -> const_iter_t {
     return const_iter_t{
-      allocator_t::create(_data, _space, std::forward<Indices>(is)...), _space
+      allocator_t::create(
+        _data, _space, std::forward<Indices>(is) + _space.padding()...
+      ),
+      _space
     };
   }
 
@@ -202,7 +229,7 @@ class DeviceBlock {
 
   /// Returns the total number of elements in the tensor.
   auto size() const -> std::size_t {
-    return _space.size();
+    return _space.internal_size();
   }
 
   /// Returns the total number of elements in dimension \p dim.
@@ -210,7 +237,7 @@ class DeviceBlock {
   /// \param Dim The type of the dimension specifier.
   template <typename Dim>
   auto size(Dim&& dim) const -> std::size_t {
-    return _space.size(std::forward<Dim>(dim));
+    return _space.internal_size(std::forward<Dim>(dim));
   }
 
  private:
