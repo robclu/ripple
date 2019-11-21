@@ -29,7 +29,7 @@ struct PointerWrapper {
   /// Constructor to create the wrapper.
   /// \param data The data to wrap as a pointer.
   ripple_host_device PointerWrapper(T data) : _data{data} {}
-  
+
   // Overload of the access operator to access the type T with pointer like
   // syntax.
   ripple_host_device auto operator->() -> T* {

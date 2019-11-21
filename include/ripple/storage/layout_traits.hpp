@@ -99,7 +99,7 @@ struct LayoutTraits<T, true> {
   /// Defines the type when referencing from an iterator.
   using iter_ref_t       = value_t;
   /// Defines the type of a const reference for an iterator.
-  using iter_const_ref_t = const iter_ref_t;
+  using iter_const_ref_t = const value_t;
   /// Defines the type of a pointer for an iterator.
   using iter_ptr_t       = PointerWrapper<value_t>;
   /// Defines thet type of a const pointer for an iterator.

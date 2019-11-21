@@ -23,21 +23,25 @@
 namespace ripple {
 
 /// The ExecParams struct defines an interface for all execution parameter
-/// implementations.
+/// implementations. The purpose of execution paramters are to customize the
+/// execution space and to create data and iterators over the data in the
+/// executin space.
 /// \tparam Impl The implementation of the interface.
 template <typename Impl>
 struct ExecParams {
  private:
   /// Defines the type of the implementation.
-  using impl_t = std::decay_t<Impl>;
+  using impl_t   = std::decay_t<Impl>;
+  /// Defines the traits for the implementation.
+  using traits_t = ExecTraits<impl_t>;
 
   /// Returns a const pointer to the implementation.
-  ripple_host_device auto impl() const -> const impl_t* {
+  ripple_host_device constexpr auto impl() const -> const impl_t* {
     return static_cast<const impl_t*>(this);
   }
 
   /// Returns a pointer to the implementation.
-  ripple_host_device auto impl() -> impl_t* {
+  ripple_host_device constexpr auto impl() -> impl_t* {
     return static_cast<impl_t*>(this);
   }
  public:
@@ -59,23 +63,6 @@ struct ExecParams {
 
   //==--- [properties] -----------------------------------------------------==//
 
-  /// Returns true if the implementation is a fixed size.
-  ripple_host_device constexpr auto is_fixed() const -> bool {
-    return impl()->is_fixed();
-  }
-
-  /// Returns the grain size for the space (the number of elements to be
-  /// processed by a thread in the space).
-  ripple_host_device constexpr auto grain_size() const -> std::size_t {
-    return impl()->grain_size();
-  }
-
-  /// Returns the grain index for the space, the current element being processed
-  /// in the space.
-  ripple_host_device constexpr auto grain_index() -> std::size_t& {
-    return impl()->grain_index();
-  }
-
   /// Returns the amount of padding for the execution space.
   ripple_host_device constexpr auto padding() const -> std::size_t {
     return impl()->padding();
@@ -94,7 +81,7 @@ struct ExecParams {
   /// \tparam Dims The number of dimensions to allocate for.
   template <std::size_t Dims>
   ripple_host_device constexpr auto allocation_size() const -> std::size_t {
-    return impl()->allocation_size();
+    return impl()->template allocation_size<Dims>();
   }
 };
 

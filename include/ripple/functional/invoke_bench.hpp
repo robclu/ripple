@@ -1,4 +1,4 @@
-//==--- ripple/functional/invoke.hpp ----------------------- -*- C++ -*- ---==//
+//==--- ripple/functional/invoke_bench.hpp ----------------- -*- C++ -*- ---==//
 //            
 //                                Ripple
 // 
@@ -8,20 +8,21 @@
 //
 //==------------------------------------------------------------------------==//
 //
-/// \file  invoke.hpp
-/// \brief This file implements functionality to invoke a functor on a block.
+/// \file  invoke_bench.hpp
+/// \brief This file implements functionality to invoke a functor and benchmark
+///        it.
 //
 //==------------------------------------------------------------------------==//
 
-#ifndef RIPPLE_FUNCTIONAL_INVOKE_HPP
-#define RIPPLE_FUNCTIONAL_INVOKE_HPP
+#ifndef RIPPLE_FUNCTIONAL_INVOKE_BENCH_HPP
+#define RIPPLE_FUNCTIONAL_INVOKE_BENCH_HPP
 
 #include "kernel/invoke_cpp_.hpp"
 #include "kernel/invoke_cuda_.cuh"
 
 namespace ripple {
 
-//==--- [simple invoke] ----------------------------------------------------==//
+//==--- [simple] -----------------------------------------------------------==//
 
 /// This forwards the callable and the block to the cpp implemtation to invoke
 /// the \p callable on each element of the block.
@@ -30,9 +31,13 @@ namespace ripple {
 /// callable, where the iterator has been offset to index i,[j,[k]] in the
 /// block.
 ///
+/// It will also profile the kernel, filling the \p event struct with information
+/// about the kernel
+///
 /// This overload is for host blocks, and will run on the CPU.
 ///
 /// \param  block     The block to invoke the callable on.
+/// \param  event     The event to fill with profiling information.
 /// \param  callabble The callable object.
 /// \param  args      Arguments for the callable.
 /// \tparam T         The type of the data in the block.
@@ -41,15 +46,22 @@ namespace ripple {
 /// \tparam Args      The type of the arguments for the invocation.
 template <
   typename    T       ,
-  std::size_t Dims    ,
+  std::size_t Dims    , 
   typename    Callable,
   typename... Args    ,
   non_exec_param_enable_t<Callable> = 0
 >
-auto invoke(HostBlock<T, Dims>& block, Callable&& callable, Args&&... args)
--> void {
-  kernel::invoke(
-    block, std::forward<Callable>(callable), std::forward<Args>(args)...
+auto invoke_bench(
+  HostBlock<T, Dims>& block,
+  Event&              event,
+  Callable&&          callable,
+  Args&&...           args
+) -> void {
+  kernel::bench::invoke(
+    block                           ,
+    event                           ,
+    std::forward<Callable>(callable),
+    std::forward<Args>(args)...
   );
 }
 
@@ -60,9 +72,13 @@ auto invoke(HostBlock<T, Dims>& block, Callable&& callable, Args&&... args)
 /// callable, where the iterator has been offset to index i,[j,[k]] in the
 /// block.
 ///
+/// It will also profile the kernel, filling the \p event struct with information
+/// about the kernel
+///
 /// This overload is for device blocks, and will run on the GPU.
 ///
 /// \param  block     The block to invoke the callable on.
+/// \param  event     The event to fill with profiling information.
 /// \param  callabble The callable object.
 /// \param  args      Arguments for the callable.
 /// \tparam T         The type of the data in the block.
@@ -76,28 +92,36 @@ template <
   typename... Args    ,
   non_exec_param_enable_t<Callable> = 0
 >
-auto invoke(DeviceBlock<T, Dims>& block, Callable&& callable, Args&&... args)
--> void {
-  kernel::cuda::invoke(
-    block, std::forward<Callable>(callable), std::forward<Args>(args)...
+auto invoke_bench(
+  DeviceBlock<T, Dims>& block   ,
+  Event&                event   ,
+  Callable&&            callable,
+  Args&&...             args
+) -> void {
+  kernel::cuda::bench::invoke(
+    block, event, std::forward<Callable>(callable), std::forward<Args>(args)...
   );
 }
 
-//==--- [invoke with exec params] ------------------------------------------==//
+//==--- [with exec params] -------------------------------------------------==//
 
-/// This forwards the callable and the block to the cpp implemtation to invoke
-/// the \p callable on each element of the block, with the execution parameters
-/// specified by the \p params.
+/// This forwards the \p callable and the \p block to the cpp implemtation to
+/// invoke the \p callable on each element of the block, with the execution
+/// parameters specified by the \p exec_params.
+///
+/// This will pass an iterator to the block as the first argument to the
+/// callable, where the iterator has been offset to index i,[j,[k]] in the
+/// block.
 ///
 /// This overload is for host blocks, and will run on the CPU.
 ///
 /// \param  block       The block to invoke the callable on.
 /// \param  exec_params The parameters which define the execution space.
-/// \param  callabble   The callable object.
+/// \param  callable    The callable object.
 /// \param  args        Arguments for the callable.
 /// \tparam T           The type of the data in the block.
 /// \tparam Dims        The number of dimensions in the block.
-/// \tparam ExecParams  The type of the execution paramters.
+/// \tparam ExecImpl    The type of the execution parameters.
 /// \tparam Callable    The callable object to invoke.
 /// \tparam Args        The type of the arguments for the invocation.
 template <
@@ -107,9 +131,10 @@ template <
   typename    Callable,
   typename... Args
 >
-auto invoke(
+auto invoke_bench(
   HostBlock<T, Dims>& block      ,
   ExecImpl&&          exec_params,
+  Event&              event      ,
   Callable&&          callable   ,
   Args&&...           args
 ) -> void {
@@ -117,9 +142,10 @@ auto invoke(
     is_exec_param_v<ExecImpl>,
     "exec_params must implement ExecParams interface"
   );
-  kernel::invoke(
+  kernel::bench::invoke(
     block                           ,
     exec_params                     ,
+    event                           , 
     std::forward<Callable>(callable),
     std::forward<Args>(args)...
   );
@@ -127,23 +153,23 @@ auto invoke(
 
 /// This forwards the \p callable and the \p block to the cuda implemtation to
 /// invoke the \p callable on each element of the block, with the execution
-/// parameters specified by the \p params.
+/// parameters specified by the \p exec_params.
 ///
 /// This will pass an iterator to the block as the first argument to the
 /// callable, where the iterator has been offset to index i,[j,[k]] in the
-/// block, and the \p params as the second argument.
+/// block.
 ///
 /// This overload is for device blocks, and will run on the GPU.
 ///
-/// \param  block       The block to invoke the callable on.
-/// \param  exec_params The parameters which define the execution space.
-/// \param  callabble   The callable object.
-/// \param  args        Arguments for the callable.
-/// \tparam T           The type of the data in the block.
-/// \tparam Dims        The number of dimensions in the block.
-/// \tparam ExecImpl    The type of the execution implementation.
-/// \tparam Callable    The callable object to invoke.
-/// \tparam Args        The type of the arguments for the invocation.
+/// \param  block     The block to invoke the callable on.
+/// \param  params    The parameters which define the execution space.
+/// \param  callabble The callable object.
+/// \param  args      Arguments for the callable.
+/// \tparam T         The type of the data in the block.
+/// \tparam Dims      The number of dimensions in the block.
+/// \tparam Params    The type of the execution parameters.
+/// \tparam Callable  The callable object to invoke.
+/// \tparam Args      The type of the arguments for the invocation.
 template <
   typename    T       ,
   std::size_t Dims    ,
@@ -151,8 +177,9 @@ template <
   typename    Callable,
   typename... Args
 >
-auto invoke(
+auto invoke_bench(
   DeviceBlock<T, Dims>& block      ,
+  Event&                event      ,
   ExecImpl&&            exec_params,
   Callable&&            callable   ,
   Args&&...             args
@@ -161,14 +188,15 @@ auto invoke(
     is_exec_param_v<ExecImpl>,
     "exec_params must implement ExecParams interface"
   );
-  kernel::cuda::invoke(
-    block                           ,
-    exec_params                     ,
-    std::forward<Callable>(callable),
+  kernel::cuda::bench::invoke(
+    block                              ,
+    event                              , 
+    std::forward<ExecImpl>(exec_params), 
+    std::forward<Callable>(callable)   ,
     std::forward<Args>(args)...
   );
 }
 
 } // namespace ripple
 
-#endif //  RIPPLE_FUNCTIONAL_INVOKE_HPP
+#endif // RIPPLE_FUNCTIONAL_INVOKE_BNECH_HPP

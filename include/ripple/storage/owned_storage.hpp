@@ -162,7 +162,21 @@ class OwnedStorage : public StorageAccessor<OwnedStorage<Ts...>> {
 
   //==--- [interface] ------------------------------------------------------==//
 
- /// Returns the number of components in the Ith type being stored. For
+  /// Copies the data from the \p other strided view.
+  /// \param other The other strided view to copy from.
+  /// \tparam Other The type of the other storage to copy from.
+  template <typename Other>
+  ripple_host_device auto copy(const Other& other) -> void {
+    unrolled_for<num_types>([&] (auto i) {
+      constexpr std::size_t type_idx = i;
+      constexpr auto        values   = 
+        element_components_v<nth_element_t<type_idx, Ts...>>;
+
+      copy_from_to<type_idx, values>(other, *this);
+    });
+  }
+
+  /// Returns the number of components in the Ith type being stored. For
   /// non-indexable types this will always return 1, otherwise will return the
   /// number of possible components which can be indexed.
   /// \tparam I The index of the type to get the number of components for.

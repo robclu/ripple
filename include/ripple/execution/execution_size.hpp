@@ -17,7 +17,6 @@
 #ifndef RIPPLE_EXECUTION_EXECUTION_SIZE_HPP
 #define RIPPLE_EXECUTION_EXECUTION_SIZE_HPP
 
-#include "execution_params.hpp"
 #include <ripple/container/device_block.hpp>
 #include <ripple/utility/dim.hpp>
 #include <ripple/utility/type_traits.hpp>
@@ -69,8 +68,8 @@ auto get_dim_num_threads(T elements, U max_threads) -> std::size_t {
 /// \tparam Dims        The number of dimensions for the block.
 /// \tparam ExeImpl     The type of the execution parameter implementation.
 template <
-  typename    T,
-  std::size_t Dims,
+  typename    T      ,
+  std::size_t Dims   ,
   typename    ExeImpl,
   dim_1d_enable_t<Dims> = 0
 >
@@ -81,9 +80,9 @@ auto get_exec_size(
 
   auto threads = dim3(1, 1, 1);
   auto blocks  = dim3(1, 1, 1);
-  
+
   threads.x = get_dim_num_threads(elems_x, exec_params.size(dim_x));
-  blocks.x  = get_dim_num_blocks(elems_x, threads.x * exec_params.grain_size());
+  blocks.x  = get_dim_num_blocks(elems_x, threads.x);
 
   return std::make_tuple(threads, blocks);
 }
@@ -100,8 +99,8 @@ auto get_exec_size(
 /// \tparam Dims        The number of dimensions for the block.
 /// \tparam ExeImpl     The type of the execution parameter implementation.
 template <
-  typename    T,
-  std::size_t Dims,
+  typename    T      ,
+  std::size_t Dims   ,
   typename    ExeImpl,
   dim_2d_enable_t<Dims> = 0
 >
@@ -115,8 +114,9 @@ auto get_exec_size(
   auto blocks  = dim3(1, 1, 1);
 
   threads.x = get_dim_num_threads(elems_x, exec_params.size(dim_x));
+  threads.x = get_dim_num_threads(elems_x, exec_params.size(dim_x));
   threads.y = get_dim_num_threads(elems_y, exec_params.size(dim_y));
-  blocks.x  = get_dim_num_blocks(elems_x, threads.x * exec_params.grain_size());
+  blocks.x  = get_dim_num_blocks(elems_x, threads.x);
   blocks.y  = get_dim_num_blocks(elems_y, threads.y);
 
   return std::make_tuple(threads, blocks);
@@ -134,8 +134,8 @@ auto get_exec_size(
 /// \tparam Dims        The number of dimensions for the block.
 /// \tparam ExeImpl     The type of the execution parameter implementation.
 template <
-  typename    T,
-  std::size_t Dims,
+  typename    T      ,
+  std::size_t Dims   ,
   typename    ExeImpl,
   dim_3d_enable_t<Dims> = 0
 >
@@ -152,7 +152,7 @@ auto get_exec_size(
   threads.x = get_dim_num_threads(elems_x, exec_params.size(dim_x));
   threads.y = get_dim_num_threads(elems_y, exec_params.size(dim_y));
   threads.z = get_dim_num_threads(elems_z, exec_params.size(dim_z));
-  blocks.x  = get_dim_num_blocks(elems_x, threads.x * exec_params.grain_size());
+  blocks.x  = get_dim_num_blocks(elems_x, threads.x);
   blocks.y  = get_dim_num_blocks(elems_y, threads.y);
   blocks.z  = get_dim_num_blocks(elems_z, threads.z);
 

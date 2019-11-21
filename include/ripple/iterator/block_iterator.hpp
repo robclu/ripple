@@ -55,6 +55,7 @@ class BlockIterator {
   using offsetter_t     = typename layout_traits_t::allocator_t;
   /// Defines the type of the space for the iterator.
   using space_t         = Space;
+
   //==--- [constants] ------------------------------------------------------==//
 
   /// Defines an overload instance for overloading implementations based on the
@@ -72,7 +73,7 @@ class BlockIterator {
   /// Implementation of dereferencing for stridable types. Since the stridable
   /// type stores a pointer like wrapper, a constant reference to this type is
   /// returned.
-  ripple_host_device auto deref_impl(stridable_overload_t) const
+  ripple_host_device auto deref_impl(stridable_overload_t) const 
   -> const_ref_t {
     return const_ref_t{_data_ptr};
   }
@@ -207,7 +208,7 @@ class BlockIterator {
   //==--- [dimensions] -----------------------------------------------------==//
 
   /// Returns the number of dimensions for the iterator.
-  ripple_host_device constexpr auto dimensions() {
+  ripple_host_device constexpr auto dimensions() const -> std::size_t {
     return _space.dimensions();
   }
 
@@ -224,6 +225,11 @@ class BlockIterator {
   template <typename Dim>
   ripple_host_device constexpr auto size(Dim&& dim) const -> std::size_t {
     return _space.size(std::forward<Dim>(dim));
+  }
+
+  /// Returns the amount of padding for the iteration space.
+  ripple_host_device constexpr auto padding() const -> std::size_t {
+    return _space.padding();
   }
 };
 

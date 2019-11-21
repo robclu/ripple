@@ -41,7 +41,7 @@ struct Vec : public Array<Vec<T, Size>>  {
   //==--- [construction] ---------------------------------------------------==//
 
   /// Default constructor for the vector.
-  constexpr Vec() = default;
+  ripple_host_device constexpr Vec() {};
   
   /// Constructor to create the array from a list of values. This overload is
   /// only enabled when the number of elements in the variadic parameter pack

@@ -29,19 +29,17 @@ namespace ripple {
 /// \tparam SizeX   The number of threads to execute in the x dimension.
 /// \tparam SizeY   The number of threads to execute in the y dimension..
 /// \tparam SizeZ   The number of threads to execute in the z dimension.
-/// \tparam Grain   The number of elements to processes per thread in the tile.
 /// \tparam Padding The amount of padding for each size of each dimension.
 /// \tparam Shared  A type for tile local shared memory.
 template <
   std::size_t SizeX  ,
   std::size_t SizeY  ,
   std::size_t SizeZ  ,
-  std::size_t Grain  ,
   std::size_t Padding,
   typename    Shared
 >
 struct StaticExecParams : public 
-  ExecParams<StaticExecParams<SizeX, SizeY, SizeZ, Grain, Padding, Shared>> {
+  ExecParams<StaticExecParams<SizeX, SizeY, SizeZ, Padding, Shared>> {
  private:
   //==--- [aliases] --------------------------------------------------------==//
  
@@ -82,23 +80,6 @@ struct StaticExecParams : public
 
   //==--- [properties] -----------------------------------------------------==//
 
-  /// Returns that the space is fixed size.
-  ripple_host_device constexpr auto is_fixed() const -> bool {
-    return true;
-  }
-
-  /// Returns the grain size for the space (the number of elements to be
-  /// processed by a thread in the space).
-  ripple_host_device constexpr auto grain_size() const -> std::size_t {
-    return Grain;
-  }
-
-  /// Returns the grain index for the space, the current element being processed
-  /// in the space.
-  ripple_host_device constexpr auto grain_index() -> std::size_t& {
-    return _grain_index;
-  }
-
   /// Returns the amount of padding for the execution space.
   ripple_host_device constexpr auto padding() const -> std::size_t {
     return Padding;
@@ -122,28 +103,23 @@ struct StaticExecParams : public
   }
 
  private:
-  std::size_t _grain_index = 0;  //!< The index of the grain element.
-
   //==--- [methods] --------------------------------------------------------==//
   
   /// Implementation to return the size of the execution space in the x
   /// dimension.
-  ripple_host_device constexpr auto size_impl(dimx_t) const 
-  -> std::size_t {
+  ripple_host_device constexpr auto size_impl(dimx_t) const -> std::size_t {
     return SizeX;
   }
 
   /// Implementation to return the size of the execution space in the y
   /// dimension.
-  ripple_host_device constexpr auto size_impl(dimy_t) const 
-  -> std::size_t {
+  ripple_host_device constexpr auto size_impl(dimy_t) const -> std::size_t {
     return SizeY;
   }
 
   /// Implementation to return the size of the execution space in the z
   /// dimension.
-  ripple_host_device constexpr auto size_impl(dimz_t) const 
-  -> std::size_t {
+  ripple_host_device constexpr auto size_impl(dimz_t) const -> std::size_t {
     return SizeZ;
   }
 };

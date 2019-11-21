@@ -1,4 +1,4 @@
-//==--- ripple/time/event.hpp ------------------------------ -*- C++ -*- ---==//
+//==--- ripple/perf/event.hpp ------------------------------ -*- C++ -*- ---==//
 //            
 //                                Ripple
 // 
@@ -13,8 +13,8 @@
 //
 //==------------------------------------------------------------------------==//
 
-#ifndef RIPPLE_TIME_EVENT_HPP
-#define RIPPLE_TIME_EVENT_HPP
+#ifndef RIPPLE_PERF_EVENT_HPP
+#define RIPPLE_PERF_EVENT_HPP
 
 namespace ripple {
 
@@ -26,4 +26,4 @@ struct Event {
 
 } // namespace ripple
 
-#endif // RIPPLE_TIME_EVENT_HPP
+#endif // RIPPLE_PERF_EVENT_HPP

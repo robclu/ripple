@@ -31,12 +31,12 @@ struct MultidimSpace {
   using impl_t = std::decay_t<Impl>;
 
   /// Returns a const pointer to the implementation.
-  ripple_host_device auto impl() const -> const impl_t* {
+  ripple_host_device constexpr auto impl() const -> const impl_t* {
     return static_cast<const impl_t*>(this);
   }
 
   /// Returns a pointer to the implementation.
-  ripple_host_device auto impl() -> impl_t* {
+  ripple_host_device constexpr auto impl() -> impl_t* {
     return static_cast<impl_t*>(this);
   }
 

@@ -26,10 +26,9 @@ namespace ripple {
 /// The DynamicExecParams struct defines the parameters of an execution space
 /// for which the size is dynamic.
 ///
-/// \tparam Grain   The number of elements to processes per thread in the tile.
 /// \tparam Shared  A type for tile local shared memory.
-template <std::size_t Grain, typename Shared>
-struct DynamicExecParams : public ExecParams<DynamicExecParams<Grain, Shared>> {
+template <typename Shared>
+struct DynamicExecParams : public ExecParams<DynamicExecParams<Shared>> {
  private:
   //==--- [aliases] --------------------------------------------------------==//
  
@@ -46,7 +45,11 @@ struct DynamicExecParams : public ExecParams<DynamicExecParams<Grain, Shared>> {
 
  public:
   //==--- [constructor] ----------------------------------------------------==//
-  
+ 
+  /// Default constructor, creates a space of size 1024, 1, 1 with no padding.
+  ripple_host_device constexpr DynamicExecParams()
+  : _space{1024, 1, 1} {}
+
   /// Creates the execution space without padding.
   /// \tparam Sizes The sizes of the execution space.
   template <typename... Sizes, all_arithmetic_size_enable_t<3, Sizes...> = 0>
@@ -87,23 +90,6 @@ struct DynamicExecParams : public ExecParams<DynamicExecParams<Grain, Shared>> {
 
   //==--- [properties] -----------------------------------------------------==//
 
-  /// Returns that the space is not of a fixed size.
-  ripple_host_device constexpr auto is_fixed() const -> bool {
-    return false;
-  }
-
-  /// Returns the grain size for the space (the number of elements to be
-  /// processed by a thread in the space).
-  ripple_host_device constexpr auto grain_size() const -> std::size_t {
-    return Grain;
-  }
-
-  /// Returns the grain index for the space, the current element being processed
-  /// in the space.
-  ripple_host_device constexpr auto grain_index() -> std::size_t& {
-    return _grain_index;
-  }
-
   /// Returns the amount of padding for the execution space.
   ripple_host_device constexpr auto padding() const -> std::size_t {
     return _space.padding();
@@ -125,8 +111,7 @@ struct DynamicExecParams : public ExecParams<DynamicExecParams<Grain, Shared>> {
     return allocator_t::allocation_size(size<Dims>());
   }
  private:
-  space_t     _space;            //!< The space defining the execution region.
-  std::size_t _grain_index = 0;  //!< The index of the grain element.
+  space_t _space; //!< The space defining the execution region.
 };
 
 } // namespace ripple

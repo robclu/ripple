@@ -157,7 +157,8 @@ class ContiguousStorageView :
     /// \tparam Indices   The types of the indices.
     template <
       typename SpaceImpl,
-      typename... Indices, variadic_ge_enable_t<1, Indices...> = 0
+      typename... Indices,
+      variadic_ge_enable_t<1, Indices...> = 0
     >
     ripple_host_device static auto offset(
       const storage_t&                storage,
@@ -235,7 +236,8 @@ class ContiguousStorageView :
     /// \tparam Indices   The type of the indices.
     template <
       typename    SpaceImpl,
-      typename... Indices  , variadic_ge_enable_t<1, Indices...> = 0
+      typename... Indices  ,
+      variadic_ge_enable_t<1, Indices...> = 0
     > 
     ripple_host_device static auto create(
       void*                           ptr  ,
@@ -319,6 +321,20 @@ class ContiguousStorageView :
   }
 
   //==--- [interface] ------------------------------------------------------==//
+
+  /// Copies the data from the \p other conitguous view.
+  /// \param  other The other contiguous view to copy from.
+  /// \tparam Other The type of the other storage to copy from.
+  template <typename Other>
+  ripple_host_device auto copy(const Other& other) -> void {
+    unrolled_for<num_types>([&] (auto i) {
+      constexpr std::size_t type_idx = i;
+      constexpr auto        values   = 
+        element_components_v<nth_element_t<type_idx, Ts...>>;
+
+      copy_from_to<type_idx, values>(other, *this);
+    });
+  }
 
   /// Returns the number of components in the Ith type being stored. For
   /// non-indexable types this will always return 1, otherwise will return the

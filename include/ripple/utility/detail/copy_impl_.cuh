@@ -14,7 +14,7 @@
 //==------------------------------------------------------------------------==//
 
 #include "../portability.hpp"
-#include <ripple/multidim/thread_index.hpp>
+#include <ripple/execution/thread_index.hpp>
 
 #ifndef RIPPLE_UTILITY_DETAIL_COPY_IMPL__CUH
 #define RIPPLE_UTILITY_DETAIL_COPY_IMPL__CUH
@@ -30,7 +30,7 @@ namespace ripple::cuda::kernel {
 /// \tparam Ptr      The type of the pointers.
 template <typename Ptr>
 ripple_global auto copy(Ptr* out, const Ptr* in, std::size_t elements) -> void {
-  const auto idx = grid_idx(dim_x);
+  const auto idx = global_idx(dim_x);
   if (idx < elements) {
     out[idx] = in[idx];
   }

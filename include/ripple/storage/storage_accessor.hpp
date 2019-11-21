@@ -43,6 +43,14 @@ struct StorageAccessor {
   }
 
  public:
+  /// Explicitly copies the data from the \p other storage type.
+  /// \param  other The other storage type tto copy from.
+  /// \tparam Other The type of the other storage.
+  template <typename Other>
+  ripple_host_device auto copy(const Other& other) -> void {
+    impl()->copy(other);
+  }
+
   /// Returns the number of components in the Ith type being stored. For
   /// non-indexable types this will always return 1, otherwise will return the
   /// number of possible components which can be indexed.
