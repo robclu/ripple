@@ -95,6 +95,15 @@ ripple_target_link_libraries(
 #==--------------------------------------------------------------------------==#
 
 ripple_add_executable(
+  math_tests ${ripple_SOURCE_DIR}/tests/math.cpp
+)
+ripple_target_link_libraries(
+  math_tests ${GTEST_BOTH_LIBRARIES}
+)
+
+#==--------------------------------------------------------------------------==#
+
+ripple_add_executable(
   multidim_tests ${ripple_SOURCE_DIR}/tests/multidim.cpp
 )
 ripple_target_link_libraries(

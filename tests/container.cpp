@@ -8,8 +8,8 @@
 //
 //==------------------------------------------------------------------------==//
 //
-/// \file  container_tests.cpp
-/// \brief This file contains container tests.
+/// \file  container.cpp
+/// \brief This file is the main function for executing container tests.
 //
 //==------------------------------------------------------------------------==//
 
