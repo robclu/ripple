@@ -59,6 +59,15 @@ ripple_target_link_libraries(
 #==--------------------------------------------------------------------------==#
 
 ripple_add_executable(
+  boundary_tests ${ripple_SOURCE_DIR}/tests/boundary.cpp
+)
+ripple_target_link_libraries(
+  boundary_tests ${GTEST_BOTH_LIBRARIES}
+)
+
+#==--------------------------------------------------------------------------==#
+
+ripple_add_executable(
   container_tests ${ripple_SOURCE_DIR}/tests/container.cpp
 )
 ripple_target_link_libraries(

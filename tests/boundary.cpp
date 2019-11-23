@@ -1,4 +1,4 @@
-//==--- ripple/tests/all.cpp -------------------------------- -*- C++ -*- ---==//
+//==--- ripple/tests/boundary.cpp -------------------------- -*- C++ -*- ---==//
 //            
 //                                Ripple
 // 
@@ -8,20 +8,13 @@
 //
 //==------------------------------------------------------------------------==//
 //
-/// \file  all.cpp
-/// \brief This file contains all tests.
+/// \file  boundary.cpp
+/// \brief This file is the main function for running boundary tests.
 //
 //==------------------------------------------------------------------------==//
 
-#include "algorithm/algorithm_tests.hpp"
 #include "boundary/boundary_tests.hpp"
-#include "container/container_tests.hpp"
-#include "execution/execution_tests.hpp"
-#include "iterator/iterator_tests.hpp"
-#include "math/math_tests.hpp"
-#include "multidim/multidim_tests.hpp"
-#include "storage/storage_tests.hpp"
-#include "utility/utility_tests.hpp"
+#include <gtest/gtest.h>
 
 int main(int argc, char** argv) {
   ::testing::InitGoogleTest(&argc, argv);
