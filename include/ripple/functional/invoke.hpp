@@ -105,7 +105,8 @@ template <
   std::size_t Dims    ,
   typename    ExecImpl,
   typename    Callable,
-  typename... Args
+  typename... Args    ,
+  exec_param_enable_t<ExecImpl> = 0
 >
 auto invoke(
   HostBlock<T, Dims>& block      ,
@@ -113,10 +114,6 @@ auto invoke(
   Callable&&          callable   ,
   Args&&...           args
 ) -> void {
-  static_assert(
-    is_exec_param_v<ExecImpl>,
-    "exec_params must implement ExecParams interface"
-  );
   kernel::invoke(
     block                           ,
     exec_params                     ,
@@ -149,7 +146,8 @@ template <
   std::size_t Dims    ,
   typename    ExecImpl,
   typename    Callable,
-  typename... Args
+  typename... Args    ,
+  exec_param_enable_t<ExecImpl> = 0
 >
 auto invoke(
   DeviceBlock<T, Dims>& block      ,
@@ -157,10 +155,6 @@ auto invoke(
   Callable&&            callable   ,
   Args&&...             args
 ) -> void {
-  static_assert(
-    is_exec_param_v<ExecImpl>,
-    "exec_params must implement ExecParams interface"
-  );
   kernel::cuda::invoke(
     block                           ,
     exec_params                     ,

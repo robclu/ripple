@@ -345,8 +345,9 @@ TEST(iterator_block_iterator, can_offset_iterator_primitive) {
 
 //===--- [shifting] --------------------------------------------------------==//
 
+
 TEST(iterator_block_iterator, can_shift_iterator_strided) {
-  ripple::host_block_3d_t<iter_strided_t> b(29, 17, 11);
+  ripple::host_block_3d_t<iter_strided_t> b(21, 32, 17);
 
   // Set the block data:
   for (auto k : ripple::range(b.size(ripple::dim_z))) {
@@ -366,8 +367,7 @@ TEST(iterator_block_iterator, can_shift_iterator_strided) {
   for (auto k : ripple::range(b.size(ripple::dim_z))) {
     for (auto j : ripple::range(b.size(ripple::dim_y))) {
       for (auto i : ripple::range(b.size(ripple::dim_x))) {
-        const auto bi       = b(i, j, k);
-        iter.shift(ripple::dim_x, 1);
+        const auto bi = b(i, j, k);
 
         EXPECT_EQ(bi->flag(), -1   );
         EXPECT_EQ(bi->v(0)  , 10.0f);
@@ -383,10 +383,13 @@ TEST(iterator_block_iterator, can_shift_iterator_strided) {
         EXPECT_EQ((*iter).v(0)  , 10.0f);
         EXPECT_EQ((*iter).v(1)  , 20.0f);
         EXPECT_EQ((*iter).v(2)  , 30.0f);
+
+        iter.shift(ripple::dim_x, 1);
       }
       iter.shift(ripple::dim_x, -1 * b.size(ripple::dim_x));
       iter.shift(ripple::dim_y, 1);
     }
+    iter.shift(ripple::dim_y, -1 * b.size(ripple::dim_y));
     iter.shift(ripple::dim_z, 1);
   }
 }
@@ -409,8 +412,7 @@ TEST(iterator_block_iterator, can_shift_iterator_contig) {
   for (auto k : ripple::range(b.size(ripple::dim_z))) {
     for (auto j : ripple::range(b.size(ripple::dim_y))) {
       for (auto i : ripple::range(b.size(ripple::dim_x))) {
-        const auto bi       = b(i, j, k);
-        iter.shift(ripple::dim_x, 1);
+        const auto bi = b(i, j, k);
 
         EXPECT_EQ(bi->flag(), -1);
         EXPECT_EQ(bi->v(0)  , 10);
@@ -426,10 +428,12 @@ TEST(iterator_block_iterator, can_shift_iterator_contig) {
         EXPECT_EQ((*iter).v(0)  , 10);
         EXPECT_EQ((*iter).v(1)  , 20);
         EXPECT_EQ((*iter).v(2)  , 30);
+        iter.shift(ripple::dim_x, 1);
       }
       iter.shift(ripple::dim_x, -1 * b.size(ripple::dim_x));
       iter.shift(ripple::dim_y, 1);
     }
+    iter.shift(ripple::dim_y, -1 * b.size(ripple::dim_y));
     iter.shift(ripple::dim_z, 1);
   }
 }
@@ -447,22 +451,23 @@ TEST(iterator_block_iterator, can_shift_iterator_normal) {
   for (auto k : ripple::range(b.size(ripple::dim_z))) {
     for (auto j : ripple::range(b.size(ripple::dim_y))) {
       for (auto i : ripple::range(b.size(ripple::dim_x))) {
-        const auto bi       = b(i, j, k);
-        iter.shift(ripple::dim_x, 1);
+        const auto bi = b(i, j, k);
 
-        EXPECT_EQ(bi->get()        , 22.5f);
+        EXPECT_EQ(bi->get()    , 22.5f);
         EXPECT_EQ(iter->get()  , 22.5f);
         EXPECT_EQ((*iter).get(), 22.5f);
+        iter.shift(ripple::dim_x, 1);
       }
       iter.shift(ripple::dim_x, -1 * b.size(ripple::dim_x));
       iter.shift(ripple::dim_y, 1);
     }
+    iter.shift(ripple::dim_y, -1 * b.size(ripple::dim_y));
     iter.shift(ripple::dim_z, 1);
   }
 }
 
 TEST(iterator_block_iterator, can_shift_iterator_primitive) {
-  ripple::host_block_3d_t<double> b(20, 30, 15);
+  ripple::host_block_3d_t<double> b(19, 27, 36);
   for (auto k : ripple::range(b.size(ripple::dim_z))) {
     for (auto j : ripple::range(b.size(ripple::dim_y))) {
       for (auto i : ripple::range(b.size(ripple::dim_x))) {
@@ -474,15 +479,16 @@ TEST(iterator_block_iterator, can_shift_iterator_primitive) {
   for (auto k : ripple::range(b.size(ripple::dim_z))) {
     for (auto j : ripple::range(b.size(ripple::dim_y))) {
       for (auto i : ripple::range(b.size(ripple::dim_x))) {
-        const auto bi       = b(i, j, k);
-        iter.shift(ripple::dim_x, i);
+        const auto bi = b(i, j, k);
 
         EXPECT_EQ(*bi  , 31.0);
         EXPECT_EQ(*iter, 31.0);
+        iter.shift(ripple::dim_x, 1);
       }
       iter.shift(ripple::dim_x, -1 * b.size(ripple::dim_x));
       iter.shift(ripple::dim_y, 1);
     }
+    iter.shift(ripple::dim_y, -1 * b.size(ripple::dim_y));
     iter.shift(ripple::dim_z, 1);
   }
 }

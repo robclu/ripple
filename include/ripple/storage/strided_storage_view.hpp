@@ -190,8 +190,8 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
     template <typename SpaceImpl, typename Dim, diff_enable_t<Dim, int> = 0>
     ripple_host_device static auto offset(
       const storage_t&                storage,
-      const MultidimSpace<SpaceImpl>& space,
-      Dim&&                           dim,
+      const MultidimSpace<SpaceImpl>& space  ,
+      Dim&&                           dim    ,
       int                             amount
     ) -> storage_t {
       storage_t r;
@@ -220,8 +220,8 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
     template <typename SpaceImpl, typename Dim>
     ripple_host_device static auto shift(
       storage_t&                      storage,
-      const MultidimSpace<SpaceImpl>& space,
-      Dim&&                           dim,
+      const MultidimSpace<SpaceImpl>& space  ,
+      Dim&&                           dim    ,
       int                             amount
     ) -> void {
       unrolled_for<num_types>([&] (auto i) {
@@ -454,7 +454,8 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
     typename    T = nth_element_t<I, Ts...>,
     storage_element_enable_t<T> = 0
   >
-  ripple_host_device auto get(std::size_t j) const -> const element_value_t<T>& {
+  ripple_host_device auto get(std::size_t j) const 
+  -> const element_value_t<T>& {
     return static_cast<const element_value_t<T>*>(_data[I])[j * _stride];
   }
 };

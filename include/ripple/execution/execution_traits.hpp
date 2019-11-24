@@ -61,8 +61,6 @@ struct DynamicExecParams;
 /// Defines execution traits for the type T.
 template <typename T>
 struct ExecTraits {
-  /// Defines that the grain size is 1.
-  static constexpr auto grain_size  = 1;
   /// Defines that the execution space is not static.
   static constexpr auto is_static   = false;
   /// Defines that shared memory is not used.

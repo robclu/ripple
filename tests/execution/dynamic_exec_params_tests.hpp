@@ -19,26 +19,8 @@
 #include <ripple/execution/dynamic_execution_params.hpp>
 #include <gtest/gtest.h>
 
-TEST(execution_dynamic_exec_params, can_create_single_grain_no_shared) {
-  using exec_params_t = ripple::DynamicExecParams<1>;
-
-  std::size_t size_x = 1024, size_y = 1, size_z = 1;
-  exec_params_t params(size_x, size_y, size_z);
-
-  EXPECT_EQ(params.template size<1>(), size_x);
-  EXPECT_EQ(params.template size<2>(), size_x * size_y);
-  EXPECT_EQ(params.template size<3>(), size_x * size_y * size_z);
-
-  EXPECT_EQ(params.size(ripple::dim_x), size_x);
-  EXPECT_EQ(params.size(ripple::dim_y), size_y);
-  EXPECT_EQ(params.size(ripple::dim_z), size_z);
-
-  EXPECT_EQ(params.is_fixed(), false);
-  EXPECT_EQ(params.padding() , std::size_t{0});
-}
-
 TEST(execution_dynamic_exec_params, can_create_simple_multidim) {
-  using exec_params_t = ripple::DynamicExecParams<1>;
+  using exec_params_t = ripple::DynamicExecParams<ripple::VoidShared>;
 
   std::size_t size_x = 16, size_y = 16, size_z = 4;
   exec_params_t params(size_x, size_y, size_z);
@@ -51,13 +33,14 @@ TEST(execution_dynamic_exec_params, can_create_simple_multidim) {
   EXPECT_EQ(params.size(ripple::dim_y), size_y);
   EXPECT_EQ(params.size(ripple::dim_z), size_z);
 
-  EXPECT_EQ(params.is_fixed(), false);
-  EXPECT_EQ(params.padding() , std::size_t{0});
+  EXPECT_EQ(params.padding(), std::size_t{0});
+  using traits_t = ripple::ExecTraits<exec_params_t>;
+  EXPECT_EQ(traits_t::is_static  , false);
+  EXPECT_EQ(traits_t::uses_shared, false);
 }
 
 TEST(execution_dynamic_exec_params, can_create_padded_multidim) {
-  constexpr auto grain_size = std::size_t{1};
-  using exec_params_t = ripple::DynamicExecParams<grain_size>;
+  using exec_params_t = ripple::DynamicExecParams<ripple::VoidShared>;
 
   std::size_t size_x = 16, size_y = 16, size_z = 4, padding = 2;
   exec_params_t params(padding, size_x, size_y, size_z);
@@ -73,14 +56,14 @@ TEST(execution_dynamic_exec_params, can_create_padded_multidim) {
   EXPECT_EQ(params.size(ripple::dim_y), size_y);
   EXPECT_EQ(params.size(ripple::dim_z), size_z);
 
-  EXPECT_EQ(params.is_fixed()  , false);
-  EXPECT_EQ(params.padding()   , padding);
-  EXPECT_EQ(params.grain_size(), grain_size);
+  EXPECT_EQ(params.padding(), padding);
+  using traits_t = ripple::ExecTraits<exec_params_t>;
+  EXPECT_EQ(traits_t::is_static  , false);
+  EXPECT_EQ(traits_t::uses_shared, false);
 }
 
-TEST(execution_dynamic_exec_params, can_create_mutligrain) {
-  constexpr auto grain_size = std::size_t{3};
-  using exec_params_t = ripple::DynamicExecParams<grain_size>;
+TEST(execution_dynamic_exec_params, can_detect_shared_usage) {
+  using exec_params_t = ripple::DynamicExecParams<float>;
 
   std::size_t size_x = 16, size_y = 16, size_z = 4, padding = 2;
   exec_params_t params(padding, size_x, size_y, size_z);
@@ -96,9 +79,10 @@ TEST(execution_dynamic_exec_params, can_create_mutligrain) {
   EXPECT_EQ(params.size(ripple::dim_y), size_y);
   EXPECT_EQ(params.size(ripple::dim_z), size_z);
 
-  EXPECT_EQ(params.is_fixed()  , false);
-  EXPECT_EQ(params.padding()   , padding);
-  EXPECT_EQ(params.grain_size(), grain_size);
+  EXPECT_EQ(params.padding(), padding);
+  using traits_t = ripple::ExecTraits<exec_params_t>;
+  EXPECT_EQ(traits_t::is_static  , false);
+  EXPECT_EQ(traits_t::uses_shared, true);
 }
 
 #endif // RIPPLE_TESTS_EXECUTION_DYNAMIC_EXECUTION_PARAMS_TESTS_HPP

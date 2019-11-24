@@ -129,7 +129,8 @@ template <
   std::size_t Dims    ,
   typename    ExecImpl,
   typename    Callable,
-  typename... Args
+  typename... Args    ,
+  exec_param_enable_t<ExecImpl> = 0
 >
 auto invoke_bench(
   HostBlock<T, Dims>& block      ,
@@ -138,10 +139,6 @@ auto invoke_bench(
   Callable&&          callable   ,
   Args&&...           args
 ) -> void {
-  static_assert(
-    is_exec_param_v<ExecImpl>,
-    "exec_params must implement ExecParams interface"
-  );
   kernel::bench::invoke(
     block                           ,
     exec_params                     ,
@@ -175,7 +172,8 @@ template <
   std::size_t Dims    ,
   typename    ExecImpl,
   typename    Callable,
-  typename... Args
+  typename... Args    ,
+  exec_param_enable_t<ExecImpl> = 0
 >
 auto invoke_bench(
   DeviceBlock<T, Dims>& block      ,
@@ -184,10 +182,6 @@ auto invoke_bench(
   Callable&&            callable   ,
   Args&&...             args
 ) -> void {
-  static_assert(
-    is_exec_param_v<ExecImpl>,
-    "exec_params must implement ExecParams interface"
-  );
   kernel::cuda::bench::invoke(
     block                              ,
     event                              , 

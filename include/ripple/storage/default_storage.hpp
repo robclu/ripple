@@ -66,7 +66,8 @@ class DefaultStorage {
     /// \tparam Indices   The types of the indices.
     template <
       typename    SpaceImpl,
-      typename... Indices  , variadic_ge_enable_t<1, Indices...> = 0
+      typename... Indices  ,
+      variadic_ge_enable_t<1, Indices...> = 0
     >
     ripple_host_device static auto offset(
       const storage_t&                storage,
@@ -92,8 +93,8 @@ class DefaultStorage {
     template <typename SpaceImpl, typename Dim, diff_enable_t<Dim, int> = 0>
     ripple_host_device static auto offset(
       const storage_t&                storage,
-      const MultidimSpace<SpaceImpl>& space,
-      Dim&&                           dim,
+      const MultidimSpace<SpaceImpl>& space  ,
+      Dim&&                           dim    ,
       int                             amount
     ) -> storage_t {
       storage_t r;
@@ -104,9 +105,6 @@ class DefaultStorage {
     /// Offsets the storage by the amount specified by \p amount in the
     /// dimension \p dim.
     ///
-    /// This returns a new StridedStorage, offset to the new indices in the
-    /// space.
-    ///
     /// \param  storage   The storage to offset.
     /// \param  space     The space for which the storage is defined.
     /// \param  dim       The dimension to offset in.
@@ -115,11 +113,11 @@ class DefaultStorage {
     template <typename SpaceImpl, typename Dim>
     ripple_host_device static auto shift(
       storage_t&                      storage,
-      const MultidimSpace<SpaceImpl>& space,
-      Dim&&                           dim,
+      const MultidimSpace<SpaceImpl>& space  ,
+      Dim&&                           dim    ,
       int                             amount
     ) -> void {
-      storage += amount * space.step(dim);
+      storage = storage + (amount * space.step(dim));
     }
 
     /// Creates the storage, initializing a T instance which points to \p ptr,
@@ -133,10 +131,11 @@ class DefaultStorage {
     /// \tparam Indices   The indices to offset into to create the element.
     template <
       typename    SpaceImpl,
-      typename... Indices  , variadic_ge_enable_t<1, Indices...> = 0
+      typename... Indices  ,
+      variadic_ge_enable_t<1, Indices...> = 0
     >
     ripple_host_device static auto create(
-      void*                           ptr,
+      void*                           ptr  ,
       const MultidimSpace<SpaceImpl>& space,
       Indices&&...                    is
     ) -> storage_t {

@@ -179,9 +179,7 @@ class HostBlock {
   /// Gets an iterator to the beginning of the block.
   auto begin() -> iter_t {
     auto it = iter_t{allocator_t::create(_data, _space), _space};
-    unrolled_for<Dimensions>([&] (auto dim) {
-      it.shift(dim, _space.padding());
-    });
+    shift_iterator(it);
     return it;
   }
 
@@ -193,7 +191,7 @@ class HostBlock {
   auto operator()(Indices&&... is) -> iter_t {
     return iter_t{
       allocator_t::create(
-        _data, _space, std::forward<Indices>(is) + _space.padding()...
+        _data, _space, std::forward<Indices>(is) + padding()...
       ),
       _space
     };
@@ -207,7 +205,7 @@ class HostBlock {
   auto operator()(Indices&&... is) const -> const_iter_t {
     return const_iter_t{
       allocator_t::create(
-        _data, _space, std::forward<Indices>(is) +_space.padding()...
+        _data, _space, std::forward<Indices>(is) + padding()...
       ),
       _space
     };
@@ -282,6 +280,13 @@ class HostBlock {
       free(_data);
       _data = nullptr;
     }
+  }
+
+  // Shifts an iterator by the padding in each direction.
+  auto shift_iterator(iter_t& it) const -> void {
+    unrolled_for<Dimensions>([&] (auto dim) {
+      it.shift(dim, _space.padding());
+    });
   }
 };
 

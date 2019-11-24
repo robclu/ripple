@@ -68,6 +68,15 @@ ripple_target_link_libraries(
 #==--------------------------------------------------------------------------==#
 
 ripple_add_executable(
+  boundary_device_tests ${ripple_SOURCE_DIR}/tests/boundary_device.cu
+)
+ripple_target_link_libraries(
+  boundary_device_tests ${GTEST_BOTH_LIBRARIES} ${CUDA_LIBRARIES}
+)
+
+#==--------------------------------------------------------------------------==#
+
+ripple_add_executable(
   container_tests ${ripple_SOURCE_DIR}/tests/container.cpp
 )
 ripple_target_link_libraries(
