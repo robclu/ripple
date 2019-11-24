@@ -18,6 +18,7 @@
 #define RIPPLE_BOUNDARY_GHOST_INDEX_HPP
 
 #include <ripple/algorithm/unrolled_for.hpp>
+#include <ripple/execution/thread_index.hpp>
 #include <ripple/math/math.hpp>
 #include <ripple/utility/dim.hpp>
 
@@ -130,6 +131,14 @@ struct GhostIndex {
   template <typename Dim>
   ripple_host_device constexpr auto index(Dim&& dim) -> value_t& {
     return _values[dim];
+  }
+
+  /// Returns the absolute value of the index in the \p dim dimension.
+  /// \param  dim The dimension to get the index for.
+  /// \tparam Dim The type of the dimension specifier.
+  template <typename Dim>
+  ripple_host_device constexpr auto abs_index(Dim&& dim) const -> value_t {
+    return math::sign(_values[dim]) * _values[dim];
   }
 
   //==--- [utilities] ------------------------------------------------------==//

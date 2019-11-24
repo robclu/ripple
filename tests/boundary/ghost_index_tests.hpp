@@ -61,6 +61,26 @@ TEST(boundary_ghost_index, can_set_as_void) {
   }
 }
 
+TEST(boundary_ghost_index, can_get_abs_value_index) {
+  ripple::ghost_index_3d_t indices;
+
+  indices.index(ripple::dim_x) = -1;
+  indices.index(ripple::dim_y) = -2;
+  indices.index(ripple::dim_z) = -3;
+
+  EXPECT_EQ(indices.abs_index(ripple::dim_x), 1);
+  EXPECT_EQ(indices.abs_index(ripple::dim_y), 2);
+  EXPECT_EQ(indices.abs_index(ripple::dim_z), 3);
+
+  indices.index(ripple::dim_x) = 1;
+  indices.index(ripple::dim_y) = 2;
+  indices.index(ripple::dim_z) = 3;
+
+  EXPECT_EQ(indices.abs_index(ripple::dim_x), 1);
+  EXPECT_EQ(indices.abs_index(ripple::dim_y), 2);
+  EXPECT_EQ(indices.abs_index(ripple::dim_z), 3);
+}
+
 TEST(boundary_ghost_index, can_get_dimensions) {
   ripple::ghost_index_3d_t indices;
   EXPECT_EQ(indices.dimensions(), std::size_t{3});
