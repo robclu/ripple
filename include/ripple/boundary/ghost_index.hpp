@@ -97,9 +97,14 @@ struct GhostIndex {
       // iterator size, and g_idx > it.size(), making the index negative.
       if (_values[dim] < it.padding() && _values[dim] >= value_t{0}) {
         _values[dim] -= it.padding();
-        _values[dim] *= math::sign(
-          static_cast<int>(g_idx) - static_cast<int>(it.size(dim)) / 2
-        );
+        const auto g_idx_i   = static_cast<int>(g_idx);
+        const auto size_half = static_cast<int>(it.size(dim)) / 2;
+
+        // Have to handle the case that the dimension is very small, i.e 2
+        // elements, then g_idx_i - size_half = 0, rather than 1 which should be
+        // the sign to use.
+        _values[dim] *= g_idx_i == size_half 
+          ? 1 : math::sign(g_idx_i - size_half);
         loader_cell = true;
       } else {
         set_as_void(dim);
