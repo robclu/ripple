@@ -107,7 +107,7 @@ class DeviceBlock {
   DeviceBlock(const self_t& other)
   : _space{other._space} {
     allocate();
-    cuda::memcpy_device_to_device(
+    cuda::memcpy_device_to_device<value_t>(
       _data, other._data, allocator_t::allocation_size(_space.size())
     );
   }

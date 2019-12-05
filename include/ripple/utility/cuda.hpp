@@ -29,17 +29,11 @@ namespace cuda   {
 /// \tparam     DevPtr       The type of the device pointer.
 template <typename DevPtr>
 static inline auto memcpy_device_to_device(
-  DevPtr* dev_ptr_out, const DevPtr* dev_ptr_in,std::size_t bytes
+  DevPtr* dev_ptr_out, const DevPtr* dev_ptr_in, std::size_t bytes
 ) -> void {
-#if defined(__CUDACC__)
-  constexpr auto num_threads = 2048;
-  const     auto elements    = bytes / sizeof(DevPtr);
-  auto threads = dim3(num_threads);
-  auto blocks  = dim3(elements / num_threads);
-
-  kernel::copy<<<blocks, threads>>>(dev_ptr_out, dev_ptr_in, elements);
-  ripple_check_cuda_result(cudaDeviceSynchronize());
-#endif // __CUDACC__
+  ripple_check_cuda_result(
+    cudaMemcpy(dev_ptr_out, dev_ptr_in, bytes, cudaMemcpyDeviceToDevice)
+  );
 }
 
 /// Copies \p bytes of data from \p host_ptr to \p dev_ptr.
