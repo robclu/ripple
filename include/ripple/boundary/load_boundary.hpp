@@ -19,7 +19,6 @@
 
 #include "detail/load_global_boundary_impl_.hpp"
 #include <ripple/execution/execution_traits.hpp>
-
 #include <ripple/execution/thread_index.hpp>
 
 namespace ripple {
@@ -54,6 +53,8 @@ ripple_host_device auto load_global_boundary(Block&& block, Loader&& loader)
     std::forward<Loader>(loader)
   );
 }
+
+
 
 } // namespace ripple
 

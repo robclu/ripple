@@ -77,6 +77,42 @@ struct GhostIndex {
   static constexpr auto void_value = value_t{0};
 
   //==--- [initialisation] -------------------------------------------------==//
+
+ private:
+  /// Initialises the indices from the \p it iterator in dimension \p dim with
+  /// \p elements in the dimension. Returns true if the value was set to a valid
+  /// value.
+  /// \param  it         The iterator to use to set the ghost cell.
+  /// \param  idx        The index in the dimension.
+  /// \param  dim        The dimension to initialise.
+  /// \param  valid_cell Value to set to true if the cell is valid.
+  /// \tparam Iterator   The type of the iterator.
+  /// \tparam Dim        The dimension to initialise.
+  template <typename Iterator, typename Dim>
+  ripple_host_device constexpr auto init_dim(
+    Iterator&& it, std::size_t idx, Dim&& dim, bool& valid_cell
+  ) -> void {
+    _values[dim] = std::min(idx, it.size(dim) - idx - 1);
+
+    // Second condition for the case that there are more threads than the
+    // iterator size in the dimension, and idx > it.size(), making the index
+    // negative.
+    if (_values[dim] < it.padding() && _values[dim] >= value_t{0}) {
+      _values[dim] -= it.padding();
+      const auto idx_i     = static_cast<int>(idx);
+      const auto size_half = static_cast<int>(it.size(dim)) / 2;
+
+      // Have to handle the case that the dimension is very small, i.e 2
+      // elements, then idx_i - size_half = 0, rather than 1 which should be
+      // the sign to use.
+      _values[dim] *= idx_i == size_half ? 1 : math::sign(idx_i - size_half);
+      valid_cell = true;
+      return;
+    } 
+    set_as_void(dim);
+  }
+
+ public:
   
   /// Initialises the indices from the \p it iterator for the global domain,
   /// returning true if one of the indices for a dimension is valid, and hence
@@ -86,29 +122,28 @@ struct GhostIndex {
   /// \param Iterator The type of the iterator.
   template <typename Iterator>
   ripple_host_device constexpr auto init_as_global(Iterator&& it) -> bool {
-    constexpr auto dims = Dimensions;
-    bool loader_cell    = false;
-    unrolled_for<dims>([&] (auto d) {
-      constexpr auto dim   = d;
-      const auto     g_idx = global_idx(dim);
-      _values[dim]         = std::min(g_idx, it.size(dim) - g_idx - 1);
+    bool loader_cell = false;
+    unrolled_for<Dimensions>([&] (auto d) {
+      constexpr auto dim = d;
+      const auto     idx = global_idx(dim);
+      init_dim(it, idx, dim, loader_cell);
+    });
+    return loader_cell;
+  }
 
-      // Second condition for the case that there are more threads than the
-      // iterator size, and g_idx > it.size(), making the index negative.
-      if (_values[dim] < it.padding() && _values[dim] >= value_t{0}) {
-        _values[dim] -= it.padding();
-        const auto g_idx_i   = static_cast<int>(g_idx);
-        const auto size_half = static_cast<int>(it.size(dim)) / 2;
-
-        // Have to handle the case that the dimension is very small, i.e 2
-        // elements, then g_idx_i - size_half = 0, rather than 1 which should be
-        // the sign to use.
-        _values[dim] *= g_idx_i == size_half 
-          ? 1 : math::sign(g_idx_i - size_half);
-        loader_cell = true;
-      } else {
-        set_as_void(dim);
-      }
+  /// Initialises the indices from the \p it iterator for the block level
+  /// domain, returning true if one of the indices for a dimension is valid, and
+  /// hence that the index structure is valid (i.e that it defines a valid index
+  /// for a ghost cell).
+  /// \param it       The iterator to use to set the ghost cell.
+  /// \param Iterator The type of the iterator.
+  template <typename Iterator>
+  ripple_host_device constexpr auto init_as_block(Iterator&& it) -> bool {
+    bool loader_cell = false;
+    unrolled_for<Dimensions>([&] (auto d) {
+      constexpr auto dim = d;
+      const auto     idx = thread_idx(dim);
+      init_dim(it, idx, dim, loader_cell);
     });
     return loader_cell;
   }

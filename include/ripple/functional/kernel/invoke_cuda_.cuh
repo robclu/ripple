@@ -95,9 +95,13 @@ ripple_device_only auto invoke_shared(
   bool in_range = true;
   // Shift higher dimensions ...
   unrolled_for<Dims>([&] (auto d) {
-    constexpr auto dim = Dims - 1 - d;
-    const auto     idx = global_idx(dim);
-    if (idx < it.size(dim) && in_range) {
+    constexpr auto dim    = d;
+    const auto idx        = global_idx(dim);
+    const auto must_shift = 
+      idx             < it.size(dim)        &&
+      thread_idx(dim) < shared_it.size(dim) &&
+      in_range;
+    if (must_shift) {
       it.shift(dim, idx);
       shared_it.shift(dim, thread_idx(dim) + shared_it.padding());
     } else {
@@ -365,7 +369,6 @@ auto invoke(
   cudaEventElapsedTime(&event.elapsed_time_ms, start, stop);
 #endif // __CUDACC__
 }
-
 
 //==--- [nonshared] --------------------------------------------------------==//
 
