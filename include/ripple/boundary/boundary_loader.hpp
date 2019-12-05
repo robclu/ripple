@@ -25,7 +25,7 @@ namespace ripple {
 template <typename Impl>
 class BoundaryLoader {
   /// Defines the type of the implementation.
-  using impl_t   = std::decay_t<Impl>;
+  using impl_t = std::decay_t<Impl>;
 
   /// Returns a const pointer to the implementation.
   ripple_host_device constexpr auto impl() const -> const impl_t* {

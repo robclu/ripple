@@ -178,7 +178,8 @@ template <
   typename    Iterator,
   std::size_t Dims    ,
   typename    Loader  ,
-  typename... Args>
+  typename... Args
+>
 ripple_host_device auto load_global_boundary(
   dimz_t                  dim    ,
   Iterator&&              it     ,

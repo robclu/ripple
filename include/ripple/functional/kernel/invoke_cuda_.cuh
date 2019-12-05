@@ -17,6 +17,8 @@
 #ifndef RIPPLE_FUNCTIONAL_KERNEL_INVOKE_CUDA__HPP
 #define RIPPLE_FUNCTIONAL_KERNEL_INVOKE_CUDA__HPP
 
+#include <ripple/boundary/copy_loader.hpp>
+#include <ripple/boundary/load_boundary.hpp>
 #include <ripple/container/device_block.hpp>
 #include <ripple/execution/execution_params.hpp>
 #include <ripple/execution/execution_size.hpp>
@@ -59,7 +61,6 @@ ripple_global auto invoke(Iterator it, Callable callable, Args... args)
     return;
   }
 
-  // Offset in the last dimension, and invoke callable:
   callable(it, args...);
 }
 
@@ -111,6 +112,18 @@ ripple_device_only auto invoke_shared(
 
   if (!in_range)
     return;
+
+  using it_1_t = std::decay_t<decltype(*it)>;
+  using it_2_t = std::decay_t<decltype(*shared_it)>;
+
+  constexpr auto same_type = 
+    std::is_same_v<it_1_t, it_2_t> || std::is_convertible_v<it_1_t, it_2_t>;
+
+  // Load in the padding data:
+  if (same_type && shared_it.padding() > 0) {
+    load_internal_boundary<Dims>(it, shared_it, CopyLoader());
+  }
+  __syncthreads();
 
   callable(it, shared_it, args...);
 }

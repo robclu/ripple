@@ -53,6 +53,7 @@ struct NumericLoader : public ripple::BoundaryLoader<NumericLoader<T>> {
 };
 
 TEST(boundary_device_load_boundary, can_load_boundary_1d) {
+  // Part 1: Test loading of global data:
   using data_t = float;
   constexpr std::size_t padding = 3;
   constexpr std::size_t size_x  = 200;
@@ -85,6 +86,43 @@ TEST(boundary_device_load_boundary, can_load_boundary_1d) {
     total += 10.0f * i * 2.0f;
   }
   total += hblock.size(ripple::dim_x) * 10.0f;
+
+  EXPECT_EQ(total, sum);
+
+  // Part 2: Test that shared data is loaded:
+  using exec_params_t = ripple::StaticExecParams<256, 1, 1, padding, data_t>;
+  ripple::invoke(block, exec_params_t(), 
+    [] ripple_host_device (auto it, auto shared_it) {
+      *shared_it = *it;
+      __syncthreads();
+
+      for (auto i = 1; i <= shared_it.padding(); ++i) {
+        *it += *shared_it.offset(ripple::dim_x, -i) +
+               *shared_it.offset(ripple::dim_x,  i);
+      }
+    }
+  );
+
+  hblock = block.as_host();
+  it     = hblock.begin();
+  sum    = data_t{0};
+
+  // Move iterator into the padding area:
+  it.shift(ripple::dim_x, -1 * static_cast<int>(it.padding()));
+
+  for (auto i = 0; i < elements; ++i) {
+    sum += *(it.offset(ripple::dim_x, i));
+  }
+
+  total = 0.0f;
+  // Padding:
+  for (auto i = 1; i <= hblock.padding(); ++i) {
+    total += 10.0f * i * 2.0f;
+  }
+  // Internal sum:
+  total += hblock.size(ripple::dim_x) * (10.0f * (2 * padding + 1));
+  // Internal sum with shared data:
+  total += 2 * 40.0f;
 
   EXPECT_EQ(total, sum);
 }
@@ -199,15 +237,12 @@ TEST(boundary_device_load_boundary, can_load_boundary_2d_large) {
   EXPECT_EQ(total, sum);
 }
 
-// Same test as above, but in 3D.
-// NOTE: This does fail if one of the sizes of the block is <= 2, because then
-// there are not enough cells to load the padding for the dimension.
-TEST(boundary_device_load_boundary, can_load_boundary_3d_small) {
+TEST(boundary_device_load_boundary, can_load_boundary_3d_large) {
   using data_t = float;
   constexpr std::size_t padding = 1;
-  constexpr std::size_t size_x  = 2;
-  constexpr std::size_t size_y  = 2;
-  constexpr std::size_t size_z  = 2;
+  constexpr std::size_t size_x  = 17;
+  constexpr std::size_t size_y  = 32;
+  constexpr std::size_t size_z  = 24;
 
   ripple::device_block_3d_t<data_t> block(padding, size_x, size_y, size_z);
   NumericLoader<data_t> loader;
