@@ -22,8 +22,6 @@
 #include <ripple/execution/execution_traits.hpp>
 #include <ripple/execution/thread_index.hpp>
 
-#include <ripple/multidim/dynamic_multidim_space.hpp>
-
 namespace ripple {
 
 /// Loads the boundary data for the \p block, using the \p loader. The loader
@@ -64,54 +62,45 @@ ripple_host_device auto load_global_boundary(
 /// Loads the boundary data for a block pointed do by \p it_to, using the data
 /// pointed to by \p it_from, offsetting into the boundary of \p it_to, then
 /// performing the offset into \p it_from.
+///
+/// Loads boundary data from the \p it_from iterator into the boundary of the \p
+/// it_to iterator.
+///
+/// \pre The iterators must be offset to the locations from which the padding
+/// will be loaded. I.e, The top left cell pointed to by an iterator must point
+/// to the first cell in the domain.
+///
+/// If the \p it_from is a smaller (in any dimension) iterator than the \p it_to
+/// iterator, the behaviour is undefined. Additionally, it must be possible to
+/// offset both itertators by the padding amount of \p it_to in each dimension.
+///
 /// \param  it_from      The iterator to load the boundary data from.
 /// \param  it_to        The iterator to load the boundary data into.
-/// \param  loader       The loader to use to load the data.
-/// \param  args         Additional arguments for the loader.
 /// \tparam IteratorFrom The type of the from iterator.
 /// \tparam IteratorTo   The type of the to iterator.
-/// \tparam Loader       The type of the loader.
-/// \tparam Args         The type of the arguments.
-template <
-  std::size_t Dims        ,
-  typename    IteratorFrom,
-  typename    IteratorTo  ,
-  typename    Loader      ,
-  typename... Args
->
+template <std::size_t Dims, typename IteratorFrom, typename IteratorTo>
 ripple_host_device auto load_internal_boundary(
-    IteratorFrom&& it_from, IteratorTo&& it_to, Loader&& loader, Args&&... args
+    IteratorFrom&& it_from, IteratorTo&& it_to
 ) -> void {
   constexpr auto dims = Dims;
-  using dim_spec_t    = std::conditional_t<
-    dims == 1, dimx_t, std::conditional_t<dims == 2, dimy_t, dimz_t>
-  >;
- 
-  // Create the space defining the block size. We need to do this for blocks at
-  // the end of the domain for which all threads in the block may not run. 
-  DynamicMultidimSpace<dims> space;
+
+  /// More both iterators to the top left of the domain:
   unrolled_for<dims>([&] (auto d) {
-    constexpr auto dim  = d;
-    const auto elements = it_from.size(dim) - block_idx(dim) * block_size(dim);
-    space[dim] = std::min(it_to.size(dim), elements);
+    constexpr auto dim = d;
+    it_from.shift(dim, -static_cast<int>(it_to.padding()));
+    it_to.shift(dim, -static_cast<int>(it_to.padding()));
   });
 
-  GhostIndex<dims> indices;
-  if (!indices.init_as_block(it_to, space)) {
-    return;
-  }
+  // Now load in the data by shifting all the threads around the domain;
+  detail::load_internal<dims>(it_from, it_to);
 
-  // Perform the load ...
-  detail::load_internal_boundary(
-    dim_spec_t{}                       , 
-    std::forward<IteratorFrom>(it_from),
-    std::forward<IteratorTo>(it_to)    ,
-    indices                            ,
-    std::forward<Loader>(loader)       ,
-    std::forward<Args>(args)...
-  );
+  // Shift the iterators back:
+  unrolled_for<dims>([&] (auto d) {
+    constexpr auto dim = d;
+    it_from.shift(dim, static_cast<int>(it_to.padding()));
+    it_to.shift(dim, static_cast<int>(it_to.padding()));
+  });
 }
-
 
 } // namespace ripple
 

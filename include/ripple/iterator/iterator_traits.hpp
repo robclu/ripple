@@ -1,0 +1,84 @@
+//==--- ripple/iterator/iterator_traits.hpp ---------------- -*- C++ -*- ---==//
+//            
+//                                Ripple
+// 
+//                      Copyright (c) 2019 Rob Clucas.
+//
+//  This file is distributed under the MIT License. See LICENSE for details.
+//
+//==------------------------------------------------------------------------==//
+//
+/// \file  iterator_traits.hpp
+/// \brief This file defines traits for iterators.
+//
+//==------------------------------------------------------------------------==//
+
+#ifndef RIPPLE_ITERATOR_ITERATOR_TRAITS_HPP
+#define RIPPLE_ITERATOR_ITERATOR_TRAITS_HPP
+
+#include <ripple/multidim/space_traits.hpp>
+#include <ripple/storage/storage_traits.hpp>
+
+namespace ripple {
+
+//==--- [forward declations] -----------------------------------------------==//
+
+/// The BlockIterator class defines a iterator over a block, for a given space
+/// which defines the region of the block. The iterator only iterates over the
+/// internal space of the block, not over the padding.
+///
+/// The type T for the iterator can be e, or type which
+/// implements the StridableLayout interface. Regardless, the use is the same,
+/// and the iterator operator as if it was a pointer to T.
+///
+/// \tparam T     The data type which the iterator will access.
+/// \tparam Space The type which defines the iteration space.
+template <typename T, typename Space> class BlockIterator;
+
+//==--- [traits declations] ------------------------------------------------==//
+
+/// Defines a class for traits for iterators.
+/// \tparam Iterator The iterator to get traits for.
+template <typename Iterator> struct IteratorTraits {
+  //==--- [aliases] --------------------------------------------------------==//
+  
+  /// Defines the value type of the iterator.
+  using value_t = void*;
+
+  //==--- [traits] ---------------------------------------------------------==//
+  
+  /// Defines that the iterator has a single dimension.
+  static constexpr size_t dimensions = 1;
+};
+
+/// Specialization of the iterator traits for a block iterator.
+/// \tparam T     The type of the block iterator.
+/// \tparam Space The space for the iterator.
+template <typename T, typename Space>
+struct IteratorTraits<BlockIterator<T, Space>> {
+  //==--- [aliases] --------------------------------------------------------==//
+  
+ private:
+   /// Defines the layout traits for the iterator.
+  using layout_traits_t = layout_traits_t<T>;
+
+ public:
+  /// Defines the value type of the iterator.
+  using value_t = typename layout_traits_t::value_t;
+
+  //==--- [traits] ---------------------------------------------------------==//
+  
+  /// Defines the number of dimensions for the iterator.
+  static constexpr size_t dimensions = space_traits_t<Space>::dimensions;
+};
+
+//==--- [aliases] ----------------------------------------------------------==//
+
+/// Defines the iterator traits for the type T after decaying the type T.
+/// \tparam T The type to get the iterator traits for.
+template <typename T>
+using iterator_traits_t = IteratorTraits<std::decay_t<T>>;
+
+} // namespace ripple
+
+#endif // RIPPLE_ITERATOR_ITERATOR_TRAITS_HPP

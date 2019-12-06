@@ -22,6 +22,18 @@
 #include <ripple/functional/invoke.hpp>
 #include <gtest/gtest.h>
 
+//==--- [NOTE] -------------------------------------------------------------==//
+//
+// Currently, the implemenatation requires that the maximum padding value for a
+// single side of a dimension is half the dimension size. In almost all cases
+// this is not a problem, and in most cases is actually beneficial because it
+// ensures that the ratio of data cells to padding cells is high. However, for
+// 2D, it may be a problem for wide stencils (i.e 9 x 9 x 9), which will require
+// a padding size of 4, hence requiring that the minimum block size for shared
+// memory use would be 8 x 8 x 8, which is possible on all architectures.
+//
+//==------------------------------------------------------------------------==//
+
 // Test loader class for numeric types.
 template <typename T>
 struct NumericLoader : public ripple::BoundaryLoader<NumericLoader<T>> {
@@ -49,6 +61,34 @@ struct NumericLoader : public ripple::BoundaryLoader<NumericLoader<T>> {
   // returns the abs value of the index.
   ripple_host_device auto abs_index(int index) const -> T {
     return static_cast<value_t>(ripple::math::sign(index) * index);
+  }
+};
+
+// Test loader class for loading the padding as constant, so that testing is
+// made easier:
+template <typename T>
+struct ConstantLoader : public ripple::BoundaryLoader<ConstantLoader<T>> {
+  using value_t = std::decay_t<T>;
+
+  // Defines the value that is loaded:
+  static constexpr auto value = value_t{1};
+
+  //==--- [any dim] --------------------------------------------------------==//
+  
+  // Loads the front data in the dim dimension.
+  template <typename Iterator, typename Dim>
+  ripple_host_device constexpr auto load_front(
+    Iterator&& it, int index, Dim&& dim
+  ) const -> void {
+    *it = value;
+  }
+
+  // Loads the back data in the dim dimension.
+  template <typename Iterator, typename Dim>
+  ripple_host_device constexpr auto load_back(
+    Iterator&& it, int index, Dim&& dim
+  ) const -> void {
+    *it = value;
   }
 };
 
@@ -88,8 +128,27 @@ TEST(boundary_device_load_boundary, can_load_boundary_1d) {
   total += hblock.size(ripple::dim_x) * 10.0f;
 
   EXPECT_EQ(total, sum);
+}
 
-  // Part 2: Test that shared data is loaded:
+
+TEST(boundary_device_load_boundary, can_load_internal_1d) {
+  using data_t   = float;
+  using loader_t = ConstantLoader<data_t>;
+  constexpr std::size_t padding = 3;
+  constexpr std::size_t size_x  = 2000;
+
+  ripple::device_block_1d_t<data_t> block(padding, size_x);
+  loader_t loader;
+
+  // Fill internal data to const value:
+  ripple::invoke(block, [] ripple_host_device (auto it) {
+    *it = loader_t::value;
+  });
+
+  // Load boundaries
+  ripple::load_global_boundary(block, loader);
+
+  // Sum from values around each cell:
   using exec_params_t = ripple::StaticExecParams<256, 1, 1, padding, data_t>;
   ripple::invoke(block, exec_params_t(), 
     [] ripple_host_device (auto it, auto shared_it) {
@@ -103,29 +162,26 @@ TEST(boundary_device_load_boundary, can_load_boundary_1d) {
     }
   );
 
-  hblock = block.as_host();
-  it     = hblock.begin();
-  sum    = data_t{0};
+  auto hblock = block.as_host();
+  auto it     = hblock.begin();
+  auto sum    = data_t{0};
 
   // Move iterator into the padding area:
   it.shift(ripple::dim_x, -1 * static_cast<int>(it.padding()));
 
+  const auto elements = hblock.size(ripple::dim_x) + 2 * hblock.padding();
   for (auto i = 0; i < elements; ++i) {
     sum += *(it.offset(ripple::dim_x, i));
   }
 
-  total = 0.0f;
-  // Padding:
-  for (auto i = 1; i <= hblock.padding(); ++i) {
-    total += 10.0f * i * 2.0f;
-  }
-  // Internal sum:
-  total += hblock.size(ripple::dim_x) * (10.0f * (2 * padding + 1));
-  // Internal sum with shared data:
-  total += 2 * 40.0f;
+  // Sum of padding values and the internally accumulated values:
+  auto total = loader_t::value * padding * 2.0f
+    + hblock.size(ripple::dim_x) * (loader_t::value * (2 * padding + 1));
 
   EXPECT_EQ(total, sum);
 }
+
+//==--- [2d] ---------------------------------------------------------------==//
 
 // This test loads the data as increading values of 10 in the paddings layers,
 // so for a 4,4 square with 2 padding layers, the data would look like:
@@ -233,6 +289,62 @@ TEST(boundary_device_load_boundary, can_load_boundary_2d_large) {
     total += x + y + corners;
   }
   total += size_x * size_y * data_t{10};
+
+  EXPECT_EQ(total, sum);
+}
+
+// Test for internal loading of data (i.e shared memory). This is a small test
+// case, which tests that the shared memory is loaded correctly for blocks which
+// are smaller than the execution block size.
+TEST(boundary_device_load_boundary, can_load_internal_2d_small) {
+  using data_t   = float;
+  using loader_t = ConstantLoader<data_t>;
+  constexpr std::size_t padding = 2;
+  constexpr std::size_t size_x  = 4;
+  constexpr std::size_t size_y  = 5;
+
+  ripple::device_block_2d_t<data_t> block(padding, size_x, size_y);
+  loader_t loader;
+
+  // Fill internal data to const value:
+  ripple::invoke(block, [] ripple_host_device (auto it) {
+    *it = loader_t::value;;
+  });
+
+  ripple::load_global_boundary(block, loader);
+
+  // Set each cell to the sum of the padding x padding block in which the cell
+  // is centerd:
+  using exec_params_t = ripple::StaticExecParams<16, 16, 1, padding, data_t>;
+  ripple::invoke(block, exec_params_t(), 
+    [] ripple_host_device (auto it, auto shared_it) {
+      const int neg_padding = -1 * static_cast<int>(shared_it.padding());
+      shared_it.shift(ripple::dim_x, neg_padding);
+      shared_it.shift(ripple::dim_y, neg_padding);
+      for (auto j : ripple::range(2 * shared_it.padding() + 1)) {
+        for (auto i : ripple::range(2 * shared_it.padding() + 1)) {
+          *it += *shared_it.offset(ripple::dim_x, i);
+        }
+        shared_it.shift(ripple::dim_y, 1);
+      }
+    }
+  );
+
+  auto hblock = block.as_host();
+  auto it     = hblock.begin();
+  auto sum    = data_t{0};
+
+  const auto elements_x = hblock.size(ripple::dim_x);
+  const auto elements_y = hblock.size(ripple::dim_y);
+
+  for (auto j = 0; j < elements_y; ++j) {
+    for (auto i = 0; i < elements_x; ++i) {
+      sum += *(it.offset(ripple::dim_x, i).offset(ripple::dim_y, j));
+    }
+  }
+
+  const auto elems_in_sum = (2 * padding + 1) * (2 * padding + 1) + 1;
+  const auto total = elements_x * elements_y * elems_in_sum * loader_t::value;
 
   EXPECT_EQ(total, sum);
 }

@@ -16,6 +16,7 @@
 #ifndef RIPPLE_MULTIDIM_MULTIDIM_SPACE_HPP
 #define RIPPLE_MULTIDIM_MULTIDIM_SPACE_HPP
 
+#include "space_traits.hpp"
 #include <ripple/container/vec.hpp>
 #include <ripple/utility/type_traits.hpp>
 
@@ -61,7 +62,7 @@ struct MultidimSpace {
 
   /// Returns the number of dimensions in the space.
   ripple_host_device constexpr auto dimensions() const -> std::size_t {
-    return impl()->dimensions();
+    return SpaceTraits<Impl>::dimensions;
   }
 
   /// Returns the size of the \p dim dimension, including the padding.

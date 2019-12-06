@@ -121,7 +121,7 @@ ripple_device_only auto invoke_shared(
 
   // Load in the padding data:
   if (same_type && shared_it.padding() > 0) {
-    load_internal_boundary<Dims>(it, shared_it, CopyLoader());
+    load_internal_boundary<Dims>(it, shared_it);
   }
   __syncthreads();
 
