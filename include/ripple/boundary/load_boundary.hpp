@@ -82,20 +82,18 @@ template <std::size_t Dims, typename IteratorFrom, typename IteratorTo>
 ripple_host_device auto load_internal_boundary(
     IteratorFrom&& it_from, IteratorTo&& it_to
 ) -> void {
-  constexpr auto dims = Dims;
-
   /// More both iterators to the top left of the domain:
-  unrolled_for<dims>([&] (auto d) {
+  unrolled_for<Dims>([&] (auto d) {
     constexpr auto dim = d;
     it_from.shift(dim, -static_cast<int>(it_to.padding()));
     it_to.shift(dim, -static_cast<int>(it_to.padding()));
   });
 
   // Now load in the data by shifting all the threads around the domain;
-  detail::load_internal<dims>(it_from, it_to);
+  detail::load_internal<Dims>(it_from, it_to);
 
   // Shift the iterators back:
-  unrolled_for<dims>([&] (auto d) {
+  unrolled_for<Dims>([&] (auto d) {
     constexpr auto dim = d;
     it_from.shift(dim, static_cast<int>(it_to.padding()));
     it_to.shift(dim, static_cast<int>(it_to.padding()));

@@ -349,6 +349,76 @@ TEST(boundary_device_load_boundary, can_load_internal_2d_small) {
   EXPECT_EQ(total, sum);
 }
 
+// Test for internal loading of data (i.e shared memory). This is a small test
+// case, which tests that the shared memory is loaded correctly for blocks which
+// are smaller than the execution block size.
+TEST(boundary_device_load_boundary, can_load_internal_3d_small) {
+  using data_t   = float;
+  using loader_t = ConstantLoader<data_t>;
+  constexpr std::size_t padding = 2;
+  constexpr std::size_t size_x  = 5;
+  constexpr std::size_t size_y  = 5;
+  constexpr std::size_t size_z  = 7;
+
+  ripple::device_block_3d_t<data_t> block(padding, size_x, size_y, size_z);
+  loader_t loader;
+
+  // Fill internal data to const value:
+  ripple::invoke(block, [] ripple_host_device (auto it) {
+    *it = loader_t::value;;
+  });
+
+  ripple::load_global_boundary(block, loader);
+
+  // Set each cell to the sum of the padding x padding block in which the cell
+  // is centerd:
+  using exec_params_t = ripple::StaticExecParams<8, 8, 8, padding, data_t>;
+  ripple::invoke(block, exec_params_t(), 
+    [] ripple_host_device (auto it, auto shared_it) {
+      const int neg_padding = -1 * static_cast<int>(shared_it.padding());
+      shared_it.shift(ripple::dim_x, neg_padding);
+      shared_it.shift(ripple::dim_y, neg_padding);
+      shared_it.shift(ripple::dim_z, neg_padding);
+      for (auto k : ripple::range(2 * shared_it.padding() + 1)) {
+        for (auto j : ripple::range(2 * shared_it.padding() + 1)) {
+          for (auto i : ripple::range(2 * shared_it.padding() + 1)) {
+            *it += *shared_it
+              .offset(ripple::dim_x, i)
+              .offset(ripple::dim_y, j)
+              .offset(ripple::dim_z, k);
+          }
+        }
+      }
+    }
+  );
+
+  auto hblock = block.as_host();
+  auto it     = hblock.begin();
+  auto sum    = data_t{0};
+
+  const auto elements_x = hblock.size(ripple::dim_x);
+  const auto elements_y = hblock.size(ripple::dim_y);
+  const auto elements_z = hblock.size(ripple::dim_z);
+  for (auto k = 0; k < elements_z; ++k) {
+    for (auto j = 0; j < elements_y; ++j) {
+      for (auto i = 0; i < elements_x; ++i) {
+        sum += *(it
+          .offset(ripple::dim_x, i)
+          .offset(ripple::dim_y, j)
+          .offset(ripple::dim_z, k)
+        );
+      }
+    }
+  }
+
+  const auto length       = 2 * padding + 1;
+  const auto elems_in_sum = length * length * length + 1;
+  const auto total = 
+    elements_x * elements_y * elements_z * elems_in_sum * loader_t::value;
+
+  EXPECT_EQ(total, sum);
+}
+
 TEST(boundary_device_load_boundary, can_load_boundary_3d_large) {
   using data_t = float;
   constexpr std::size_t padding = 1;
