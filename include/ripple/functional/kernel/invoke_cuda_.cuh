@@ -30,6 +30,8 @@
 namespace ripple::kernel::cuda {
 namespace detail {
 
+//==--- [non shared memory] ------------------------------------------------==//
+
 /// Invokes the \p callale on the iterator, shifting the iterator by the thread
 /// index.
 ///
@@ -62,6 +64,56 @@ ripple_global auto invoke(Iterator it, Callable callable, Args... args)
   }
 
   callable(it, args...);
+}
+
+/// Invokes the \p callale on the iterator \p it_1 and passing the iterator 
+/// \p it_2 as the second argument, shifting both of the iterators by the thread
+/// indices in each of the dimensions which are valid for the iterator.
+///
+/// \param  it_1        The iterator to invoke the callable on.
+/// \param  it_2        An additioanl iterator to pass to the callable.
+/// \param  callable    The callable object.
+/// \param  args        Arguments for the callable.
+/// \tparam Iterator1   The type of the first iterator.
+/// \tparam Iterator2   The type of the second iterator.
+/// \tparam Callable    The callable object to invoke.
+/// \tparam Args        The type of the arguments for the invocation.
+template <
+  typename    Iterator1, 
+  typename    Iterator2,
+  typename    Callable ,
+  typename... Args
+>
+ripple_global auto invoke(
+  Iterator1 it_1    ,
+  Iterator2 it_2    ,
+  Callable  callable, 
+  Args...   args
+) -> void {
+  constexpr auto dims_1 = it_1.dimensions();
+  constexpr auto dims_2 = it_2.dimensions();
+  bool in_range         = true;
+
+  // Shift higher dimensions ...
+  unrolled_for<dims_1>([&] (auto d) {
+    constexpr auto dim = d;
+    const auto     idx = global_idx(dim);
+    if (idx < it_1.size(dim) && in_range) {
+      it_1.shift(dim, idx);
+    } else {
+      in_range = false;
+    }
+
+    if constexpr (dim < dims_2) {
+      it_2.shift(dim, idx);
+    }
+  });
+
+  if (!in_range) {
+    return;
+  }
+
+  callable(it_1, it_2, args...);
 }
 
 //--- [shared memory] --------------------------------------------------------//
@@ -218,6 +270,43 @@ auto invoke(DeviceBlock<T, Dims>& block, Callable&& callable, Args&&... args)
   auto [threads, blocks] = get_exec_size(block, exec_params_t{});
   detail::invoke<<<blocks, threads>>>(
     block.begin(), callable, args...
+  );
+  ripple_check_cuda_result(cudaDeviceSynchronize());
+#endif // __CUDACC__
+}
+
+/// Invokes the \p callale on each element in the \p block_1.
+///
+/// \param  block_1   The first block to invoke the callable on.
+/// \param  block_2   The second block to pass to the callable.
+/// \param  callable  The callable object.
+/// \param  args      Arguments for the callable.
+/// \tparam T1        The type of the data in the first block.
+/// \tparam T2        The type of the data in the second block.
+/// \tparam Dims1     The number of dimensions in the first block.
+/// \tparam Dims2     The number of dimensions in the second block.
+/// \tparam Callable  The callable object to invoke.
+/// \tparam Args      The type of the arguments for the invocation.
+template <
+  typename    T1      ,
+  std::size_t Dims1   ,
+  typename    T2      ,
+  std::size_t Dims2   ,
+  typename    Callable,
+  typename... Args    ,
+  non_exec_param_enable_t<Callable> = 0
+>
+auto invoke(
+  DeviceBlock<T1, Dims1>& block_1 , 
+  DeviceBlock<T2, Dims2>& block_2 , 
+  Callable&&              callable,
+  Args&&...               args
+) -> void {
+#if defined(__CUDACC__)
+  using exec_params_t = default_exec_params_t<Dims1>;
+  auto [threads, blocks] = get_exec_size(block_1, exec_params_t{});
+  detail::invoke<<<blocks, threads>>>(
+    block_1.begin(), block_2.begin(), callable, args...
   );
   ripple_check_cuda_result(cudaDeviceSynchronize());
 #endif // __CUDACC__

@@ -485,6 +485,121 @@ TEST(container_device_block, exec_params_shared_pad_stridable_elements_3d) {
   }
 }
 
+//==--- [multiple blocks] --------------------------------------------------==//
+
+TEST(container_device_block, can_access_1d_multiple_blocks_1d) {
+  ripple::device_block_1d_t<dev_block_test_t> b_dev_1(400);
+  ripple::device_block_1d_t<dev_block_test_t> b_dev_2(400);
+
+  ripple::invoke(b_dev_1, b_dev_2,
+    [] ripple_host_device (auto e_it_1, auto e_it_2) {
+      e_it_1->flag() = -1;
+      e_it_1->v(0)   = 4.4f;
+      e_it_1->v(1)   = 5.5f;
+      e_it_1->v(2)   = 6.6f;
+
+      e_it_2->flag() = e_it_1->flag();
+      e_it_2->v(0)   = e_it_1->v(0);
+      e_it_2->v(1)   = e_it_1->v(1);
+      e_it_2->v(2)   = e_it_1->v(2);
+  });
+
+  auto b1 = b_dev_1.as_host();
+  auto b2 = b_dev_2.as_host();
+  for (auto i : ripple::range(b2.size())) {
+    const auto b1i = b1(i);
+    const auto b2i = b2(i);
+    EXPECT_EQ(b1i->flag(), -1  );
+    EXPECT_EQ(b1i->v(0)  , 4.4f);
+    EXPECT_EQ(b1i->v(1)  , 5.5f);
+    EXPECT_EQ(b1i->v(2)  , 6.6f);
+
+    EXPECT_EQ(b2i->flag(), -1  );
+    EXPECT_EQ(b2i->v(0)  , 4.4f);
+    EXPECT_EQ(b2i->v(1)  , 5.5f);
+    EXPECT_EQ(b2i->v(2)  , 6.6f);
+  }
+}
+
+TEST(container_device_block, can_access_1d_multiple_blocks_2d) {
+  constexpr std::size_t size_x = 83;
+  constexpr std::size_t size_y = 79;
+  ripple::device_block_2d_t<dev_block_test_t> b_dev_1(size_x, size_y);
+  ripple::device_block_2d_t<dev_block_test_t> b_dev_2(size_x, size_y);
+
+  ripple::invoke(b_dev_1, b_dev_2,
+    [] ripple_host_device (auto e_it_1, auto e_it_2) {
+      e_it_1->flag() = -1;
+      e_it_1->v(0)   = 4.4f;
+      e_it_1->v(1)   = 5.5f;
+      e_it_1->v(2)   = 6.6f;
+
+      e_it_2->flag() = e_it_1->flag();
+      e_it_2->v(0)   = e_it_1->v(0);
+      e_it_2->v(1)   = e_it_1->v(1);
+      e_it_2->v(2)   = e_it_1->v(2);
+  });
+
+  auto b1 = b_dev_1.as_host();
+  auto b2 = b_dev_2.as_host();
+  for (auto j : ripple::range(b2.size(ripple::dim_y))) {
+    for (auto i : ripple::range(b2.size(ripple::dim_x))) {
+      const auto b1i = b1(i, j);
+      const auto b2i = b2(i, j);
+      EXPECT_EQ(b1i->flag(), -1  );
+      EXPECT_EQ(b1i->v(0)  , 4.4f);
+      EXPECT_EQ(b1i->v(1)  , 5.5f);
+      EXPECT_EQ(b1i->v(2)  , 6.6f);
+
+      EXPECT_EQ(b2i->flag(), -1  );
+      EXPECT_EQ(b2i->v(0)  , 4.4f);
+      EXPECT_EQ(b2i->v(1)  , 5.5f);
+      EXPECT_EQ(b2i->v(2)  , 6.6f);
+    }
+  }
+}
+
+TEST(container_device_block, can_access_1d_multiple_blocks_3d) {
+  constexpr std::size_t size_x = 83;
+  constexpr std::size_t size_y = 79;
+  constexpr std::size_t size_z = 19;
+  ripple::device_block_2d_t<dev_block_test_t> b_dev_1(size_x, size_y, size_z);
+  ripple::device_block_2d_t<dev_block_test_t> b_dev_2(size_x, size_y, size_z);
+
+  ripple::invoke(b_dev_1, b_dev_2,
+    [] ripple_host_device (auto e_it_1, auto e_it_2) {
+      e_it_1->flag() = -1;
+      e_it_1->v(0)   = 4.4f;
+      e_it_1->v(1)   = 5.5f;
+      e_it_1->v(2)   = 6.6f;
+
+      e_it_2->flag() = e_it_1->flag();
+      e_it_2->v(0)   = e_it_1->v(0);
+      e_it_2->v(1)   = e_it_1->v(1);
+      e_it_2->v(2)   = e_it_1->v(2);
+  });
+
+  auto b1 = b_dev_1.as_host();
+  auto b2 = b_dev_2.as_host();
+  for (auto k : ripple::range(b2.size(ripple::dim_z))) {
+    for (auto j : ripple::range(b2.size(ripple::dim_y))) {
+      for (auto i : ripple::range(b2.size(ripple::dim_x))) {
+        const auto b1i = b1(i, j, k);
+        const auto b2i = b2(i, j, k);
+        EXPECT_EQ(b1i->flag(), -1  );
+        EXPECT_EQ(b1i->v(0)  , 4.4f);
+        EXPECT_EQ(b1i->v(1)  , 5.5f);
+        EXPECT_EQ(b1i->v(2)  , 6.6f);
+
+        EXPECT_EQ(b2i->flag(), -1  );
+        EXPECT_EQ(b2i->v(0)  , 4.4f);
+        EXPECT_EQ(b2i->v(1)  , 5.5f);
+        EXPECT_EQ(b2i->v(2)  , 6.6f);
+      }
+    }
+  }
+}
+
 #endif // RIPPLE_TESTS_CONTAINER_DEVICE_BLOCK_TESTS_HPP
 
 
