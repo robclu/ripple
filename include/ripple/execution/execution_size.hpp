@@ -55,26 +55,18 @@ auto get_dim_num_threads(T elements, U max_threads) -> std::size_t {
   );
 }
 
-
-/// Returns the number of threads and blocks required to launch a kernel for the
-/// \p block on the device, with the execution space parameters defined by the
-/// \p exec_params.
+/// Returns the number of threads and blocks required to cover the space defined
+/// by the \p block, with the execution space defined by the \p exec_params.
 ///
 /// This overload is only enabled if the \p block is one dimensional.
 ///
 /// \param  block       The block to generate the execution size for.
 /// \param  exec_params The execution parameters.
-/// \tparam T           The data type for the block.
-/// \tparam Dims        The number of dimensions for the block.
+/// \tparam Block       The type of the block.
 /// \tparam ExeImpl     The type of the execution parameter implementation.
-template <
-  typename    T      ,
-  std::size_t Dims   ,
-  typename    ExeImpl,
-  dim_1d_enable_t<Dims> = 0
->
+template <typename Block, typename ExeImpl, block_1d_enable_t<Block> = 0>
 auto get_exec_size(
-  const DeviceBlock<T, Dims>& block, const ExecParams<ExeImpl>& exec_params
+    const Block& block, const ExecParams<ExeImpl>& exec_params
 ) -> std::tuple<dim3, dim3> { 
   const auto elems_x = block.size(dim_x);
 
@@ -87,25 +79,18 @@ auto get_exec_size(
   return std::make_tuple(threads, blocks);
 }
 
-/// Returns the number of threads and blocks required to launch a kernel for the
-/// \p block on the device, with the execution space parameters defined by the
-/// \p exec_params.
+/// Returns the number of threads and blocks required to cover the space defined
+/// by the \p block, with the execution space defined by the \p exec_params.
 ///
 /// This overload is only enabled if the \p block is two dimensional.
 ///
 /// \param  block       The block to generate the execution size for.
 /// \param  exec_params The execution parameters
-/// \tparam T           The data type for the block.
-/// \tparam Dims        The number of dimensions for the block.
+/// \tparam Block       The type of the block.
 /// \tparam ExeImpl     The type of the execution parameter implementation.
-template <
-  typename    T      ,
-  std::size_t Dims   ,
-  typename    ExeImpl,
-  dim_2d_enable_t<Dims> = 0
->
+template <typename Block, typename ExeImpl, block_2d_enable_t<Block> = 0>
 auto get_exec_size(
-  const DeviceBlock<T, Dims>& block, const ExecParams<ExeImpl>& exec_params
+  const Block& block, const ExecParams<ExeImpl>& exec_params
 ) -> std::tuple<dim3, dim3> { 
   const auto elems_x = block.size(dim_x);
   const auto elems_y = block.size(dim_y);
@@ -122,25 +107,18 @@ auto get_exec_size(
   return std::make_tuple(threads, blocks);
 }
 
-/// Returns the number of threads and blocks required to launch a kernel for the
-/// \p block on the device, with the execution space parameters defined by the
-/// \p exec_params.
+/// Returns the number of threads and blocks required to cover the space defined
+/// by the \p block, with the execution space defined by the \p exec_params.
 ///
 /// This overload is only enabled if the \p block is three dimensional.
 ///
 /// \param  block       The block to generate the execution size for.
 /// \param  exec_params The execution parameters.
-/// \tparam T           The data type for the block.
-/// \tparam Dims        The number of dimensions for the block.
+/// \tparam Block       The type of the block.
 /// \tparam ExeImpl     The type of the execution parameter implementation.
-template <
-  typename    T      ,
-  std::size_t Dims   ,
-  typename    ExeImpl,
-  dim_3d_enable_t<Dims> = 0
->
+template <typename Block, typename ExeImpl, block_3d_enable_t<Block> = 0>
 auto get_exec_size(
-  const DeviceBlock<T, Dims>& block, const ExecParams<ExeImpl>& exec_params
+  const Block& block, const ExecParams<ExeImpl>& exec_params
 ) -> std::tuple<dim3, dim3> {
   const auto  elems_x = block.size(dim_x);
   const auto  elems_y = block.size(dim_y);

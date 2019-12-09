@@ -44,10 +44,22 @@ template <typename T, std::size_t Dimensions> class DeviceBlock;
 /// \tparam Dimensions The number of dimensions in the tensor.
 template <typename T, std::size_t Dimensions> class HostBlock;
 
-/// The BlockTraits class defines traits for a block.
-///
-/// \tparm Block The block to get the traits for.
-template <typename Block> struct BlockTraits;
+/// The BlockTraits class defines traits for a block. This instance is for
+/// non-specialzied blocks.
+/// \tparm T The type to get the block traits for.
+template <typename R> struct BlockTraits {
+  /// Defines the value type of the block.
+  using value_t     = void*;
+  /// Defines the type of allocator for the tensor.
+  using allocator_t = void*;
+  /// Defines the the of the dimension information for the tensor.
+  using space_t     = void*;
+
+  /// Defines the number of dimensions for the block.
+  static constexpr auto dimensions = 0;
+  /// Defines the the type is not a block.
+  static constexpr auto is_block   = false;
+};
 
 //==--- [specializations] --------------------------------------------------==//
 
@@ -66,6 +78,11 @@ struct BlockTraits<HostBlock<T, Dimensions>> {
   using allocator_t = typename layout_traits_t::allocator_t;
   /// Defines the the of the dimension information for the tensor.
   using space_t     = DynamicMultidimSpace<Dimensions>;
+
+  /// Defines the number of dimensions for the block.
+  static constexpr auto dimensions = Dimensions;
+  /// Defines that the traits are for a valid block.
+  static constexpr auto is_block   = true;
 };
 
 /// Specialization of the BlockTraits struct for a device block.
@@ -83,9 +100,19 @@ struct BlockTraits<DeviceBlock<T, Dimensions>> {
   using allocator_t = typename layout_traits_t::allocator_t;
   /// Defines the the of the dimension information for the tensor.
   using space_t     = DynamicMultidimSpace<Dimensions>;
+
+  /// Defines the number of dimensions for the block.
+  static constexpr auto dimensions = Dimensions;
+  /// Defines that the traits are for a valid block.
+  static constexpr auto is_block   = true;
 };
 
 //==--- [aliases] ----------------------------------------------------------==//
+
+/// Defines the block traits for a type T after decaying the type T.
+/// \tparam T The type to get the block traits for.
+template <typename T>
+using block_traits_t = BlockTraits<std::decay_t<T>>;
 
 /// Alias for a 1-dimensional host side block.
 /// \tparam T The type of the data for the block.
@@ -116,6 +143,34 @@ using host_block_3d_t = HostBlock<T, 3>;
 /// \tparam T The type of the data for the block.
 template <typename T>
 using device_block_3d_t = DeviceBlock<T, 3>;
+
+//==--- [traits] -----------------------------------------------------------==//
+
+/// Returns true if the type T is a block.
+/// \tparam T The type to determine if is a block.
+template <typename T>
+static constexpr auto is_block_v = block_traits_t<T>::is_block;
+
+/// Defines a valid type if T is a 1 dimensional block.
+/// \tparam T The type to base the enable on.
+template <typename T>
+using block_1d_enable_t = std::enable_if_t<
+  is_block_v<T> && block_traits_t<T>::dimensions == 1, int
+>;
+
+/// Defines a valid type if T is a 2 dimensional block.
+/// \tparam T The type to base the enable on.
+template <typename T>
+using block_2d_enable_t = std::enable_if_t<
+  is_block_v<T> && block_traits_t<T>::dimensions == 2, int
+>;
+
+/// Defines a valid type if T is a 3 dimensional block.
+/// \tparam T The type to base the enable on.
+template <typename T>
+using block_3d_enable_t = std::enable_if_t<
+  is_block_v<T> && block_traits_t<T>::dimensions == 3, int
+>;
 
 } // namespace ripple
 

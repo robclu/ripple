@@ -22,6 +22,7 @@
 
 namespace ripple::detail {
 
+/// The Dim3 class is stores information about the size/index in 3 dimensions.
 struct Dim3 {
   std::size_t x = 0;  //!< X value.
   std::size_t y = 0;  //!< Y value.

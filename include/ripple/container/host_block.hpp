@@ -263,6 +263,11 @@ class HostBlock {
     return _space.padding();
   }
 
+ /// Returns the number of dimensions for the block.
+  constexpr auto dimensions() const -> std::size_t {
+    return Dimensions;
+  }
+
  private:
   ptr_t     _data = nullptr;   //!< Storage for the tensor.
   space_t   _space;            //!< Spatial information for the tensor.
