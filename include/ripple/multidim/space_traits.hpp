@@ -16,6 +16,8 @@
 #ifndef RIPPLE_MULTIDIM_SPACE_TRAITS_HPP
 #define RIPPLE_MULTIDIM_SPACE_TRAITS_HPP
 
+#include <ripple/utility/portability.hpp>
+
 namespace ripple {
 
 //==--- [forward declations] -----------------------------------------------==//

@@ -167,7 +167,7 @@ auto invoke(
 
 /// Passes an iterator to the \p block_1 as the first argument to the
 /// callable, where the iterator has been offset to index i,[j,[k]] in the
-/// block. Additionally, passes an iteartor to the \p block_2 as the second
+/// block. Additionally, passes an iterator to the \p block_2 as the second
 /// argument to the callable, offset to index i, [j, [k]] in the block.
 ///
 /// This overload is for device blocks, and will run on the GPU.
@@ -198,6 +198,46 @@ auto invoke(
   Args&&...               args
 ) -> void {
   kernel::cuda::invoke(
+    block_1                         ,
+    block_2                         ,
+    std::forward<Callable>(callable),
+    std::forward<Args>(args)...
+  );
+}
+
+/// Passes an iterator to the \p block_1 as the first argument to the
+/// callable, where the iterator has been offset to index i,[j,[k]] in the
+/// block. Additionally, passes an iterator to the \p block_2 as the second
+/// argument to the callable, offset to index i, [j, [k]] in the block.
+///
+/// This overload is for host blocks, and will run on the CPU.
+///
+/// \param  block_1     The first block to invoke the callable on.
+/// \param  block_2     An additional block to pass to the callable.
+/// \param  callabble   The callable object.
+/// \param  args        Arguments for the callable.
+/// \tparam T1          The type of the data in the first block.
+/// \tparam Dims1       The number of dimensions in the first block.
+/// \tparam T2          The type of the data in the second block.
+/// \tparam Dims1       The number of dimensions in the first block.
+/// \tparam Callable    The callable object to invoke.
+/// \tparam Args        The type of the arguments for the invocation.
+template <
+  typename    T1      ,
+  std::size_t Dims1   ,
+  typename    T2      ,
+  std::size_t Dims2   ,
+  typename    Callable,
+  typename... Args    ,
+  non_exec_param_enable_t<Callable> = 0
+>
+auto invoke(
+  HostBlock<T1, Dims1>& block_1 ,
+  HostBlock<T2, Dims2>& block_2 ,
+  Callable&&            callable,
+  Args&&...             args
+) -> void {
+  kernel::invoke(
     block_1                         ,
     block_2                         ,
     std::forward<Callable>(callable),

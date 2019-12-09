@@ -145,6 +145,7 @@ ripple_device_only auto invoke_shared(
   Callable&&       callable   ,
   Args&&...        args  
 ) -> void {
+#if defined(__CUDACC__)
   bool in_range = true;
   // Shift higher dimensions ...
   unrolled_for<Dims>([&] (auto d) {
@@ -178,6 +179,7 @@ ripple_device_only auto invoke_shared(
   __syncthreads();
 
   callable(it, shared_it, args...);
+#endif // __CUDACC__
 }
 
 /// Invokes the \p callale on the iterator, shifting the iterator by the thread

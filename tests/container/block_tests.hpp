@@ -369,6 +369,117 @@ TEST(container_block, can_invoke_3d_with_padding) {
   EXPECT_EQ(b.padding(), std::size_t{2});
 }
 
+//==--- [invoke multiple blocks] -------------------------------------------==//
+
+TEST(container_block, can_invoke_multiple_blocks_1d) {
+  constexpr auto size_x = 4712;
+  ripple::host_block_1d_t<test_t> b1(size_x);
+  ripple::host_block_1d_t<test_t> b2(size_x);
+
+  ripple::invoke(b1, b2, [] (auto bi1, auto bi2) {
+    bi1->flag() = -1;
+    bi1->v(0)   = 10.0f;
+    bi1->v(1)   = 20.0f;
+    bi1->v(2)   = 30.0f;
+
+    bi2->flag() = bi1->flag();
+    bi2->v(0)   = bi1->v(0);
+    bi2->v(1)   = bi1->v(1);
+    bi2->v(2)   = bi1->v(2);
+  });
+
+  for (auto i : ripple::range(b2.size(ripple::dim_x))) {
+    const auto bi1 = b1(i);
+    const auto bi2 = b2(i);
+
+    EXPECT_EQ(bi1->flag(), -1   );
+    EXPECT_EQ(bi1->v(0)  , 10.0f);
+    EXPECT_EQ(bi1->v(1)  , 20.0f);
+    EXPECT_EQ(bi1->v(2)  , 30.0f);
+
+    EXPECT_EQ(bi2->flag(), -1   );
+    EXPECT_EQ(bi2->v(0)  , 10.0f);
+    EXPECT_EQ(bi2->v(1)  , 20.0f);
+    EXPECT_EQ(bi2->v(2)  , 30.0f);
+  }
+}
+
+TEST(container_block, can_invoke_multiple_blocks_2d) {
+  constexpr auto size_x = 412;
+  constexpr auto size_y = 571;
+  ripple::host_block_2d_t<test_t> b1(size_x, size_y);
+  ripple::host_block_2d_t<test_t> b2(size_x, size_y);
+
+  ripple::invoke(b1, b2, [] (auto bi1, auto bi2) {
+    bi1->flag() = -1;
+    bi1->v(0)   = 10.0f;
+    bi1->v(1)   = 20.0f;
+    bi1->v(2)   = 30.0f;
+
+    bi2->flag() = bi1->flag();
+    bi2->v(0)   = bi1->v(0);
+    bi2->v(1)   = bi1->v(1);
+    bi2->v(2)   = bi1->v(2);
+  });
+
+  for (auto j : ripple::range(b2.size(ripple::dim_y))) {
+    for (auto i : ripple::range(b2.size(ripple::dim_x))) {
+      const auto bi1 = b1(i, j);
+      const auto bi2 = b2(i, j);
+
+      EXPECT_EQ(bi1->flag(), -1   );
+      EXPECT_EQ(bi1->v(0)  , 10.0f);
+      EXPECT_EQ(bi1->v(1)  , 20.0f);
+      EXPECT_EQ(bi1->v(2)  , 30.0f);
+
+      EXPECT_EQ(bi2->flag(), -1   );
+      EXPECT_EQ(bi2->v(0)  , 10.0f);
+      EXPECT_EQ(bi2->v(1)  , 20.0f);
+      EXPECT_EQ(bi2->v(2)  , 30.0f);
+    }
+  }
+}
+
+
+TEST(container_block, can_invoke_multiple_blocks_3d) {
+  constexpr auto size_x = 61;
+  constexpr auto size_y = 57;
+  constexpr auto size_z = 12;
+  ripple::host_block_3d_t<test_t> b1(size_x, size_y, size_z);
+  ripple::host_block_3d_t<test_t> b2(size_x, size_y, size_z);
+
+  ripple::invoke(b1, b2, [] (auto bi1, auto bi2) {
+    bi1->flag() = -1;
+    bi1->v(0)   = 10.0f;
+    bi1->v(1)   = 20.0f;
+    bi1->v(2)   = 30.0f;
+
+    bi2->flag() = bi1->flag();
+    bi2->v(0)   = bi1->v(0);
+    bi2->v(1)   = bi1->v(1);
+    bi2->v(2)   = bi1->v(2);
+  });
+
+  for (auto k : ripple::range(b2.size(ripple::dim_z))) {
+    for (auto j : ripple::range(b2.size(ripple::dim_y))) {
+      for (auto i : ripple::range(b2.size(ripple::dim_x))) {
+        const auto bi1 = b1(i, j, k);
+        const auto bi2 = b2(i, j, k);
+
+        EXPECT_EQ(bi1->flag(), -1   );
+        EXPECT_EQ(bi1->v(0)  , 10.0f);
+        EXPECT_EQ(bi1->v(1)  , 20.0f);
+        EXPECT_EQ(bi1->v(2)  , 30.0f);
+
+        EXPECT_EQ(bi2->flag(), -1   );
+        EXPECT_EQ(bi2->v(0)  , 10.0f);
+        EXPECT_EQ(bi2->v(1)  , 20.0f);
+        EXPECT_EQ(bi2->v(2)  , 30.0f);
+      }
+    }
+  }
+}
+
 //==--- [access begin] -----------------------------------------------------==//
 
 TEST(container_block, can_access_block_beginning) {
