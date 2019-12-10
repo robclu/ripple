@@ -480,6 +480,85 @@ TEST(container_block, can_invoke_multiple_blocks_3d) {
   }
 }
 
+//==--- [invoke blocked] ---------------------------------------------------==//
+
+TEST(container_block, can_invoke_with_exec_params_1d) {
+  constexpr auto size_x = 141;
+  ripple::host_block_1d_t<test_t> b(size_x);
+  ripple::StaticExecParams<32, 1, 1> params;
+
+  ripple::invoke(b, params, [] (auto bi) {
+    bi->flag() = -1;
+    bi->v(0)   = 10.0f;
+    bi->v(1)   = 20.0f;
+    bi->v(2)   = 30.0f;
+  });
+
+  for (auto i : ripple::range(b.size(ripple::dim_x))) {
+    const auto bi = b(i);
+
+    EXPECT_EQ(bi->flag(), -1   );
+    EXPECT_EQ(bi->v(0)  , 10.0f);
+    EXPECT_EQ(bi->v(1)  , 20.0f);
+    EXPECT_EQ(bi->v(2)  , 30.0f);
+  }
+}
+
+TEST(container_block, can_invoke_with_exec_params_2d) {
+  constexpr auto size_x = 151;
+  constexpr auto size_y = 37;
+  ripple::host_block_2d_t<test_t> b(size_x, size_y);
+  ripple::StaticExecParams<16, 16, 1> params;
+
+
+  ripple::invoke(b, params, [] (auto bi) {
+    bi->flag() = -1;
+    bi->v(0)   = 10.0f;
+    bi->v(1)   = 20.0f;
+    bi->v(2)   = 30.0f;
+  });
+
+  for (auto j : ripple::range(b.size(ripple::dim_y))) {
+    for (auto i : ripple::range(b.size(ripple::dim_x))) {
+      const auto bi = b(i, j);
+
+      EXPECT_EQ(bi->flag(), -1   );
+      EXPECT_EQ(bi->v(0)  , 10.0f);
+      EXPECT_EQ(bi->v(1)  , 20.0f);
+      EXPECT_EQ(bi->v(2)  , 30.0f);
+    }
+  }
+}
+
+TEST(container_block, can_invoke_with_exec_params_3d) {
+  constexpr auto size_x = 31;
+  constexpr auto size_y = 41;
+  constexpr auto size_z = 27;
+  ripple::host_block_3d_t<test_t> b(size_x, size_y, size_z);
+  ripple::StaticExecParams<8, 8, 8> params;
+
+
+  ripple::invoke(b, params, [] (auto bi) {
+    bi->flag() = -1;
+    bi->v(0)   = 10.0f;
+    bi->v(1)   = 20.0f;
+    bi->v(2)   = 30.0f;
+  });
+
+  for (auto k : ripple::range(b.size(ripple::dim_z))) {
+    for (auto j : ripple::range(b.size(ripple::dim_y))) {
+      for (auto i : ripple::range(b.size(ripple::dim_x))) {
+        const auto bi = b(i, j, k);
+
+        EXPECT_EQ(bi->flag(), -1   );
+        EXPECT_EQ(bi->v(0)  , 10.0f);
+        EXPECT_EQ(bi->v(1)  , 20.0f);
+        EXPECT_EQ(bi->v(2)  , 30.0f);
+      }
+    }
+  }
+}
+
 //==--- [access begin] -----------------------------------------------------==//
 
 TEST(container_block, can_access_block_beginning) {

@@ -18,6 +18,7 @@
 #define RIPPLE_FUNCTIONAL_KERNEL_INVOKE_CPP__HPP
 
 #include <ripple/container/host_block.hpp>
+#include <ripple/iterator/iterator_traits.hpp>
 #include <ripple/perf/perf_traits.hpp>
 #include <ripple/utility/dim.hpp>
 #include <ripple/utility/number.hpp>
@@ -25,6 +26,226 @@
 
 namespace ripple::kernel {
 namespace detail {
+
+//==--- [invoke blocked implementation] ------------------------------------==//
+
+/// Implementation struct to invoke a callable on a block.
+/// \tparam I The index of the dimension to invoke for.
+template <std::size_t I>
+struct InvokeOnBlock {
+  /// Invokes the \p callable on the \p it iterator with the \p args, and the
+  /// execution \p exec_params, in a blocked manner.
+  /// \param  it          The iterator to pass to the callable.
+  /// \param  exec_params The execution parameters.
+  /// \param  threads     The number fo threads in each block.
+  /// \param  blocks      The number of blocks.
+  /// \param  callable    The callable object.
+  /// \param  args        Arguments for the callable.
+  /// \tparam Iterator    The type of the iterator.
+  /// \tparam ExecImpl    The type of the execution params.
+  /// \tparam Callable    The callable object to invoke.
+  /// \tparam Args        The type of the arguments for the invocation.
+  template <
+    typename    Iterator,
+    typename    ExecImpl,
+    typename    Callable,
+    typename... Args    ,
+    exec_param_enable_t<ExecImpl> = 0
+  >
+  static auto invoke(
+    Iterator&& it         ,
+    ExecImpl&& exec_params,
+    dim3&      threads    ,
+    Callable&& callable   ,
+    Args&&...  args
+  ) -> void {
+    using namespace ::ripple::detail;
+    constexpr auto dim        = Num<I>();
+    const auto block_threads  = I == 1 ? threads.y  : threads.z;
+    const auto initial_offset = 
+      block_threads * (I == 1 ? block_idx_.y : block_idx_.z);
+
+    for (auto i : range(block_threads)) {
+      if constexpr (I == 1) {
+        thread_idx_.y = i;
+        if (thread_idx_.y + initial_offset > it.size(dim) - 1) {
+          return;
+        }
+      }
+      if constexpr (I == 2) {
+        thread_idx_.z = i;
+        if (thread_idx_.z + initial_offset > it.size(dim) - 1) {
+          return;
+        }
+      }
+
+      InvokeOnBlock<I - 1>::invoke(
+        it.offset(dim, i)                  ,
+        std::forward<ExecImpl>(exec_params),
+        threads                            ,
+        std::forward<Callable>(callable)   ,
+        std::forward<Args>(args)...
+      );
+    }
+  }
+};
+
+/// Implementation struct to invoke a callable in a blocked manner,
+/// \tparam I The index of the dimension to invoke for.
+template <>
+struct InvokeOnBlock<0> {
+  /// Invokes the \p callable on the \p it iterator with the \p args, and the
+  /// execution \p exec_params, in a blocked manner.
+  /// \param  it          The iterator to pass to the callable.
+  /// \param  exec_params The execution parameters.
+  /// \param  threads     The number fo threads in each block.
+  /// \param  blocks      The number of blocks.
+  /// \param  callable    The callable object.
+  /// \param  args        Arguments for the callable.
+  /// \tparam Iterator    The type of the iterator.
+  /// \tparam ExecImpl    The type of the execution params.
+  /// \tparam Callable    The callable object to invoke.
+  /// \tparam Args        The type of the arguments for the invocation.
+  template <
+    typename    Iterator,
+    typename    ExecImpl,
+    typename    Callable,
+    typename... Args    ,
+    exec_param_enable_t<ExecImpl> = 0
+  >
+  static auto invoke(
+    Iterator&& it         ,
+    ExecImpl&& exec_params,
+    dim3&      threads    ,
+    Callable&& callable   ,
+    Args&&...  args
+  ) -> void {
+    using namespace ::ripple::detail;
+    const auto block_threads  = threads.x;
+    const auto initial_offset = threads.x * block_idx_.x;
+    
+    for (auto i : range(block_threads)) {
+      thread_idx_.x = i;
+      if (thread_idx_.x + initial_offset > it.size(dim_x) - 1) {
+        return;
+      }
+
+      callable(it.offset(dim_x, i), std::forward<Args>(args)...);
+    }
+  }
+};
+
+
+//==--- [invoke blocked implementation] ------------------------------------==//
+
+/// Implementation struct to invoke a callable in a blocked manner,
+/// \tparam I The index of the dimension to invoke for.
+template <std::size_t I>
+struct InvokeBlockedImpl {
+  /// Invokes the \p callable on the \p it iterator with the \p args, and the
+  /// execution \p exec_params, in a blocked manner.
+  /// \param  it          The iterator to pass to the callable.
+  /// \param  exec_params The execution parameters.
+  /// \param  threads     The number fo threads in each block.
+  /// \param  blocks      The number of blocks.
+  /// \param  callable    The callable object.
+  /// \param  args        Arguments for the callable.
+  /// \tparam Iterator    The type of the iterator.
+  /// \tparam ExecImpl    The type of the execution params.
+  /// \tparam Callable    The callable object to invoke.
+  /// \tparam Args        The type of the arguments for the invocation.
+  template <
+    typename    Iterator,
+    typename    ExecImpl,
+    typename    Callable,
+    typename... Args    ,
+    exec_param_enable_t<ExecImpl> = 0
+  >
+  static auto invoke(
+    Iterator&& it         ,
+    ExecImpl&& exec_params,
+    dim3&      threads    ,
+    dim3&      blocks     ,
+    Callable&& callable   ,
+    Args&&...  args
+  ) -> void {
+    using namespace ::ripple::detail;
+    constexpr auto dim    = Num<I>();
+    const auto dim_blocks = I == 1 ? blocks.y  : blocks.z;
+    const auto dim_offset = I == 1 ? threads.y : threads.z;
+
+    for (auto i : range(dim_blocks)) {
+      if constexpr (I == 1) {
+        block_idx_.y = i;
+      }
+      if constexpr (I == 2) {
+        block_idx_.z = i;
+      }
+
+      InvokeBlockedImpl<I - 1>::invoke(
+        it.offset(dim, i * dim_offset)     ,
+        std::forward<ExecImpl>(exec_params),
+        threads                            ,
+        blocks                             ,
+        std::forward<Callable>(callable)   ,
+        std::forward<Args>(args)...
+      );
+    }
+  }
+};
+
+/// Implementation struct to invoke a callable in a blocked manner,
+/// \tparam I The index of the dimension to invoke for.
+template <>
+struct InvokeBlockedImpl<0> {
+  /// Invokes the \p callable on the \p it iterator with the \p args, and the
+  /// execution \p exec_params, in a blocked manner.
+  /// \param  it          The iterator to pass to the callable.
+  /// \param  exec_params The execution parameters.
+  /// \param  threads     The number fo threads in each block.
+  /// \param  blocks      The number of blocks.
+  /// \param  callable    The callable object.
+  /// \param  args        Arguments for the callable.
+  /// \tparam Iterator    The type of the iterator.
+  /// \tparam ExecImpl    The type of the execution params.
+  /// \tparam Callable    The callable object to invoke.
+  /// \tparam Args        The type of the arguments for the invocation.
+  template <
+    typename    Iterator,
+    typename    ExecImpl,
+    typename    Callable,
+    typename... Args    ,
+    exec_param_enable_t<ExecImpl> = 0
+  >
+  static auto invoke(
+    Iterator&& it         ,
+    ExecImpl&& exec_params,
+    dim3&      threads    ,
+    dim3&      blocks     ,
+    Callable&& callable   ,
+    Args&&...  args
+  ) -> void {
+    using namespace ::ripple::detail;
+    const auto dim_blocks = blocks.x;
+    const auto dim_offset = threads.x;
+    
+    constexpr auto dims = iterator_traits_t<Iterator>::dimensions;
+
+    for (auto i : range(dim_blocks)) {
+      block_idx_.x = i;
+
+      InvokeOnBlock<dims - 1>::invoke(
+        it.offset(dim_x, i * dim_offset)   ,
+        std::forward<ExecImpl>(exec_params),
+        threads                            ,
+        std::forward<Callable>(callable)   ,
+        std::forward<Args>(args)...
+      );
+    }
+  }
+};
+
+//==--- [invoke implementation] --------------------------------------------==//
 
 /// Implementation struct to invoke a callable over a number of dimensions.
 /// \tparam I The index of the dimension to invoke over.
@@ -328,12 +549,32 @@ auto invoke(
   Callable&&          callable   ,
   Args&&...           args
 ) -> void {
-  detail::InvokeImpl<Dims - 1>::invoke(
+  auto [threads, blocks] = get_exec_size(block, exec_params);
+
+  using namespace ::ripple::detail;
+
+  block_dim_.x = threads.x;
+  block_dim_.y = threads.y;
+  block_dim_.z = threads.z;
+  grid_dim_.x  = blocks.x;
+  grid_dim_.y  = blocks.y;
+  grid_dim_.z  = blocks.z;
+
+  detail::InvokeBlockedImpl<Dims - 1>::invoke(
     block.begin()                      ,
     std::forward<ExecImpl>(exec_params),
+    threads                            ,
+    blocks                             ,
     std::forward<Callable>(callable)   ,
     std::forward<Args>(args)...
-  );   
+  );
+
+  block_dim_.x = 1;
+  block_dim_.y = 1;
+  block_dim_.z = 1;
+  grid_dim_.x  = 1;
+  grid_dim_.y  = 1;
+  grid_dim_.z  = 1;
 }
 
 namespace bench {

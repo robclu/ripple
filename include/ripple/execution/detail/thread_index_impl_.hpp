@@ -221,17 +221,17 @@ ripple_host_device inline auto block_idx(std::size_t dim) -> std::size_t {
 
 /// Returns the index of the thread in the grid for the x dimension.
 ripple_host_device inline auto global_idx(dimx_t) -> std::size_t {
-  return thread_idx_.x;
+  return block_idx_.x * block_dim_.x + thread_idx_.x;
 }
 
 /// Returns the index of the thread in the grid for the y dimension.
 ripple_host_device inline auto global_idx(dimy_t) -> std::size_t {
-  return thread_idx_.y;
+  return block_idx_.y * block_dim_.y + thread_idx_.y;
 }
 
 /// Returns the index of the thread in the grid for the z dimension.
 ripple_host_device inline auto global_idx(dimz_t) -> std::size_t {
-  return thread_idx_.z;
+  return block_idx_.z * block_dim_.z + thread_idx_.z;
 }
 
 /// Returns the index of the thread in the grid in the \p dim dimension.
