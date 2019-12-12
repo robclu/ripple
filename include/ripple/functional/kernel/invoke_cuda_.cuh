@@ -25,6 +25,7 @@
 #include <ripple/execution/execution_traits.hpp>
 #include <ripple/execution/static_execution_params.hpp>
 #include <ripple/execution/thread_index.hpp>
+#include <ripple/iterator/iterator_traits.hpp>
 #include <ripple/perf/perf_traits.hpp>
 
 namespace ripple::kernel::cuda {
@@ -42,7 +43,12 @@ namespace detail {
 /// \tparam Dims        The number of dimensions in the block.
 /// \tparam Callable    The callable object to invoke.
 /// \tparam Args        The type of the arguments for the invocation.
-template <typename Iterator, typename Callable, typename... Args>
+template <
+  typename    Iterator,
+  typename    Callable,
+  typename... Args    ,
+  non_iterator_enable_t<Callable> = 0
+>
 ripple_global auto invoke(Iterator it, Callable callable, Args... args)
 -> void {
   constexpr auto dims = it.dimensions();
@@ -82,7 +88,8 @@ template <
   typename    Iterator1, 
   typename    Iterator2,
   typename    Callable ,
-  typename... Args
+  typename... Args     ,
+  iterator_enable_t<Iterator2> = 0
 >
 ripple_global auto invoke(
   Iterator1 it_1    ,

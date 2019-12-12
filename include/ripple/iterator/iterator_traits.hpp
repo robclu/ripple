@@ -49,6 +49,8 @@ template <typename Iterator> struct IteratorTraits {
   
   /// Defines that the iterator has a single dimension.
   static constexpr size_t dimensions = 1;
+  /// Returns that the traits are not for a valid iterator.
+  static constexpr bool  is_iterator = false;
 };
 
 /// Specialization of the iterator traits for a block iterator.
@@ -70,6 +72,8 @@ struct IteratorTraits<BlockIterator<T, Space>> {
   
   /// Defines the number of dimensions for the iterator.
   static constexpr size_t dimensions = space_traits_t<Space>::dimensions;
+  /// Returns that the traits are for a valid iterator.
+  static constexpr bool  is_iterator = true;
 };
 
 //==--- [aliases] ----------------------------------------------------------==//
@@ -78,6 +82,25 @@ struct IteratorTraits<BlockIterator<T, Space>> {
 /// \tparam T The type to get the iterator traits for.
 template <typename T>
 using iterator_traits_t = IteratorTraits<std::decay_t<T>>;
+
+//==--- [traits] -----------------------------------------------------------==//
+
+/// Returns true if the type T is an iterator.
+/// \tparam T The type to determine if is an iterator.
+template <typename T>
+static constexpr auto is_iterator_v = iterator_traits_t<T>::is_iterator;
+
+//==--- [enables] ----------------------------------------------------------==//
+
+/// Defines a valid type if the type T is an iterator.
+/// \tparam T The type to base the enable on.
+template <typename T>
+using iterator_enable_t = std::enable_if_t<is_iterator_v<T>, int>;
+
+/// Defines a valid type if the type T is not an iterator.
+/// \tparam T The type to base the enable on.
+template <typename T>
+using non_iterator_enable_t = std::enable_if_t<!is_iterator_v<T>, int>;
 
 } // namespace ripple
 

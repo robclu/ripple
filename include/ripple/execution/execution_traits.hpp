@@ -156,6 +156,36 @@ using default_exec_params_t =
     std::conditional_t<Dims == 2, exec_params_2d_t, exec_params_3d_t>
   >;
 
+/// Defines an alias for 1d execution parameters. 1024 threads in the x
+/// dimension, a grain size of 1, and no padding, for a shared memory type T.
+/// \tparam T   The type of the shared memory.
+template <typename T>
+using shared_exec_params_1d_t = StaticExecParams<1024, 1, 1, 0, T>;
+
+/// Defines an alias for 2d execution parameters. 32 threads in the x
+/// dimension, 16 in the y dimension, a grain size of 1, and no padding.
+/// \tparam T The type of the shared memory.
+template <typename T>
+using shared_exec_params_2d_t = StaticExecParams<32, 16, 1, 0, T>;
+
+/// Defines an alias for 3d execution parameters. 8 threads in the x dimension,
+/// 8 threads, in the y dimension, 8 threads in the z dimension, a grain size
+/// of 1, and no padding.
+/// tparam T The type of the shared memory data.
+template <typename T>
+using shared_exec_params_3d_t = StaticExecParams<8, 8, 8, 0, T>;
+
+/// Defines the execution parameter type based on the number of dimensions.
+/// \tparam Dims The number of dimensions to get the execution params for.
+/// \tparma T    The type for the shared memory.
+template <std::size_t Dims, typename T>
+using default_shared_exec_params_t = std::conditional_t<
+  Dims == 1, shared_exec_params_1d_t<T>,
+  std::conditional_t<
+    Dims == 2, shared_exec_params_2d_t<T>, shared_exec_params_3d_t<T>
+  >
+>;
+
 //==--- [enables] ----------------------------------------------------------==//
 
 /// Defines a valid type if Exec param implementation is dynamic and uses shared

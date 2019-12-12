@@ -13,4 +13,5 @@
 //
 //==------------------------------------------------------------------------==//
 
+#include "reduce_tests.hpp"
 #include "unrolled_for_tests.hpp"

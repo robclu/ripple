@@ -137,6 +137,14 @@ ripple_host_device inline auto block_norm_idx(Dim&& dim, std::size_t dim_size)
 
 //==--- [utilities] --------------------------------------------------------==//
 
+/// Returns true if the thread is the first thread in the block for all
+/// dimensions.
+ripple_host_device inline auto first_thread_in_block() -> bool {
+  return detail::thread_idx(dim_x) == std::size_t{0} &&
+         detail::thread_idx(dim_y) == std::size_t{0} &&
+         detail::thread_idx(dim_z) == std::size_t{0};
+}
+
 /// Returns true if the thread is the first thread in the block for dimension
 /// \p dim.
 /// \param  dim The dimension to check for the first thread.
@@ -153,6 +161,14 @@ ripple_host_device inline auto first_thread_in_block(Dim&& dim) -> bool {
 template <typename Dim>
 ripple_host_device inline auto last_thread_in_block(Dim&& dim) -> bool {
   return detail::thread_idx(dim) == (detail::block_size(dim) - 1);
+}
+
+/// Returns true if the thread is the first thread in the grid for all
+/// dimensions.
+ripple_host_device inline auto first_thread_in_grid() -> bool {
+  return detail::global_idx(dim_x) == std::size_t{0} &&
+         detail::global_idx(dim_x) == std::size_t{0} &&
+         detail::global_idx(dim_x) == std::size_t{0};
 }
 
 /// Returns true if the thread is the first thread in the grid for dimension

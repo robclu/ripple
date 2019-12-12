@@ -537,7 +537,6 @@ TEST(container_block, can_invoke_with_exec_params_3d) {
   ripple::host_block_3d_t<test_t> b(size_x, size_y, size_z);
   ripple::StaticExecParams<8, 8, 8> params;
 
-
   ripple::invoke(b, params, [] (auto bi) {
     bi->flag() = -1;
     bi->v(0)   = 10.0f;
