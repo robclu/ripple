@@ -13,8 +13,8 @@
 //
 //==------------------------------------------------------------------------==//
 
-#ifndef RIPPLE_TESTS_ALGORITHM_REDUCE_FOR_TESTS_HPP
-#define RIPPLE_TESTS_ALGORITHM_REDUCE_FOR_TESTS_HPP
+#ifndef RIPPLE_TESTS_ALGORITHM_REDUCE_TESTS_HPP
+#define RIPPLE_TESTS_ALGORITHM_REDUCE_TESTS_HPP
 
 #include <ripple/algorithm/reduce.hpp>
 #include <gtest/gtest.h>

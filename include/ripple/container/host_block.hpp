@@ -183,6 +183,13 @@ class HostBlock {
     return it;
   }
 
+  /// Gets a constant iterator to the beginning of the block.
+  auto begin() const -> const_iter_t {
+    auto it = const_iter_t{allocator_t::create(_data, _space), _space};
+    shift_iterator(it);
+    return it;
+  }
+
   /// Overload of operator() to get an iterator to the element at the location
   /// specified by the \p is indices.
   /// \param  is      The indices to get the element at.

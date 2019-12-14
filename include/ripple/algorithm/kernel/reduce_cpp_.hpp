@@ -47,7 +47,7 @@ template <> struct Reducer<0> {
   /// \tparam Pred     The type of the predicate.
   /// \tparam Args     The type of the predicate additional arguments.
   template <typename Iterator, typename T, typename Pred, typename... Args>
-  ripple_device_only static auto reduce(
+  ripple_host_device static auto reduce(
     Iterator&&  it    ,
     T&          result,
     Pred&&      pred  ,
@@ -98,7 +98,7 @@ struct Reducer {
   /// \tparam Pred     The type of the predicate.
   /// \tparam Args     The type of the predicate additional arguments.
   template <typename Iterator, typename T, typename Pred, typename... Args>
-  ripple_device_only static auto reduce(
+  ripple_host_device static auto reduce(
     Iterator&& it    ,
     T&         result,
     Pred&&     pred  ,
@@ -115,7 +115,6 @@ struct Reducer {
   }
 };
 
-
 } // namespace detail
 
 /// Reduces the \p block using the \p pred.
@@ -128,7 +127,7 @@ struct Reducer {
 /// \tparam Pred  The type of the predicate.
 /// \tparam Args  The type of the arguments for the invocation.
 template <typename T, std::size_t Dims, typename Pred, typename... Args>
-auto reduce(HostBlock<T, Dims>& block, Pred&& pred, Args&&... args) {
+auto reduce(const HostBlock<T, Dims>& block, Pred&& pred, Args&&... args) {
   using reducer_t = detail::Reducer<Dims - 1>;
   auto it         = block.begin();
   auto result     = *it;

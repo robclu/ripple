@@ -21,6 +21,7 @@
 #include <cuda.h>
 #include <cuda_runtime.h>
 #include <exception>
+#include <cooperative_groups.h>
 
 /// Definitions for host, device, and host device functions
 /// if CUDA is supported.
