@@ -215,5 +215,6 @@ set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} ${CUDA_FLAGS}")
 
 #==--- Subdirectories -------------------------------------------------------==#
 
+add_subdirectory(apps)
 add_subdirectory(benchmarks)
 add_subdirectory(tests)
