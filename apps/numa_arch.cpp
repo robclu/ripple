@@ -19,9 +19,13 @@
 
 int main(int argc, char** argv) {
   auto cpu_info = ripple::CpuInfo();
-  auto caches   = cpu_info.create_cache_info();
 
-  for (auto& cache : caches) {
+  printf("Available cores   : %-6i\n", cpu_info.available_cores());
+  printf("Packages          : %-6i\n", cpu_info.packages());
+  printf("Cores per package : %-6i\n", cpu_info.cores_per_package());
+
+  printf("Cache information:\n");
+  for (auto& cache : cpu_info.cache_info()) {
     printf("{\n"
       "\tLevel           : %-6i\n"
       "\tType            : %-6i\n"
@@ -42,5 +46,11 @@ int main(int argc, char** argv) {
       cache.size()
     );
   }
+
+  printf("CPU indices (Package,Core,Thread):\n{\n");
+  for (auto& proc : cpu_info.processor_info()) {
+    printf("\t{%2i %2i %2i}\n", proc.package, proc.core, proc.thread);
+  }
+  printf("\n}\n");
 }
 
