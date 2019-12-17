@@ -53,6 +53,14 @@ ripple_host_device constexpr auto sign(T x) -> T {
   return detail::sign(x, std::is_signed<T>());
 }
 
+/// Returns the absolute value of \p x.
+/// \param x The value to get the absolute value of.
+/// \tpram T The type of the value.
+template <typename T>
+ripple_host_device constexpr auto abs(T x) -> T {
+  return sign(x) * x;
+}
+
 } // namespace ripple::math
 
 #endif // RIPPLE_MATH_MATH_HPP

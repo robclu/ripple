@@ -64,11 +64,13 @@ ripple_device_only auto reduce_block_for_dim(
   // performance of these two options needs to be tested though. It's likely
   // that a reduction is almost never the bottleneck though, so perhaps not
   // worth the effort.
+  auto left = it, right = it;
   for (auto i : range(iters)) {
     const auto rem   = elements & 1;
     elements       >>= 1;
     if (thread_idx(dim) < elements) {
-      pred (*it, *it.offset(dim, elements + rem), args...);
+      right = it.offset(dim, elements + rem);
+      pred (left, right, args...);
     }
     elements += rem;
     sync_block();
@@ -152,11 +154,11 @@ ripple_global auto reduce_block_shared(
 /// Reduces the \p block using the \p pred.
 ///
 /// \param  block     The block to invoke the callable on.
-/// \param  callable  The callable object.
-/// \param  args      Arguments for the callable.
+/// \param  pred      The predicate for the reduction.
+/// \param  args      Arguments for the predicate.
 /// \tparam T         The type of the data in the block.
 /// \tparam Dims      The number of dimensions in the block.
-/// \tparam Callable  The callable object to invoke.
+/// \tparam Pred      The type of the predicate for the reduction.
 /// \tparam Args      The type of the arguments for the invocation.
 template <typename T, size_t Dims, typename Pred, typename... Args>
 auto reduce(const DeviceBlock<T, Dims>& block, Pred&& pred, Args&&... args) {
@@ -185,7 +187,7 @@ auto reduce(const DeviceBlock<T, Dims>& block, Pred&& pred, Args&&... args) {
 
   // Reduce the results:
   const auto res = results.as_host();
-  return reduce(res,  std::forward<Pred>(pred), std::forward<Args>(args)...);
+  return reduce(res, std::forward<Pred>(pred), std::forward<Args>(args)...);
 #endif // __CUDACC__
 }
 

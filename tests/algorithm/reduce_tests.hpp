@@ -23,7 +23,7 @@
 struct SumReducer {
   template <typename T>
   auto operator()(T& into, T& from) -> void {
-    into += from;
+    *into += *from;
   }
 };
 

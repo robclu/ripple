@@ -24,13 +24,18 @@ namespace ripple {
 
 /// Reduces the \p block using the \p pred, returning the result. 
 ///
-/// The pred must have the form:
+/// The pred must have the following form:
 ///
 /// ~~~.cpp
-/// auto (T& into, const T& from) const -> void {};
+/// ripple_host_device auto (T<&> into, <const> T<&> from) const -> void {
+///   //...
+/// };
 /// ~~~
 ///
-/// and must modify the into element using the from element.
+/// where T is an iterator, and therefore the reference is optional. The
+/// predicate must modify the data pointed to by the `into` iterator, as
+/// appropriate, using the `from` iterator. Modifying the `from` iterator may 
+/// cause unexpectd results.
 ///
 /// This overload is for device blocks.
 ///
@@ -53,10 +58,15 @@ auto reduce(const DeviceBlock<T, Dims>& block, Pred&& pred, Args&&... args) {
 /// The pred must have the form:
 ///
 /// ~~~.cpp
-/// auto (T& into, const T& from) const -> void {};
+/// ripple_host_device auto (T<&> into, <const> T<&> from) const -> void {
+///   //...
+/// };
 /// ~~~
 ///
-/// and must modify the into element using the from element.
+/// where T is an iterator, and therefore the reference is optional. The
+/// predicate must modify the data pointed to by the `into` iterator, as
+/// appropriate, using the `from` iterator. Modifying the `from` iterator may 
+/// cause unexpectd results.
 ///
 /// This overload is for host blocks.
 ///

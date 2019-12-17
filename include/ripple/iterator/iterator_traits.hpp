@@ -102,6 +102,30 @@ using iterator_enable_t = std::enable_if_t<is_iterator_v<T>, int>;
 template <typename T>
 using non_iterator_enable_t = std::enable_if_t<!is_iterator_v<T>, int>;
 
+/// Defines a valid type if the type T is an iterator, and the iterator has one
+/// dimension.
+/// \tparam T The type to base the enable on.
+template <typename T>
+using it_1d_enable_t = std::enable_if_t<
+  is_iterator_v<T> && iterator_traits_t<T>::dimensions == 1, int
+>;
+
+/// Defines a valid type if the type T is an iterator, and the iterator has two
+/// dimensions.
+/// \tparam T The type to base the enable on.
+template <typename T>
+using it_2d_enable_t = std::enable_if_t<
+  is_iterator_v<T> && iterator_traits_t<T>::dimensions == 2, int
+>;
+
+/// Defines a valid type if the type T is an iterator, and the iterator has
+/// three dimensions.
+/// \tparam T The type to base the enable on.
+template <typename T>
+using it_3d_enable_t = std::enable_if_t<
+  is_iterator_v<T> && iterator_traits_t<T>::dimensions == 3, int
+>;
+
 } // namespace ripple
 
 #endif // RIPPLE_ITERATOR_ITERATOR_TRAITS_HPP

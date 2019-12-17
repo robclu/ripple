@@ -23,7 +23,7 @@
 struct DeviceSumReducer {
   template <typename T>
   ripple_host_device auto operator()(T& into, T& from) -> void {
-    into += from;
+    *into += *from;
   }
 };
 
