@@ -33,7 +33,9 @@ template <> class Reducer<0> {
   /// Defines the dimension to reduce over.
   static constexpr auto dim = ripple::dim_x;
  public:
-  /// Performs a reduction in the x dimension.
+  /// Performs a reduction in the x dimension. This does not reduce the first
+  /// element, and assumes that \p result initially has the value of the first
+  /// element.
   ///
   /// \param  it       The iterator to invoke the callable on.
   /// \param  result   The iterator which points to the result.
@@ -53,21 +55,24 @@ template <> class Reducer<0> {
     Iterator1&& it, Iterator2&& result, Pred&& pred, Args&&... args
   ) -> void {
     constexpr auto sub_iters = 4;
-    const auto iters         = it.size(dim) / sub_iters;
-    const auto rem_iters     = it.size(dim) % sub_iters;
+
+    // Not reducing the first element, hence -1.
+    const auto elements      = it.size(dim) - 1;
+    const auto iters         = elements / sub_iters;
+    const auto rem_iters     = elements % sub_iters;
 
     auto other = it;
     for (auto i : range(iters)) {
       unrolled_for<sub_iters>([&] (auto j) {
-        const auto idx   = i * sub_iters + j;
-        other = it.offset(dim, idx);
+        const auto idx  = i * sub_iters + j;
+        other = it.offset(dim, idx + 1);
         pred(result, other);
       });
     }
 
     for (auto i : range(rem_iters)) {
-      const auto idx   = iters * sub_iters + i;
-      other = it.offset(dim, idx);
+      const auto idx = iters * sub_iters + i;
+      other = it.offset(dim, idx + 1);
       pred(result, other);
     }
   }
@@ -104,12 +109,17 @@ class Reducer {
   ripple_host_device static auto reduce(
     Iterator1&& it, Iterator2&& result, Pred&& pred, Args&&... args
   ) -> void {
-    for (auto i : range(it.size(dim))) {
+    // Reduce the first row/plane:
+    next_reducer_t::reduce(
+      it, result, std::forward<Pred>(pred), std::forward<Args>(args)...
+    );
+    for (auto i : range(it.size(dim) - 1)) {
+      auto next = it.offset(dim, i + 1);
+      // Next dimension doesn't do the first element:
+      pred(result, next);
+
       next_reducer_t::reduce(
-        it.offset(dim, i)       ,
-        result                  ,
-        std::forward<Pred>(pred),
-        std::forward<Args>(args)...    
+        next, result, std::forward<Pred>(pred), std::forward<Args>(args)...
       );
     }
   }
@@ -127,8 +137,7 @@ class Reducer {
 /// \tparam Pred  The type of the predicate.
 /// \tparam Args  The type of the arguments for the invocation.
 template <typename T, std::size_t Dims, typename Pred, typename... Args>
-auto reduce(const HostBlock<T, Dims>& block, Pred&& pred, Args&&... args) 
--> std::decay_t<decltype(*block.begin())> {
+auto reduce(const HostBlock<T, Dims>& block, Pred&& pred, Args&&... args) {
   using reducer_t = detail::Reducer<Dims - 1>;
 
   // Store the inital value, and then reduce into the first iterated value.
@@ -138,8 +147,8 @@ auto reduce(const HostBlock<T, Dims>& block, Pred&& pred, Args&&... args)
     it, it, std::forward<Pred>(pred), std::forward<Args>(args)...
   );
 
-  // Compute result and set the first element:
-  auto result = *it - init_value;;
+  // Get results and reset the first element, since it has been reduced into.
+  auto result = *it;
   *it = init_value;;
   return result;
 }

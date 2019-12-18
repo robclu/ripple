@@ -110,7 +110,8 @@ ripple_global auto reduce_block_shared(
   constexpr auto dims       = it.dimensions();
   constexpr auto alloc_size = exec_params.template allocation_size<dims>();
   __shared__ char buffer[alloc_size];
-  auto shared_it = exec_params.iterator(static_cast<void*>(buffer));
+  auto shared_it = 
+    exec_params.template iterator<dims>(static_cast<void*>(buffer));
 
   // Offset the iterators to the global and thread indices:
   bool in_range  = true;
