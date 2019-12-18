@@ -70,11 +70,14 @@ struct ExecParams {
 
   //==--- [creation] -------------------------------------------------------==//
 
-  /// Returns an iterator over a memory space pointed to by \p data.
-  /// \param data A pointer to the memory space data.
-  template <typename T>
+  /// Returns an iterator over a memory space pointed to by \p data, for a
+  /// number of dimensions.
+  /// \param  data A pointer to the memory space data.
+  /// \tparam Dims The number of dimensions for the iterator.
+  /// \tparam T    The type of the data to create the iterator in.  
+  template <size_t Dims, typename T>
   ripple_host_device auto iterator(T* data) const {
-    return impl()->iterator(data);
+    return impl()->template iterator<Dims>(data);
   }
 
   /// Returns the number of bytes required to allocator data for the space.

@@ -38,10 +38,13 @@ struct DynamicExecParams : public ExecParams<DynamicExecParams<Shared>> {
   using value_t     = typename traits_t::value_t;
   /// Defines the allocator type for the execution space.
   using allocator_t = typename traits_t::allocator_t;
-  /// Defines the type of the multidimensional space for the execution.
+  /// Defines the type of the default space for the execution.
   using space_t     = DynamicMultidimSpace<3>;
-  /// Defines the type of the iterator over the execution space.
-  using iter_t      = BlockIterator<value_t, space_t>;
+
+  /// Defines the type of the multidimensional space for the execution.
+  /// \tparam Dims The number of dimensions for the space.
+  template <size_t Dims>
+  using make_space_t = DynamicMultidimSpace<Dims>;
 
  public:
   //==--- [constructor] ----------------------------------------------------==//
@@ -99,9 +102,17 @@ struct DynamicExecParams : public ExecParams<DynamicExecParams<Shared>> {
 
   /// Returns an iterator over a memory space pointed to by \p data.
   /// \param data A pointer to the memory space data.
-  template <typename T>
-  ripple_host_device auto iterator(T* data) const -> iter_t {
-    return iter_t{allocator_t::create(data, _space), _space};
+  template <size_t Dims, typename T>
+  ripple_host_device auto iterator(T* data) const {
+    using _space_t = make_space_t<Dims>;
+    using iter_t   = BlockIterator<value_t, _space_t>;
+    _space_t space;
+    unrolled_for<Dims>([&] (auto d) {
+      constexpr auto dim = d;
+      space[dim] = _space[dim];
+    });
+    space.padding() = _space.padding();
+    return iter_t{allocator_t::create(data, space), space};
   }
 
   /// Returns the number of bytes required to allocator data for the space.

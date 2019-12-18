@@ -49,10 +49,24 @@ struct StaticExecParams : public
   using value_t     = typename traits_t::value_t;
   /// Defines the allocator type for the execution space.
   using allocator_t = typename traits_t::allocator_t;
+
   /// Defines the type of the multidimensional space for the execution.
-  using space_t     = StaticMultidimSpace<SizeX, SizeY, SizeZ>;
+  /// \tparam Dims The number of dimensions to get the space for.
+  template <size_t Dims>
+  using space_t =
+    std::conditional_t<
+      Dims == 1, StaticMultidimSpace<SizeX>,
+      std::conditional_t<
+        Dims == 2, 
+        StaticMultidimSpace<SizeX, SizeY>,
+        StaticMultidimSpace<SizeX, SizeY, SizeZ>
+      >
+    >;
+
   /// Defines the type of the iterator over the execution space.
-  using iter_t      = BlockIterator<value_t, space_t>;
+  /// \tparam Dims The number of dimensions for the iterator.
+  template <std::size_t Dims>
+  using iter_t = BlockIterator<value_t, space_t<Dims>>;
 
  public:
   //==--- [size] -----------------------------------------------------------==//
@@ -87,12 +101,17 @@ struct StaticExecParams : public
 
   //==--- [creation] -------------------------------------------------------==//
 
-  /// Returns an iterator over a memory space pointed to by \p data.
-  /// \param data A pointer to the memory space data.
-  template <typename T>
-  ripple_host_device auto iterator(T* data) const -> iter_t {
-    constexpr auto space = space_t{Padding};
-    return iter_t{allocator_t::create(data, space), space};
+  /// Returns an iterator over a memory space pointed to by \p data, for a
+  /// specific number of dimension.
+  /// \param  data A pointer to the memory space data.
+  /// \tparam Dims The number of dimensions for the iterator.
+  /// \tparam T    The type of the data.
+  template <std::size_t Dims, typename T>
+  ripple_host_device auto iterator(T* data) const {
+    using _space_t       = space_t<Dims>;
+    using _iter_t        = BlockIterator<value_t, _space_t>;
+    constexpr auto space = _space_t{Padding};
+    return _iter_t{allocator_t::create(data, space), space};
   }
 
   /// Returns the number of bytes required to allocator data for the space.

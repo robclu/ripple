@@ -156,8 +156,8 @@ ripple_device_only auto invoke_shared(
   bool in_range = true;
   // Shift higher dimensions ...
   unrolled_for<Dims>([&] (auto d) {
-    constexpr auto dim    = d;
-    const auto idx        = global_idx(dim);
+    constexpr auto dim     = d;
+    const auto idx         = global_idx(dim);
     const auto must_shift = 
       idx             < it.size(dim)        &&
       thread_idx(dim) < shared_it.size(dim) &&
@@ -170,20 +170,21 @@ ripple_device_only auto invoke_shared(
     }
   });
 
-  if (!in_range)
+  if (!in_range) {
     return;
+  }
 
   using it_1_t = std::decay_t<decltype(*it)>;
   using it_2_t = std::decay_t<decltype(*shared_it)>;
 
-  constexpr auto same_type = 
+  constexpr auto same_type =
     std::is_same_v<it_1_t, it_2_t> || std::is_convertible_v<it_1_t, it_2_t>;
 
   // Load in the padding data:
   if (same_type && shared_it.padding() > 0) {
     load_internal_boundary<Dims>(it, shared_it);
   }
-  __syncthreads();
+  sync_block();
 
   callable(it, shared_it, args...);
 #endif // __CUDACC__
@@ -216,7 +217,9 @@ ripple_global auto invoke_static_shared(
   constexpr auto dims       = it.dimensions();
   constexpr auto alloc_size = exec_params.template allocation_size<dims>();
   __shared__ char buffer[alloc_size];
-  auto shared_it = exec_params.iterator(static_cast<void*>(buffer));
+
+  auto shared_it = 
+    exec_params.template iterator<dims>(static_cast<void*>(buffer));
 
   invoke_shared<dims>(it, shared_it, exec_params, callable, args...);
 }
@@ -247,7 +250,8 @@ ripple_global auto invoke_dynamic_shared(
 ) -> void {
   constexpr auto dims = it.dimensions();
   extern __shared__ char buffer[];
-  auto shared_it = exec_params.iterator(static_cast<void*>(buffer));
+  auto shared_it = 
+    exec_params.template iterator<dims>(static_cast<void*>(buffer));
 
   invoke_shared<dims>(it, shared_it, exec_params, callable, args...);
 }
