@@ -167,8 +167,8 @@ ripple_host_device inline auto last_thread_in_block(Dim&& dim) -> bool {
 /// dimensions.
 ripple_host_device inline auto first_thread_in_grid() -> bool {
   return detail::global_idx(dim_x) == std::size_t{0} &&
-         detail::global_idx(dim_x) == std::size_t{0} &&
-         detail::global_idx(dim_x) == std::size_t{0};
+         detail::global_idx(dim_y) == std::size_t{0} &&
+         detail::global_idx(dim_z) == std::size_t{0};
 }
 
 /// Returns true if the thread is the first thread in the grid for dimension

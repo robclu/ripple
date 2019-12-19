@@ -24,6 +24,7 @@
 #include <ripple/execution/execution_size.hpp>
 #include <ripple/execution/execution_traits.hpp>
 #include <ripple/execution/static_execution_params.hpp>
+#include <ripple/execution/synchronize.hpp>
 #include <ripple/execution/thread_index.hpp>
 #include <ripple/iterator/iterator_traits.hpp>
 #include <ripple/perf/perf_traits.hpp>
