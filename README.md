@@ -25,6 +25,7 @@ finer in certain regions.
 
 ## Features
 
+- Add streams to blocks
 - Tiling based on cache size for CPU invoke
 - Threads for CPU invoke
 - Multi-block array with invoke

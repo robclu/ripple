@@ -9,17 +9,27 @@
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${ripple_SOURCE_DIR}/cmake)
 include(ripple_cmake)
 
+# All required cuda libraries.
+if (APPLE)
+  set(CUDA_LIBRARIES -lcudart -ldl -lrt -lcudadevrt -pthread)
+else()
+  set(CUDA_LIBRARIES -lcudart_static -ldl -lrt -lcudadevrt -pthread)
+endif()
+
 ripple_include_directories(
   ${CUDA_INCLUDE_DIR}
   ${ripple_SOURCE_DIR}/include
 )
+ripple_library_directories(${CUDA_LIB_DIRS})
 
 #==--- [applications] -------------------------------------------------------==#
 
 ripple_add_executable(
   numa_arch ${ripple_SOURCE_DIR}/apps/numa_arch.cpp
 )
-
+ripple_target_link_libraries(
+  numa_arch ${CUDA_LIBRARIES}
+)
 #==--------------------------------------------------------------------------==#
 
 # This creates all the targets, and is required to be called to enable the

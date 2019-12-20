@@ -1,4 +1,4 @@
-//==--- ripple/arch/processor.hpp -------------------------- -*- C++ -*- ---==//
+//==--- ripple/arch/proc_info.hpp -------------------------- -*- C++ -*- ---==//
 //            
 //                                Ripple
 // 
@@ -8,17 +8,17 @@
 //
 //==------------------------------------------------------------------------==//
 //
-/// \file  processor.hpp
+/// \file  proc_info.hpp
 /// \brief This file defines a struct to store processor information.
 //
 //==------------------------------------------------------------------------==//
 
-#ifndef RIPPLE_ARCH_PROCESSOR_HPP
-#define RIPPLE_ARCH_PROCESSOR_HPP
+#ifndef RIPPLE_ARCH_PROC_INFO_HPP
+#define RIPPLE_ARCH_PROC_INFO_HPP
 
 namespace ripple {
 
-/// The processor struct stores information about the processor based on where
+/// The ProcInfo struct stores information about the processor based on where
 /// it is in the system topology.
 struct ProcInfo {
   /// Defines an invalid value for processor information.
@@ -36,6 +36,6 @@ struct ProcInfo {
 
 } // namespace ripple
 
-#endif // RIPPLE_ARCH_PROCESSOR_HPP
+#endif // RIPPLE_ARCH_PROC_INFO_HPP
 
 
