@@ -298,7 +298,7 @@ struct InvokeImpl {
     typename... Args    ,
     exec_param_enable_t<ExecImpl> = 0
   >
-  static auto invoke(
+  static auto invoke_exec_params(
     Iterator&& it         ,
     ExecImpl&& exec_params,
     Callable&& callable   ,
@@ -313,7 +313,7 @@ struct InvokeImpl {
         ::ripple::detail::thread_idx_.z = i;
       }
 
-      InvokeImpl<I - 1>::invoke(
+      InvokeImpl<I - 1>::invoke_exec_params(
         it.offset(dim, i)                  ,
         std::forward<ExecImpl>(exec_params),
         std::forward<Callable>(callable)   ,
@@ -346,7 +346,7 @@ struct InvokeImpl {
     typename... Args     ,
     non_exec_param_enable_t<Iterator2> = 0
   >
-  static auto invoke(
+  static auto invoke_multi(
     Iterator1&& it_1    , 
     Iterator2&& it_2    , 
     Callable&&  callable,
@@ -363,7 +363,7 @@ struct InvokeImpl {
 
       // Need to make sure that if the second iterator is of a lower dimension,
       // that we dont try to offset into an invalid dimension.
-      InvokeImpl<I - 1>::invoke(
+      InvokeImpl<I - 1>::invoke_multi(
         it_1.offset(dim, i)                                 ,
         dim < it_2.dimensions() ? it_2.offset(dim, i) : it_2,
         std::forward<Callable>(callable)                    ,
@@ -412,7 +412,7 @@ struct InvokeImpl<0> {
     typename... Args    ,
     exec_param_enable_t<ExecImpl> = 0
   >
-  static auto invoke(
+  static auto invoke_exec_params(
     Iterator&& it     ,
     ExecImpl&& params,
     Callable&& callable,
@@ -448,7 +448,7 @@ struct InvokeImpl<0> {
     typename... Args     ,
     non_exec_param_enable_t<Iterator2> = 0
   >
-  static auto invoke(
+  static auto invoke_multi(
     Iterator1&& it_1    ,
     Iterator2&& it_2    ,
     Callable&&  callable,
@@ -478,7 +478,13 @@ struct InvokeImpl<0> {
 /// \tparam Dims      The number of dimensions in the block.
 /// \tparam Callable  The callable object to invoke.
 /// \tparam Args      The type of the arguments for the invocation.
-template <typename T, std::size_t Dims, typename Callable, typename... Args>
+template <
+  typename    T       ,
+  std::size_t Dims    ,
+  typename    Callable, 
+  typename... Args    ,
+  non_exec_param_enable_t<Callable> = 0
+>
 auto invoke(HostBlock<T, Dims>& block, Callable&& callable, Args&&... args)
 -> void {
   detail::InvokeImpl<Dims - 1>::invoke(
@@ -507,7 +513,8 @@ template <
   typename    T2      ,
   std::size_t Dims2   , 
   typename    Callable, 
-  typename... Args
+  typename... Args    ,
+  non_exec_param_enable_t<T1> = 0
 >
 auto invoke(
   HostBlock<T1, Dims1>& block_1 , 
@@ -515,7 +522,7 @@ auto invoke(
   Callable&&            callable,
   Args&&...             args
 ) -> void {
-  detail::InvokeImpl<Dims1 - 1>::invoke(
+  detail::InvokeImpl<Dims1 - 1>::invoke_multi(
     block_1.begin()                 ,
     block_2.begin()                 ,
     std::forward<Callable>(callable),
@@ -541,7 +548,7 @@ template <
   typename    ExecImpl,
   typename    Callable,
   typename... Args    ,
-  non_event_enable_t<Callable> = 0
+  exec_param_enable_t<ExecImpl> = 0
 >
 auto invoke(
   HostBlock<T, Dims>& block      ,
