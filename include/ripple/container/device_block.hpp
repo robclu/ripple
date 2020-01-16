@@ -18,6 +18,7 @@
 
 #include "block_traits.hpp"
 #include "host_block.hpp"
+#include "block_memory_properties.hpp"
 #include <ripple/iterator/block_iterator.hpp>
 #include <ripple/utility/cuda.hpp>
 
@@ -255,14 +256,14 @@ class DeviceBlock {
   }
 
  private:
-  ptr_t   _data      = nullptr; //!< Storage for the tensor.
-  space_t _space;               //!< Spatial information for the tensor.
-  bool    _must_free = true;    //!< If the block must free its data.
+  ptr_t            _data = nullptr; //!< Storage for the tensor.
+  space_t          _space;          //!< Spatial information for the tensor.
+  BlockMemoryProps _mem_props;      //!< Memory properties for the block data.
 
   /// Allocates data for the tensor.
   auto allocate() -> void {
     // Can only allocate if the memory is not allocated, and if we own it.
-    if (_data == nullptr && _must_free) {
+    if (_data == nullptr && _mem_props.must_free) {
       cuda::allocate(
         reinterpret_cast<void**>(&_data),
         allocator_t::allocation_size(_space.size())
@@ -272,7 +273,7 @@ class DeviceBlock {
 
   /// Cleans up the data for the tensor.
   auto cleanup() -> void {
-    if (_data != nullptr && _must_free) {
+    if (_data != nullptr && _mem_props.must_free) {
       cuda::free(_data);
       _data = nullptr;
     }

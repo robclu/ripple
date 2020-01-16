@@ -13,8 +13,8 @@
 //
 //==------------------------------------------------------------------------==//
 
-#ifndef FLUIDITY_CONTAINER_BLOCK_TRAITS_HPP
-#define FLUIDITY_CONTAINER_BLOCK_TRAITS_HPP
+#ifndef RIPPLE_CONTAINER_BLOCK_TRAITS_HPP
+#define RIPPLE_CONTAINER_BLOCK_TRAITS_HPP
 
 #include <ripple/multidim/dynamic_multidim_space.hpp>
 #include <ripple/storage/storage_traits.hpp>
