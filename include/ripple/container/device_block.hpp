@@ -264,7 +264,7 @@ class DeviceBlock {
   auto allocate() -> void {
     // Can only allocate if the memory is not allocated, and if we own it.
     if (_data == nullptr && !_mem_props.allocated) {
-      cuda::allocate(
+      cuda::allocate_device(
         reinterpret_cast<void**>(&_data),
         allocator_t::allocation_size(_space.size())
       );
@@ -276,7 +276,7 @@ class DeviceBlock {
   /// Cleans up the data for the tensor.
   auto cleanup() -> void {
     if (_data != nullptr && _mem_props.must_free) {
-      cuda::free(_data);
+      cuda::free_device(_data);
       _data                = nullptr;
       _mem_props.must_free = false;
       _mem_props.allocated = false;
