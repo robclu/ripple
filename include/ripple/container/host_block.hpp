@@ -16,6 +16,7 @@
 #ifndef RIPPLE_CONTAINER_HOST_BLOCK_HPP
 #define RIPPLE_CONTAINER_HOST_BLOCK_HPP
 
+#include "block_memory_properties.hpp"
 #include "block_traits.hpp"
 #include "device_block.hpp"
 #include <ripple/iterator/block_iterator.hpp>
@@ -70,7 +71,6 @@ class HostBlock {
   ~HostBlock() {
     cleanup();
   }
-
 
   /// Initializes the size of each of the dimensions of the tensor, as well as
   /// the padding for the tensor. This is only enabled when the number of
@@ -276,21 +276,26 @@ class HostBlock {
   }
 
  private:
-  ptr_t     _data = nullptr;   //!< Storage for the tensor.
-  space_t   _space;            //!< Spatial information for the tensor.
+  ptr_t            _data = nullptr;   //!< Storage for the tensor.
+  space_t          _space;            //!< Spatial information for the tensor.
+  BlockMemoryProps _mem_props;        //!< Memory properties for the block.
 
   /// Allocates data for the tensor.
   auto allocate() -> void {
-    if (_data == nullptr) {
+    if (_data == nullptr && !_mem_props.allocated) {
       _data = malloc(allocator_t::allocation_size(_space.size()));
+      _mem_props.must_free = true;
+      _mem_props.allocated = true;
     }
   }
 
   /// Cleans up the data for the tensor.
   auto cleanup() -> void {
-    if (_data != nullptr) {
+    if (_data != nullptr && _mem_props.must_free) {
       free(_data);
-      _data = nullptr;
+      _data                = nullptr;
+      _mem_props.allocated = false;
+      _mem_props.must_free = false;
     }
   }
 

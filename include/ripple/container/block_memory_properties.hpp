@@ -16,6 +16,8 @@
 #ifndef RIPPLE_CONTAINER_BLOCK_MEMORY_PROPERTIES_HPP
 #define RIPPLE_CONTAINER_BLOCK_MEMORY_PROPERTIES_HPP
 
+#include <ripple/utility/portability.hpp>
+
 namespace ripple {
 
 /// The BlockMemoryProps struct defines properties for the memory for a block,

@@ -563,8 +563,8 @@ TEST(container_device_block, can_access_1d_multiple_blocks_3d) {
   constexpr std::size_t size_x = 83;
   constexpr std::size_t size_y = 79;
   constexpr std::size_t size_z = 19;
-  ripple::device_block_2d_t<dev_block_test_t> b_dev_1(size_x, size_y, size_z);
-  ripple::device_block_2d_t<dev_block_test_t> b_dev_2(size_x, size_y, size_z);
+  ripple::device_block_3d_t<dev_block_test_t> b_dev_1(size_x, size_y, size_z);
+  ripple::device_block_3d_t<dev_block_test_t> b_dev_2(size_x, size_y, size_z);
 
   ripple::invoke(b_dev_1, b_dev_2,
     [] ripple_host_device (auto e_it_1, auto e_it_2) {

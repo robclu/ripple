@@ -13,5 +13,6 @@
 //
 //==------------------------------------------------------------------------==//
 
+#include "block_memory_properties_tests.hpp"
 #include "block_tests.hpp"
 #include "vec_tests.hpp"
