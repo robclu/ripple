@@ -72,6 +72,8 @@ class HostBlock {
     cleanup();
   }
 
+  //==--- [synchronous constuction] -----------------------------------------=//
+
   /// Initializes the size of each of the dimensions of the tensor, as well as
   /// the padding for the tensor. This is only enabled when the number of
   /// size arguments matches the dimensionality of the tensor, and the sizes
@@ -81,8 +83,7 @@ class HostBlock {
   /// \param  sizes   The sizes of the dimensions for the tensor.
   /// \tparam Sizes   The types of other dimension sizes.
   template <
-    typename... Sizes,
-    all_arithmetic_size_enable_t<Dimensions, Sizes...> = 0
+    typename... Sizes, all_arithmetic_size_enable_t<Dimensions, Sizes...> = 0
   >
   HostBlock(std::size_t padding, Sizes&&... sizes)
   : _space{padding, std::forward<Sizes>(sizes)...} {
@@ -93,14 +94,10 @@ class HostBlock {
   /// enabled when the number of arguments matches the dimensionality of the
   /// tensor, and the sizes are numeric types.
   ///
-  /// \param size_0 The size of the zero dimension for the tensor.
-  /// \param sizes  The sizes of the other dimensions of the tensor, if there
-  ///               are additional dimensions.
-  /// \tparam Size  The type of the zero dimension size.
-  /// \tparam Sizes The types of other dimension sizes.
+  /// \param sizes  The sizes of the each of the dimensions of the block.
+  /// \tparam Sizes The types of the dimension sizes.
   template <
-    typename... Sizes,
-    all_arithmetic_size_enable_t<Dimensions, Sizes...> = 0
+    typename... Sizes, all_arithmetic_size_enable_t<Dimensions, Sizes...> = 0
   >
   HostBlock(Sizes&&... sizes)
   : _space{std::forward<Sizes>(sizes)...} {
@@ -133,6 +130,50 @@ class HostBlock {
     cuda::memcpy_device_to_host(
       _data, other._data, allocator_t::allocation_size(_space.size())
     );
+  }
+
+  //==--- [asynchrnous construction] ---------------------------------------==//
+ 
+  /// Initializes the size of each of the dimensions of the tensor, as well as
+  /// the padding for the tensor, as well as providing an option to enable
+  /// asynchronous functionality for the block. This is only enabled when the
+  /// number of size arguments matches the dimensionality of the tensor, and the
+  /// sizes are numeric types.
+  ///
+  /// \param  async   If the block must enable asynchronous functionality.
+  /// \param  padding The amount of padding for the tensor.
+  /// \param  sizes   The sizes of the dimensions for the tensor.
+  /// \tparam Sizes   The types of other dimension sizes.
+  template <
+    typename... Sizes, all_arithmetic_size_enable_t<Dimensions, Sizes...> = 0
+  >
+  HostBlock(BlockOpKind op_kind, std::size_t padding, Sizes&&... sizes)
+  : _space{padding, std::forward<Sizes>(sizes)...} {
+    if (op_kind == BlockOpKind::asynchronous) {
+      _mem_props.pinned     = true;
+      _mem_props.async_copy = true;
+    }
+    allocate();
+  }
+
+  /// Initializes the size of each of the dimensions of the tensor, as well as
+  /// providing an option to enable asynchronous functionality for the block. 
+  /// This is only enabled when the number of size arguments matches the
+  /// dimensionality of the tensor, and the sizes are numeric types.
+  ///
+  /// \param  async   If the block must enable asynchronous functionality.
+  /// \param  sizes   The sizes of the dimensions for the tensor.
+  /// \tparam Sizes   The types of other dimension sizes.
+  template <
+    typename... Sizes, all_arithmetic_size_enable_t<Dimensions, Sizes...> = 0
+  >
+  HostBlock(BlockOpKind op_kind, Sizes&&... sizes)
+  : _space{std::forward<Sizes>(sizes)...} {
+    if (op_kind == BlockOpKind::asynchronous) {
+      _mem_props.pinned     = true;
+      _mem_props.async_copy = true;
+    }
+    allocate();
   }
 
   //==--- [operator overloading] -------------------------------------------==//
@@ -280,10 +321,18 @@ class HostBlock {
   space_t          _space;            //!< Spatial information for the tensor.
   BlockMemoryProps _mem_props;        //!< Memory properties for the block.
 
-  /// Allocates data for the tensor.
+  /// Allocates data for the block, when the block only requires synchronous
+  /// functionality.
   auto allocate() -> void {
     if (_data == nullptr && !_mem_props.allocated) {
-      _data = malloc(allocator_t::allocation_size(_space.size()));
+      if (_mem_props.pinned) {
+        cuda::allocate_host_pinned(
+          reinterpret_cast<void**>(&_data),   
+          allocator_t::allocation_size(_space.size())
+        ); 
+      } else {
+        _data = malloc(allocator_t::allocation_size(_space.size()));
+      }
       _mem_props.must_free = true;
       _mem_props.allocated = true;
     }
@@ -292,10 +341,16 @@ class HostBlock {
   /// Cleans up the data for the tensor.
   auto cleanup() -> void {
     if (_data != nullptr && _mem_props.must_free) {
-      free(_data);
-      _data                = nullptr;
-      _mem_props.allocated = false;
-      _mem_props.must_free = false;
+      if (_mem_props.pinned) {
+        cuda::free_host_pinned(_data);
+      } else {
+        free(_data);
+      }
+      _data                 = nullptr;
+      _mem_props.allocated  = false;
+      _mem_props.must_free  = false;
+      _mem_props.pinned     = false;
+      _mem_props.async_copy = false;
     }
   }
 

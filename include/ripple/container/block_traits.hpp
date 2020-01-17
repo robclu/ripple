@@ -61,6 +61,12 @@ template <typename R> struct BlockTraits {
   static constexpr auto is_block   = false;
 };
 
+/// Defines an enum for the type of operations for a block.
+enum class BlockOpKind : uint8_t {
+  asynchronous = 0,  //!< Asynchrnous operations for a block.
+  synchronous  = 1   //!< Synchrnous operations for a block.
+};
+
 //==--- [specializations] --------------------------------------------------==//
 
 /// Specialization of the BlockTraits struct for a host block.
