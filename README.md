@@ -37,3 +37,23 @@ finer in certain regions.
 - Add pinned host memory when allocating on the device
 - Add async memory allocation and copies
 - Add streams to the invoke functionality for multi threaded support
+
+## Grid algorithms
+
+A grid comprises of blocks of different sizes, where each block has a padding
+layer. The blocks in a grid can either execute on the host or the device. 
+
+For each block, the following steps are requires to complete the execution:
+
+1. Set the boundary/padding data for the block.
+2. Run the computational kernel on the block data.
+3. Update the cache state of the block (if the block is on the host/device)
+
+Step 1 above can be it's own task, with steps 2 and 3 comprising another task,
+which depends on the previous task.
+
+Initially, break grid into segments of the number of GPUs, and have each thread
+submit the work to the GPU. (Leaving all additional CPU cores idle).
+
+Later, add a mechanism for sending the tasks to either the CPU or the GPU.
+

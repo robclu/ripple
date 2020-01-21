@@ -293,7 +293,7 @@ class HostBlock {
     reallocate();
   }
 
-  /// Returns the total number of elements in the tensor.
+  /// Returns the total number of elements in the block.
   auto size() const -> std::size_t {
     return _space.internal_size();
   }
