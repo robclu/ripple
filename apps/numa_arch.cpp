@@ -19,17 +19,16 @@
 #include <iostream>
 
 int main(int argc, char** argv) {
-  auto cpu_info = ripple::CpuInfo();
-  auto topology = ripple::Topology();
+  auto topo = ripple::Topology();
 
-  printf("Available cores   : %-6i\n" , cpu_info.available_cores());
-  printf("Packages          : %-6i\n" , cpu_info.packages());
-  printf("Cores per package : %-6i\n" , cpu_info.cores_per_package());
-  printf("Available gpus    : %-6zu\n", topology.num_gpus());
-  printf("Total gpu mem (GB): %-6lu\n", topology.combined_gpu_memory_gb());
+  printf("Available cores   : %-6i\n"  , topo.cpu_info.available_cores());
+  printf("Packages          : %-6i\n"  , topo.cpu_info.packages());
+  printf("Cores per package : %-6i\n"  , topo.cpu_info.cores_per_package());
+  printf("Available gpus    : %-6zu\n" , topo.num_gpus());
+  printf("Total gpu mem (GB): %-6.6f\n", topo.combined_gpu_memory_gb());
 
   printf("Cache information:\n");
-  for (auto& cache : cpu_info.cache_info()) {
+  for (auto& cache : topo.cpu_info.cache_info()) {
     printf("{\n"
       "\tLevel           : %-6i\n"
       "\tType            : %-6i\n"
@@ -52,18 +51,23 @@ int main(int argc, char** argv) {
   }
 
   printf("CPU indices (Package,Core,Thread):\n{\n");
-  for (auto& proc : cpu_info.processor_info()) {
+  for (auto& proc : topo.cpu_info.processor_info()) {
     printf("\t{%2i %2i %2i }\n", proc.package, proc.core, proc.thread);
   }
   printf("\n}\n");
 
   printf("GPU Peer access: {Device id : [peer ids]}:\n{\n");
-  for (auto & gpu : topology.gpus) {
+  for (auto & gpu : topo.gpus) {
     printf("\t{%2i : [", gpu.index);
     for (auto& peer : gpu.peers) {
       printf("%2i ", peer);
     }
     printf("] }");
+  }
+  printf("\n}\n");
+  printf("GPU mem size: {Device id : mem size (bytes))}:\n{\n");
+  for (auto & gpu : topo.gpus) {
+    printf("\t{%2i : %-6lu}\n", gpu.index, gpu.mem_size);
   }
   printf("\n}\n");
 }

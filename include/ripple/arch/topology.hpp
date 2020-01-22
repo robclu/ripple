@@ -44,11 +44,12 @@ struct Topology {
   } 
 
   /// Returns the total number of gb of available memory from all gpus.
-  auto combined_gpu_memory_gb() const -> uint64_t {
-    return combined_gpu_memory() / uint64_t{1073741824};
+  auto combined_gpu_memory_gb() const -> float {
+    return static_cast<float>(combined_gpu_memory()) / float{1073741824};
   }
 
-  std::vector<GpuInfo> gpus;  //!< Gpus for the system.
+  std::vector<GpuInfo> gpus;      //!< Gpus for the system.
+  CpuInfo              cpu_info;  //!< Cpu info for the system.
 };
 
 } // namespace ripple
