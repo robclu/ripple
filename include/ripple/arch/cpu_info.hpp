@@ -1,4 +1,4 @@
-//==--- ripple/arch/cpuinfo.hpp ---------------------------- -*- C++ -*- ---==//
+//==--- ripple/arch/cpu_info.hpp --------------------------- -*- C++ -*- ---==//
 //            
 //                                Ripple
 // 
@@ -8,13 +8,13 @@
 //
 //==------------------------------------------------------------------------==//
 //
-/// \file  cpuinfo.hpp
+/// \file  cpu_info.hpp
 /// \brief This file defines functionality for cpu information.
 //
 //==------------------------------------------------------------------------==//
 
-#ifndef RIPPLE_ARCH_CPUINFO_HPP
-#define RIPPLE_ARCH_CPUINFO_HPP
+#ifndef RIPPLE_ARCH_CPU_INFO_HPP
+#define RIPPLE_ARCH_CPU_INFO_HPP
 
 #include "cache.hpp"
 #include "cpu_utils.hpp"
@@ -279,5 +279,5 @@ struct CpuInfo {
 
 } // namespace ripple
 
-#endif // RIPPLE_ARCH_CPUINFO_HPP
+#endif // RIPPLE_ARCH_CPU_INFO_HPP
 

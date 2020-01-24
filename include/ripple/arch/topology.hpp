@@ -16,6 +16,7 @@
 #ifndef RIPPLE_ARCH_TOPOLOGY_HPP
 #define RIPPLE_ARCH_TOPOLOGY_HPP
 
+#include "cpu_info.hpp"
 #include "gpu_info.hpp"
 
 namespace ripple {

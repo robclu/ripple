@@ -14,7 +14,6 @@
 //
 //==------------------------------------------------------------------------==//
 
-#include <ripple/arch/cpuinfo.hpp>
 #include <ripple/arch/topology.hpp>
 #include <iostream>
 
