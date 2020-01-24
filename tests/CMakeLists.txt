@@ -122,6 +122,15 @@ ripple_target_link_libraries(
 #==--------------------------------------------------------------------------==#
 
 ripple_add_executable(
+  execution_device_tests ${ripple_SOURCE_DIR}/tests/execution_device.cu
+)
+ripple_target_link_libraries(
+  execution_device_tests ${GTEST_BOTH_LIBRARIES} ${CUDA_LIBRARIES}
+)
+
+#==--------------------------------------------------------------------------==#
+
+ripple_add_executable(
   iterator_tests ${ripple_SOURCE_DIR}/tests/iterator.cpp
 )
 ripple_target_link_libraries(

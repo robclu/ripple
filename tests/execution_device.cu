@@ -1,22 +1,20 @@
-//==--- ripple/tests/all_device.cu ------------------------- -*- C++ -*- ---==//
+//==--- ripple/tests/execution_device.cu ------------------- -*- C++ -*- ---==//
 //            
 //                                Ripple
 // 
-//                      Copyright (c) 2019 Rob Clucas.
+//                      Copyright (c) 2020 Rob Clucas.
 //
 //  This file is distributed under the MIT License. See LICENSE for details.
 //
 //==------------------------------------------------------------------------==//
 //
-/// \file  all_device.cu
-/// \brief This file contains all tests for the device.
+/// \file  execution_device.cu
+/// \brief This file runs device execution tests.
 //
 //==------------------------------------------------------------------------==//
 
-#include "algorithm/algorithm_tests_device.hpp"
-#include "container/container_tests_device.hpp"
-#include "boundary/boundary_tests_device.hpp"
-#include "execution/execution_tests.hpptests_device.hpp"
+#include "execution/execution_tests_device.hpp"
+#include <gtest/gtest.h>
 
 int main(int argc, char** argv) {
   ::testing::InitGoogleTest(&argc, argv);

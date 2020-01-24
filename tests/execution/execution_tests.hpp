@@ -15,3 +15,4 @@
 
 #include "dynamic_exec_params_tests.hpp"
 #include "static_exec_params_tests.hpp"
+#include "thread_index_tests.hpp"
