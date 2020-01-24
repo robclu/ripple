@@ -369,6 +369,62 @@ TEST(container_block, can_invoke_3d_with_padding) {
   EXPECT_EQ(b.padding(), std::size_t{2});
 }
 
+//==--- [modify padding] ---------------------------------------------------==//
+
+TEST(container_block, can_modify__padding) {
+  ripple::host_block_3d_t<test_t> b(2, 41, 37, 22);
+
+  ripple::invoke(b, [] (auto bi) {
+    bi->flag() = -1;
+    bi->v(0)   = 10.0f;
+    bi->v(1)   = 20.0f;
+    bi->v(2)   = 30.0f;
+  });
+
+  for (auto k : ripple::range(b.size(ripple::dim_z))) {
+    for (auto j : ripple::range(b.size(ripple::dim_y))) {
+      for (auto i : ripple::range(b.size(ripple::dim_x))) {
+        const auto bi = b(i, j, k);
+
+        EXPECT_EQ(bi->flag(), -1   );
+        EXPECT_EQ(bi->v(0)  , 10.0f);
+        EXPECT_EQ(bi->v(1)  , 20.0f);
+        EXPECT_EQ(bi->v(2)  , 30.0f);
+      }
+    }
+  }
+
+  const auto internal_size = std::size_t{41 * 37 * 22};
+  EXPECT_EQ(b.size()   , internal_size);
+  EXPECT_EQ(b.padding(), std::size_t{2});
+
+  b.set_padding(3);
+  b.reallocate();
+
+  ripple::invoke(b, [] (auto bi) {
+    bi->flag() = -1;
+    bi->v(0)   = 10.0f;
+    bi->v(1)   = 20.0f;
+    bi->v(2)   = 30.0f;
+  });
+
+  for (auto k : ripple::range(b.size(ripple::dim_z))) {
+    for (auto j : ripple::range(b.size(ripple::dim_y))) {
+      for (auto i : ripple::range(b.size(ripple::dim_x))) {
+        const auto bi = b(i, j, k);
+
+        EXPECT_EQ(bi->flag(), -1   );
+        EXPECT_EQ(bi->v(0)  , 10.0f);
+        EXPECT_EQ(bi->v(1)  , 20.0f);
+        EXPECT_EQ(bi->v(2)  , 30.0f);
+      }
+    }
+  }
+
+  EXPECT_EQ(b.size()   , internal_size);
+  EXPECT_EQ(b.padding(), std::size_t{3});
+}
+
 //==--- [invoke multiple blocks] -------------------------------------------==//
 
 TEST(container_block, can_invoke_multiple_blocks_1d) {

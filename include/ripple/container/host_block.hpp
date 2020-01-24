@@ -149,10 +149,7 @@ class HostBlock {
   >
   HostBlock(BlockOpKind op_kind, std::size_t padding, Sizes&&... sizes)
   : _space{padding, std::forward<Sizes>(sizes)...} {
-    if (op_kind == BlockOpKind::asynchronous) {
-      _mem_props.pinned     = true;
-      _mem_props.async_copy = true;
-    }
+    set_op_kind(op_kind);
     allocate();
   }
 
@@ -169,10 +166,7 @@ class HostBlock {
   >
   HostBlock(BlockOpKind op_kind, Sizes&&... sizes)
   : _space{std::forward<Sizes>(sizes)...} {
-    if (op_kind == BlockOpKind::asynchronous) {
-      _mem_props.pinned     = true;
-      _mem_props.async_copy = true;
-    }
+    set_op_kind(op_kind);
     allocate();
   }
 
@@ -311,9 +305,29 @@ class HostBlock {
     return _space.padding();
   }
 
- /// Returns the number of dimensions for the block.
+  /// Returns the number of dimensions for the block.
   constexpr auto dimensions() const -> std::size_t {
     return Dimensions;
+  }
+
+  /// Sets the operation kind of the block.
+  /// \param op_kind The type of operation for the block.
+  auto set_op_kind(BlockOpKind op_kind) -> void {
+    if (op_kind == BlockOpKind::asynchronous) {
+      _mem_props.pinned     = true;
+      _mem_props.async_copy = true;
+    } else {
+      _mem_props.pinned     = false;
+      _mem_props.async_copy = false;
+    }
+  }
+
+  /// Sets the amount of padding for the block. This does not reallocate the
+  /// memory for the block, so a call to `reallocate()` should be made if the
+  /// block owns the memory.
+  /// \param padding The amount of padding for the block.
+  auto set_padding(size_t padding) -> void {
+    _space.padding() = padding;
   }
 
  private:

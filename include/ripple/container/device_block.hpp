@@ -255,6 +255,14 @@ class DeviceBlock {
     return Dimensions;
   }
 
+  /// Sets the amount of padding for the block. This does not reallocate the
+  /// memory for the block, so a call to `reallocate()` should be made if the
+  /// block owns the memory.
+  /// \param padding The amount of padding.
+  auto set_padding(size_t padding) -> void {
+    _space.padding() = padding;
+  }
+
  private:
   ptr_t            _data = nullptr; //!< Storage for the tensor.
   space_t          _space;          //!< Spatial information for the tensor.
