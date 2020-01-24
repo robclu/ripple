@@ -487,11 +487,34 @@ template <
 >
 auto invoke(HostBlock<T, Dims>& block, Callable&& callable, Args&&... args)
 -> void {
+  using namespace ::ripple::detail;
+  block_idx_.x  = 0;
+  block_idx_.y  = 0;
+  block_idx_.z  = 0;
+  thread_idx_.x = 0;
+  thread_idx_.y = 0;
+  thread_idx_.z = 0;
+
+  block_dim_.x = block.size(dim_x);
+  block_dim_.y = Dims >= 2 ? block.size(dim_y) : 1;
+  block_dim_.z = Dims >= 3 ? block.size(dim_z) : 1;
+
   detail::InvokeImpl<Dims - 1>::invoke(
     block.begin(),
     std::forward<Callable>(callable),
     std::forward<Args>(args)...
   );   
+
+  block_idx_.x  = 0;
+  block_idx_.y  = 0;
+  block_idx_.z  = 0;
+  thread_idx_.x = 0;
+  thread_idx_.y = 0;
+  thread_idx_.z = 0;
+
+  block_dim_.x = 1;
+  block_dim_.y = 1;
+  block_dim_.z = 1;
 }
 
 /// Invokes the \p callale on each element in \p block_1, additionally passing
@@ -560,12 +583,15 @@ auto invoke(
 
   using namespace ::ripple::detail;
 
-  block_dim_.x = threads.x;
-  block_dim_.y = threads.y;
-  block_dim_.z = threads.z;
-  grid_dim_.x  = blocks.x;
-  grid_dim_.y  = blocks.y;
-  grid_dim_.z  = blocks.z;
+  block_dim_.x  = threads.x;
+  block_dim_.y  = threads.y;
+  block_dim_.z  = threads.z;
+  grid_dim_.x   = blocks.x;
+  grid_dim_.y   = blocks.y;
+  grid_dim_.z   = blocks.z;
+  thread_idx_.x = 0;
+  thread_idx_.y = 0;
+  thread_idx_.z = 0;
 
   detail::InvokeBlockedImpl<Dims - 1>::invoke(
     block.begin()                      ,
