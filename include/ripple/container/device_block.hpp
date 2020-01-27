@@ -274,7 +274,7 @@ class DeviceBlock {
 
   /// Returns true if the block has its own stream.
   auto uses_own_stream() const -> bool {
-    return _stream == nullptr;
+    return _stream != nullptr;
   }
 
   /// Returns a const reference to the stream for the block.
@@ -282,9 +282,15 @@ class DeviceBlock {
     return *_stream;
   }
 
-  /// Returns a reference to the stream for the block.
+  /// Returns a pointer to the stream for the block.
   auto stream() -> stream_t& {
     return *_stream;
+  }
+
+  /// Sets the stream for the block to the stream pointed to by \p stream_ptr.
+  /// \param stream_ptr A pointer to the stream to set this block's stream to.
+  auto set_stream(stream_t* stream_ptr) -> void {
+    _stream = stream_ptr;
   }
 
  private:
