@@ -53,6 +53,8 @@ class DeviceBlock {
   using const_iter_t    = const iter_t;
   /// Defines the type of a host block with the same parameters.
   using host_block_t    = HostBlock<T, Dimensions>;
+  /// Defines the type of the stream for the block.
+  using stream_t        = cudaStream_t;
 
   /// Declare host blocks to be friends, so that we can create device blocks
   /// from host blocks.
@@ -62,9 +64,15 @@ class DeviceBlock {
   //==--- [construction] ---------------------------------------------------==//
 
   /// Default constructor which just initializes the storage. This constructor
-  /// is available so that an unsized tensor can be instanciated and then
+  /// is available so that an unsized block can be instanciated and then
   /// resized at runtime.
   DeviceBlock() = default;
+
+  /// Default constructor which just initializes the storage. This constructor
+  /// is available so that an unsized block can be instanciated and then
+  /// resized at runtime, and operations can be performed on a given stream.
+  /// \param stream_ptr A pointer to the stream.
+  DeviceBlock(stream_t* stream_ptr) : _stream(stream_ptr) {}
 
   /// Destructor to clean up the tensor resources.
   ~DeviceBlock() {
@@ -106,11 +114,9 @@ class DeviceBlock {
   /// Constructor to create the block from another block.
   /// \param other The other block to create this block from.
   DeviceBlock(const self_t& other)
-  : _space{other._space} {
+  : _stream{other._stream}, _space{other._space} {
     allocate();
-    cuda::memcpy_device_to_device<value_t>(
-      _data, other._data, allocator_t::allocation_size(_space.size())
-    );
+    copy_from_device(other);
   }
 
   /// Constructor to create the block from a host block. This copies the memory
@@ -119,9 +125,7 @@ class DeviceBlock {
   DeviceBlock(const host_block_t& other)
   : _space{other._space} {
     allocate();
-    cuda::memcpy_host_to_device(
-      _data, other._data, allocator_t::allocation_size(_space.size())
-    );
+    copy_from_host(other);
   }
 
   //==--- [operator overloading] -------------------------------------------==//
@@ -129,22 +133,19 @@ class DeviceBlock {
   /// Constructor to create the block from another block.
   /// \param other The other block to create this block from.
   auto operator=(const self_t& other) -> self_t& {
-    _space = other._space;
+    _stream = other._stream;
+    _space  = other._space;
     reallocate();
-    cuda::memcpy_device_to_device(
-      _data, other._data, allocator_t::allocation_size(_space.size())
-    );
+    copy_from_device(other);
     return *this;
   }
 
   /// Constructor to create the block from another block.
   /// \param other The other block to create this block from.
   auto operator=(const host_block_t& other) -> self_t& {
-    _space = other._space;
+    _space  = other._space;
     reallocate();
-    cuda::memcpy_host_to_device(
-      _data, other._data, allocator_t::allocation_size(_space.size())
-    );
+    copy_from_host(other);
     return *this;
   }
 
@@ -263,18 +264,41 @@ class DeviceBlock {
     _space.padding() = padding;
   }
 
+  /// Returns the number of bytes required to allocate the internal data for the
+  /// block as well as the internal data for the block.
+  auto mem_requirement() const -> size_t {
+    return allocator_t::allocation_size(_space.size());
+  }
+
+  //==--- [stream] ---------------------------------------------------------==//
+
+  /// Returns true if the block has its own stream.
+  auto uses_own_stream() const -> bool {
+    return _stream == nullptr;
+  }
+
+  /// Returns a const reference to the stream for the block.
+  auto stream() const -> const stream_t& {
+    return *_stream;
+  }
+
+  /// Returns a reference to the stream for the block.
+  auto stream() -> stream_t& {
+    return *_stream;
+  }
+
  private:
-  ptr_t            _data = nullptr; //!< Storage for the tensor.
-  space_t          _space;          //!< Spatial information for the tensor.
-  BlockMemoryProps _mem_props;      //!< Memory properties for the block data.
+  ptr_t            _data   = nullptr; //!< Storage for the tensor.
+  stream_t*        _stream = nullptr; //!< Pointer to the stream to use.
+  space_t          _space;            //!< Spatial information for the tensor.
+  BlockMemoryProps _mem_props;        //!< Memory properties for the block data.
 
   /// Allocates data for the tensor.
   auto allocate() -> void {
     // Can only allocate if the memory is not allocated, and if we own it.
     if (_data == nullptr && !_mem_props.allocated) {
       cuda::allocate_device(
-        reinterpret_cast<void**>(&_data),
-        allocator_t::allocation_size(_space.size())
+        reinterpret_cast<void**>(&_data), mem_requirement()
       );
       _mem_props.allocated = true;
       _mem_props.must_free = true;
@@ -289,6 +313,37 @@ class DeviceBlock {
       _mem_props.must_free = false;
       _mem_props.allocated = false;
     }
+    _stream = nullptr;
+  }
+
+  /// Copies data from the host block \p other into this block.
+  /// \p other The other block to copy data from.
+  auto copy_from_host(const host_block_t& other) {
+    const auto alloc_size = allocator_t::allocation_size(_space.size());
+    if (other._mem_props.async_copy && other._mem_props.pinned) {
+      if (this->uses_own_stream()) {
+        cuda::memcpy_host_to_device_async(_data, other._data, alloc_size);
+      } else {
+        cuda::memcpy_host_to_device_async(
+          _data, other._data, alloc_size, *_stream
+        );
+      }
+      return;
+    }
+    cuda::memcpy_host_to_device(_data, other._data, alloc_size);
+  }
+
+  /// Copies data from the host block \p other into this block.
+  /// \p other The other block to copy data from.
+  auto copy_from_device(const self_t& other) {
+    const auto alloc_size = allocator_t::allocation_size(_space.size());
+    if (other.uses_own_stream()) {
+      cuda::memcpy_device_to_device_async(
+        _data, other._data, alloc_size, other.stream()
+      );
+      return;
+    } 
+    cuda::memcpy_device_to_device(_data, other._data, alloc_size);
   }
 };
 

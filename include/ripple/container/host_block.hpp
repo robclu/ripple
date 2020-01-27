@@ -330,6 +330,12 @@ class HostBlock {
     _space.padding() = padding;
   }
 
+  /// Returns the number of bytes required to allocate the internal data for the
+  /// block as well as the padding data.
+  auto mem_requirement() const -> size_t {
+    return allocator_t::allocation_size(_space.size());
+  }
+
  private:
   ptr_t            _data = nullptr;   //!< Storage for the tensor.
   space_t          _space;            //!< Spatial information for the tensor.
@@ -341,11 +347,10 @@ class HostBlock {
     if (_data == nullptr && !_mem_props.allocated) {
       if (_mem_props.pinned) {
         cuda::allocate_host_pinned(
-          reinterpret_cast<void**>(&_data),   
-          allocator_t::allocation_size(_space.size())
+          reinterpret_cast<void**>(&_data), mem_requirement()
         ); 
       } else {
-        _data = malloc(allocator_t::allocation_size(_space.size()));
+        _data = malloc(mem_requirement());
       }
       _mem_props.must_free = true;
       _mem_props.allocated = true;
