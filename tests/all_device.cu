@@ -16,7 +16,7 @@
 #include "algorithm/algorithm_tests_device.hpp"
 #include "container/container_tests_device.hpp"
 #include "boundary/boundary_tests_device.hpp"
-#include "execution/execution_tests.hpptests_device.hpp"
+#include "execution/execution_tests_device.hpp"
 
 int main(int argc, char** argv) {
   ::testing::InitGoogleTest(&argc, argv);
