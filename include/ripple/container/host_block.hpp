@@ -127,9 +127,7 @@ class HostBlock {
   HostBlock(const device_block_t& other)
   : _space{other._space} {
     reallocate();
-    cuda::memcpy_device_to_host(
-      _data, other._data, allocator_t::allocation_size(_space.size())
-    );
+    copy_from_device(other);
   }
 
   //==--- [asynchrnous construction] ---------------------------------------==//
@@ -196,9 +194,7 @@ class HostBlock {
   auto operator=(const device_block_t& other) -> self_t& {
     _space = other._space;
     reallocate();
-    cuda::memcpy_device_to_host(
-      _data, other._data, allocator_t::allocation_size(_space.size())
-    );
+    copy_from_device(other);
     return *this;
   }
 
@@ -371,6 +367,23 @@ class HostBlock {
       _mem_props.pinned     = false;
       _mem_props.async_copy = false;
     }
+  }
+
+  /// Copies data from the device block \p other into this block.
+  /// \p other The other block to copy data from.
+  auto copy_from_device(const device_block_t& other) {
+    const auto alloc_size = allocator_t::allocation_size(_space.size());
+    if (_mem_props.async_copy && _mem_props.pinned) {
+      if (other.uses_own_stream()) {
+        cuda::memcpy_device_to_host_async(
+          _data, other._data, alloc_size, other.stream()
+        );
+      } else {
+        cuda::memcpy_device_to_host_async(_data, other._data, alloc_size);
+      }
+      return;
+    }
+    cuda::memcpy_device_to_host(_data, other._data, alloc_size);
   }
 
   // Shifts an iterator by the padding in each direction.

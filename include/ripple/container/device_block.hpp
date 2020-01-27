@@ -322,11 +322,11 @@ class DeviceBlock {
     const auto alloc_size = allocator_t::allocation_size(_space.size());
     if (other._mem_props.async_copy && other._mem_props.pinned) {
       if (this->uses_own_stream()) {
-        cuda::memcpy_host_to_device_async(_data, other._data, alloc_size);
-      } else {
         cuda::memcpy_host_to_device_async(
           _data, other._data, alloc_size, *_stream
         );
+      } else {
+        cuda::memcpy_host_to_device_async(_data, other._data, alloc_size);
       }
       return;
     }
