@@ -16,8 +16,10 @@
 #ifndef RIPPLE_ARCH_GPU_INFO_HPP
 #define RIPPLE_ARCH_GPU_INFO_HPP
 
+#include <ripple/storage/storage_traits.hpp>
 #include <ripple/utility/range.hpp>
 #include <ripple/utility/portability.hpp>
+#include <array>
 #include <vector>
 
 namespace ripple {
@@ -27,19 +29,43 @@ struct GpuInfo {
   //==--- [aliases] --------------------------------------------------------==//
   
   /// Defines the type used for the device index.
-  using index_t          = uint32_t;
+  using index_t            = uint32_t;
   /// Defines the type of container used to store peer access indices.
-  using peer_container_t = std::vector<index_t>;
+  using peer_container_t   = std::vector<index_t>;
+  /// Defines the type of the stream for the device.
+  using stream_t           = cudaStream_t;
+  /// Defines the type of container for streams for the device.
+  using stream_container_t = std::array<stream_t, 8>;
 
   //==--- [constants] ------------------------------------------------------==//
   
   /// Defines an invalid value for processor information.
   static constexpr index_t invalid = 0xFFFFFFFF;
 
+  /// Defines the amount of padding to avoid false sharing.
+  static constexpr size_t padding_size = false_sharing_size - ((
+    sizeof(peer_container_t) + 
+    sizeof(index_t)          + 
+    2 * sizeof(uint64_t)     +
+    sizeof(stream_container_t)
+  ) % false_sharing_size);
+
   //==--- [constructor] ----------------------------------------------------==//
   
   /// Constructor to initialise the info with a specific index.
-  GpuInfo(index_t idx) : index(idx) {}
+  GpuInfo(index_t idx) : index(idx) {
+    for (auto& stream : streams) {
+      cudaStreamCreate(&stream);
+    }
+  }
+
+  /// Destructor which cleans up the streams.
+  ~GpuInfo() {
+    // Currently causing a segfault, so we can't clean up the streams ...
+    //for (auto& stream : streams) {
+    //   cudaStreamDestroy(stream);
+    //}
+  }
 
   //==--- [interface] ------------------------------------------------------==//
   
@@ -100,9 +126,17 @@ struct GpuInfo {
     return false;
   }
 
-  peer_container_t peers;               //!< Default to no peers.
-  index_t          index    = invalid;  //!< Index of the gpu in the system.
-  uint64_t         mem_size = 0;        //!< Amount of memory for the device.
+  /// Returns the amount of memory which is unallocated on the gpu.
+  auto mem_remaining() const -> uint64_t {
+    return mem_alloc < mem_size ? mem_size - mem_alloc : 0;
+  }
+
+  stream_container_t streams;              //!< Streams for the device.
+  peer_container_t   peers;                //!< Default to no peers.
+  index_t            index     = invalid;  //!< Index of the gpu in the system.
+  uint64_t           mem_size  = 0;        //!< Amount of memory for the device.
+  uint64_t           mem_alloc = 0;        //!< Amount of memory alocated.     
+  uint8_t            pad[padding_size];    //!< Padding for false sharing.
 };
 
 } // namespace ripple

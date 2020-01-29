@@ -215,6 +215,13 @@ using stridable_overload_t     = StridableOverloader<true>;
 /// Defines an alias for an overload type for non stridable types.
 using non_stridable_overload_t = StridableOverloader<false>;
 
+//==--- [constants] --------------------------------------------------------==//
+
+/// Defines the number of bytes to allocate to avoid false sharing. This is 128b
+/// rather than 64b because in the Intel Optimization guide, chapter 2.1.5.4,
+/// the prefetcher likes to keep pairs of cache lines in the L2 cache. 
+static constexpr auto false_sharing_size = 128;
+
 } // namespace ripple
 
 #endif // RIPPLE_STORAGE_STORAGE_TRAITS_HPP

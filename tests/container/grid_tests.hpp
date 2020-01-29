@@ -24,16 +24,18 @@ using real_t = float;
 
 TEST(container_grid, can_create_grid_1d) {
   constexpr auto size_x = size_t{100};
-  ripple::grid_1d_t<real_t> g(size_x);
+  auto topo = ripple::Topology();
+  ripple::grid_1d_t<real_t> g(topo, size_x);
 
   EXPECT_EQ(g.size()             , size_t{size_x});
   EXPECT_EQ(g.size(ripple::dim_x), size_t{size_x});
 }
 
 TEST(container_grid, can_create_grid_2d) {
-  constexpr auto size_x = size_t{100};
-  constexpr auto size_y = size_t{100};
-  ripple::grid_2d_t<real_t> g(size_x, size_y);
+  constexpr auto size_x = size_t{10};
+  constexpr auto size_y = size_t{10};
+  auto topo = ripple::Topology();
+  ripple::grid_2d_t<real_t> g(topo, size_x, size_y);
 
   EXPECT_EQ(g.size()             , size_t{size_x * size_y});
   EXPECT_EQ(g.size(ripple::dim_x), size_t{size_x});
@@ -41,10 +43,11 @@ TEST(container_grid, can_create_grid_2d) {
 }
 
 TEST(container_grid, can_create_grid_3d) {
-  constexpr auto size_x = size_t{100};
-  constexpr auto size_y = size_t{100};
-  constexpr auto size_z = size_t{100};
-  ripple::grid_3d_t<real_t> g(size_x, size_y, size_z);
+  constexpr auto size_x = size_t{10};
+  constexpr auto size_y = size_t{10};
+  constexpr auto size_z = size_t{5};
+  auto topo = ripple::Topology();
+  ripple::grid_3d_t<real_t> g(topo, size_x, size_y, size_z);
 
   EXPECT_EQ(g.size(), size_t{size_x * size_y * size_z});
   EXPECT_EQ(g.size(ripple::dim_x), size_t{size_x});
