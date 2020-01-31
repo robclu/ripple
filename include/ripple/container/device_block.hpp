@@ -48,7 +48,7 @@ class DeviceBlock {
   /// Defines the type for a reference to an element.
   using value_t         = typename traits_t::value_t;
   /// Defines the type of the iterator for the tensor.
-  using iter_t          = BlockIterator<value_t, space_t>;
+  using iter_t          = typename traits_t::iter_t;
   /// Defines the type of a contant iterator.
   using const_iter_t    = const iter_t;
   /// Defines the type of a host block with the same parameters.

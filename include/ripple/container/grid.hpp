@@ -16,6 +16,7 @@
 #ifndef RIPPLE_CONTAINER_GRID_HPP
 #define RIPPLE_CONTAINER_GRID_HPP
 
+#include "block_traits.hpp"
 #include "grid_traits.hpp"
 #include "device_block.hpp"
 #include "host_block.hpp"
@@ -37,6 +38,8 @@ class Grid {
   using device_block_t = DeviceBlock<T, Dimensions>;
   /// Defines the type of the space used by the grid.
   using space_t        = DynamicMultidimSpace<Dimensions>;
+  /// Defines the type of the iterator over host data.
+  using host_iter_t    = typename BlockTraits<host_block_t>::iter_t;
 
   /// Defines a type which wraps a host and device block into a single type, and
   /// which has a state for the different data components in the block.
@@ -51,6 +54,49 @@ class Grid {
       updated_device     = 2,   //!< Data is on the device and is updated.
       not_updated_device = 3    //!< Data is on the device but is not updated.
     };
+
+    //==--- [interface] ----------------------------------------------------==//
+
+    /// Returns true if the data is on the device.
+    auto data_on_device() const -> bool {
+      return data_state == State::updated_device ||
+        data_state == State::not_updated_device;
+    }
+
+    /// Returns true if the data is on the host.
+    auto data_on_host() const -> bool {
+      return data_state == State::updated_host ||
+        data_state == State::not_updated_host;
+    }
+
+    /// Returns true if the block has padding, otherwise returns false.
+    auto has_padding() const -> bool {
+      return host_data.padding() > 0;
+    }
+
+    /// Synchrnizes the data for the host by copying the data from the device to
+    /// the host, if the most recent data is on the device, otherwise this does
+    /// nothing.
+    auto sync_data_for_host() -> void {
+      if (data_on_device()) {
+        cudaSetDevice(gpu_id);
+        host_data = device_data;
+        cudaStreamSynchronize(device_data.stream());
+      }
+    }
+
+    /// Synchrnizes the data for the device by copying the data from the host to
+    /// the device, if the most up to date data is on the host, otherwise this
+    /// does nothing.
+    auto sync_data_for_device() -> void {
+      if (data_on_device()) {
+        cudaSetDevice(gpu_id);
+        host_data = device_data;
+        cudaStreamSynchronize(device_data.stream());
+      }
+    }
+
+    //==--- [members] ------------------------------------------------------==//
 
     host_block_t   host_data;   //!< Host block data.
     device_block_t device_data; //!< Device block data.
@@ -118,6 +164,61 @@ class Grid {
         _topo.gpus[b->gpu_id].mem_alloc -= b->device_data.mem_requirement();
       }
     });
+  }
+
+  //==--- [access] ---------------------------------------------------------==//
+  
+  /// Overload of operator() to get an iterator to the element at the location
+  /// specified by the \p is indices. This iterator is only valid within the
+  /// block to which the \p is indices belong.
+  ///
+  /// If this is called on the host, then this will copy the data for the block
+  /// to the host first, and then return an iterator over the block data on the
+  /// host. If a copy is performed, this will block until the copy from the
+  /// device is finished.
+  ///
+  /// This access is provided for convenience, and should only be used in
+  /// non-critical code paths, because there is a non-significant amount of
+  /// overhead required to get the element at the exact index from the grid
+  /// structure.
+  ///
+  /// Operations should be performed on the entire grid, or on blocks within the
+  /// grid.
+  ///
+  /// \param  is      The indices to get the element at.
+  /// \tparam Indices The types of the indices.
+  template <typename... Indices>
+  ripple_host_only auto operator()(Indices&&... is) -> host_iter_t {
+    auto block = _blocks.begin();
+    auto indices = std::array<size_t, Dimensions>{static_cast<size_t>(is)...};
+    auto offsets = std::array<size_t, Dimensions>{0};
+    // Offset to the correct block:
+    unrolled_for<Dimensions>([&] (auto d) {
+      constexpr auto dim = static_cast<size_t>(d);
+      // Automatic round down to get the block index:
+      offsets[dim] = indices[dim] / _block_size.size(dim);
+      block.shift(dim, offsets[dim]);
+
+      // Compute the offset in the block:
+      offsets[dim] = indices[dim] - offsets[dim] * _block_size.size(dim);
+    });
+
+    // Copy data back from the device, if necessary.
+    block->sync_data_for_host();
+
+    // Should also check if any of the padding is on the device, and copy that
+    // if it is the case (ignoring for now):
+    if (block->has_padding()) {
+
+    }
+    
+    // Create and return the iterator ...
+    auto iter = block->host_data.begin();
+    unrolled_for<Dimensions>([&] (auto d) {
+      constexpr auto dim = static_cast<size_t>(d);
+      iter.shift(dim, offsets[dim]);
+    });
+    return iter;
   }
 
   //==--- [interface] ------------------------------------------------------==//

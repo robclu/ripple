@@ -16,6 +16,7 @@
 #ifndef RIPPLE_CONTAINER_BLOCK_TRAITS_HPP
 #define RIPPLE_CONTAINER_BLOCK_TRAITS_HPP
 
+#include <ripple/iterator/block_iterator.hpp>
 #include <ripple/multidim/dynamic_multidim_space.hpp>
 #include <ripple/storage/storage_traits.hpp>
 #include <ripple/utility/portability.hpp>
@@ -54,6 +55,8 @@ template <typename R> struct BlockTraits {
   using allocator_t = void*;
   /// Defines the the of the dimension information for the tensor.
   using space_t     = void*;
+  /// Defines the type of the iterator for the block.
+  using iter_t      = BlockIterator<value_t, space_t>;
 
   /// Defines the number of dimensions for the block.
   static constexpr auto dimensions = 0;
@@ -84,6 +87,8 @@ struct BlockTraits<HostBlock<T, Dimensions>> {
   using allocator_t = typename layout_traits_t::allocator_t;
   /// Defines the the of the dimension information for the tensor.
   using space_t     = DynamicMultidimSpace<Dimensions>;
+  /// Defines the type of the iterator for the block.
+  using iter_t      = BlockIterator<value_t, space_t>;
 
   /// Defines the number of dimensions for the block.
   static constexpr auto dimensions = Dimensions;
@@ -106,6 +111,8 @@ struct BlockTraits<DeviceBlock<T, Dimensions>> {
   using allocator_t = typename layout_traits_t::allocator_t;
   /// Defines the the of the dimension information for the tensor.
   using space_t     = DynamicMultidimSpace<Dimensions>;
+  /// Defines the type of the iterator for the block.
+  using iter_t      = BlockIterator<value_t, space_t>;
 
   /// Defines the number of dimensions for the block.
   static constexpr auto dimensions = Dimensions;

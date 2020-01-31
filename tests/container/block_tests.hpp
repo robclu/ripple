@@ -371,7 +371,7 @@ TEST(container_block, can_invoke_3d_with_padding) {
 
 //==--- [modify padding] ---------------------------------------------------==//
 
-TEST(container_block, can_modify__padding) {
+TEST(container_block, can_modify_padding) {
   ripple::host_block_3d_t<test_t> b(2, 41, 37, 22);
 
   ripple::invoke(b, [] (auto bi) {
