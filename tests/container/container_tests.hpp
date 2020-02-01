@@ -16,4 +16,5 @@
 #include "block_memory_properties_tests.hpp"
 #include "block_tests.hpp"
 #include "grid_tests.hpp"
+#include "tuple_tests.hpp"
 #include "vec_tests.hpp"
