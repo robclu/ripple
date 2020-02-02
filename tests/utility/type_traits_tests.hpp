@@ -99,4 +99,38 @@ TEST(utility_type_traits, is_same_ignoring_templates) {
   EXPECT_TRUE(b2);
 }
 
+//==--- [function traits] --------------------------------------------------==//
+
+TEST(utility_type_traits, can_get_arity_and_args_of_lambda) {
+  auto x = [] (int a, float b) {};
+
+  using ftraits_t = ripple::function_traits_t<decltype(x)>;
+
+  EXPECT_EQ(ftraits_t::arity, size_t{2});
+
+  const auto t1 = std::is_same_v<ftraits_t::template arg_t<0>, int>;
+  const auto t2 = std::is_same_v<ftraits_t::template arg_t<1>, float>;
+
+  EXPECT_TRUE(t1);
+  EXPECT_TRUE(t2);
+}
+
+
+TEST(utility_type_traits, can_get_arity_and_args_of_host_device_lambda) {
+  auto x = [] ripple_host_device (int a, float b) {};
+
+  using ftraits_t = ripple::function_traits_t<decltype(x)>;
+
+  EXPECT_EQ(ftraits_t::arity, size_t{2});
+
+  const auto t1 = std::is_same_v<ftraits_t::template arg_t<0>, int>;
+  const auto t2 = std::is_same_v<ftraits_t::template arg_t<1>, float>;
+
+  EXPECT_TRUE(t1);
+  EXPECT_TRUE(t2);
+}
+
+
+
+
 #endif // RIPPLE_TESTS_UTILITY_TYPE_TRAITS_TESTS_HPP

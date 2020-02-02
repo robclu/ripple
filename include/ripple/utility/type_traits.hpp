@@ -17,7 +17,7 @@
 #define RIPPLE_UTILITY_TYPE_TRAITS_HPP
 
 #include "detail/index_of_impl_.hpp"
-#include "detail/nth_element_impl_.hpp"
+#include "detail/function_traits_impl_.hpp"
 #include "portability.hpp"
 #include <type_traits>
 
@@ -206,6 +206,14 @@ using dim_3d_enable_t = std::enable_if_t<Dims == 3, int>;
 /// \tparam Dims The number of dimensions to base the enable on.
 template <std::size_t Dims>
 using not_dim_3d_enable_t = std::enable_if_t<Dims != 3, int>;
+
+//==--- [function traits] --------------------------------------------------==//
+
+/// Defined the traits for a function.
+/// \tparam T The function type to get the traits for.
+template <typename T>
+using function_traits_t = detail::FunctionTraits<T>;
+
 } // namespace ripple
 
 #endif // RIPPLE_UTILITY_TYPE_TRAITS_HPP
