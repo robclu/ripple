@@ -18,6 +18,7 @@
 #define RIPPLE_CONTAINER_DETAIL_BASIC_TUPLE__HPP
 
 #include <ripple/utility/portability.hpp>
+#include <utility>
 
 namespace ripple::detail {
 

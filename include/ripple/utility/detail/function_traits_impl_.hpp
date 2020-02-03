@@ -58,10 +58,13 @@ struct FunctionTypes {
 
 //==--- [function traits] --------------------------------------------------==//
 
-/// This type defines traits for a function.
-/// \tparam T The type of the function.
-template <typename T> struct FunctionTraits
-  : FunctionTraits<decltype(&T::operator())> {};
+/// This type defines traits for a function. Note that this does not work for a
+/// generic lambda, unless specific types are passes for the Ts types.
+/// \tparam T  The type of the function.
+/// \tparam Ts The types of the arguments to the function.
+template <typename T, typename... Ts> struct FunctionTraits : 
+FunctionTraits<decltype(&std::decay_t<T>::operator()(std::declval<Ts>()...))> 
+{};
 
 //==--- [function] ---------------------------------------------------------==//
 
