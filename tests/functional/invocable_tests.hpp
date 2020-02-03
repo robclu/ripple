@@ -72,6 +72,26 @@ TEST(functional_invocable, can_store_mixed_lambda_and_invoke_it) {
   oth_invocable(x, y);
 }
 
+TEST(functional_invocable, can_determine_if_type_is_invocable) {
+  auto l = [] (auto x, auto y) {
+    EXPECT_EQ(x, 7);
+    EXPECT_EQ(y, 1.0f);
+  };
+
+  using l_conv_t = ripple::make_invocable_t<decltype(l)>;
+
+  auto invocable = ripple::make_invocable(l);
+  auto l_conv    = l_conv_t{l};
+
+  constexpr auto l_inv_v  = ripple::is_invocable_v<decltype(l)>;
+  constexpr auto i_inv_v  = ripple::is_invocable_v<decltype(invocable)>;
+  constexpr auto lc_inv_v = ripple::is_invocable_v<decltype(l_conv)>;
+
+  EXPECT_FALSE(l_inv_v);
+  EXPECT_TRUE(i_inv_v);
+  EXPECT_TRUE(lc_inv_v);
+}
+
 #endif // RIPPLE_TESTS_FUNCTIONAL_INVOCABLE_TESTS_HPP
 
 

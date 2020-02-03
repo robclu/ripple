@@ -66,7 +66,19 @@ public:
   static constexpr auto fixed_args = sizeof...(Args);
 
   //==--- [construction] ---------------------------------------------------==//
- 
+  
+  /// Takes a functor and and a pack or arguments and stores them as an
+  /// invocable.
+  ///
+  /// This copies the functor and either copies or moves the arguments into the
+  /// invocable to avoid the case that a reference to a function or one of the
+  /// arguments was taken which goes out of scope.
+  ///
+  /// \param functor The functor to store.
+  /// \param args    The arguments to store.
+  ripple_host_device Invocable(const Functor& functor, Args&&... args) noexcept 
+  : _args{arg_tuple_t{std::forward<Args>(args)...}}, _functor{functor} {} 
+
   /// Takes a functor and and a pack or arguments and stores them as an
   /// invocable.
   ///
@@ -203,6 +215,40 @@ noexcept -> Invocable<std::decay_t<Functor>, std::decay_t<Args>...> {
     static_cast<std::decay_t<Functor>>(functor), std::decay_t<Args>(args)...
   };
 }
+
+//==--- [traits] -----------------------------------------------------------==//
+
+namespace detail {
+
+/// Determines if the type T is Invocable or not.
+/// \tparam T The type to determine if is invocable.
+template <typename T>
+struct IsInvocable {
+  /// Defines that the type T is not invocable.
+  static constexpr bool value = false;
+};
+
+/// Specialization for an invocable type.
+/// \tparam F    The functor for the invocable.
+/// \tparam Args The args for the invocable.
+template <typename F, typename... Args>
+struct IsInvocable<Invocable<F, Args...>> {
+  /// Defines that the type is invocable.
+  static constexpr auto value = true;
+};
+
+} // namespace detail
+
+/// Returns true if T is an invocable type.
+/// \tparam T The type to determine if is invocable.
+template <typename T>
+static constexpr auto is_invocable_v = 
+  detail::IsInvocable<std::decay_t<T>>::value;
+
+/// Returns the type T as Invocable<T> if T is not already invocable.
+/// \tparam T The type to check and potentially make invocable.
+template <typename T>
+using make_invocable_t = std::conditional_t<is_invocable_v<T>, T, Invocable<T>>;
 
 } // namespace ripple
 
