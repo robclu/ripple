@@ -600,6 +600,32 @@ TEST(container_device_block, can_access_1d_multiple_blocks_3d) {
   }
 }
 
+//==--- [invoke with pipeline] ---------------------------------------------==//
+
+TEST(container_device_block, can_invoke_with_pipeline_1d) {
+  ripple::device_block_1d_t<dev_block_test_t> b(400);
+
+  auto pipeline = ripple::make_pipeline(
+    [] ripple_host_device (auto it) {
+      it->flag() = -1;
+      it->v(0)   = 4.4f;
+      it->v(1)   = 5.5f;
+      it->v(2)   = 0.23f;
+    }
+  );
+
+  ripple::invoke(b, pipeline);
+
+  auto b1 = b.as_host();
+  for (auto i : ripple::range(b1.size())) {
+    const auto bi = b1(i);
+    EXPECT_EQ(bi->flag(), -1  );
+    EXPECT_EQ(bi->v(0)  , 4.4f);
+    EXPECT_EQ(bi->v(1)  , 5.5f);
+    EXPECT_EQ(bi->v(2)  , 0.23f);
+  }
+}
+
 #endif // RIPPLE_TESTS_CONTAINER_DEVICE_BLOCK_TESTS_HPP
 
 
