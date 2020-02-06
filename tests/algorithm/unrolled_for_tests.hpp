@@ -1,4 +1,4 @@
-//==--- ripple/tests/algorithm/unrolled_for_tests.hpp ------ -*- C++ -*- ---==//
+//==--- ripple/core/tests/algorithm/unrolled_for_tests.hpp ------ -*- C++ -*- ---==//
 //            
 //                                Ripple
 // 
@@ -16,7 +16,7 @@
 #ifndef RIPPLE_TESTS_ALGORITHM_UNROLLED_FOR_TESTS_HPP
 #define RIPPLE_TESTS_ALGORITHM_UNROLLED_FOR_TESTS_HPP
 
-#include <ripple/algorithm/unrolled_for.hpp>
+#include <ripple/core/algorithm/unrolled_for.hpp>
 #include <gtest/gtest.h>
 
 //==--- [compile time unrolling] -------------------------------------------==//

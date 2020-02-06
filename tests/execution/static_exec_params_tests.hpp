@@ -16,7 +16,7 @@
 #ifndef RIPPLE_TESTS_EXECUTION_STATIC_EXECUTION_PARAMS_TESTS_HPP
 #define RIPPLE_TESTS_EXECUTION_STATIC_EXECUTION_PARAMS_TESTS_HPP
 
-#include <ripple/execution/static_execution_params.hpp>
+#include <ripple/core/execution/static_execution_params.hpp>
 #include <gtest/gtest.h>
 
 TEST(execution_static_exec_params, can_create_simple_multidim) {

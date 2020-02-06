@@ -1,4 +1,4 @@
-#==--- riplpe/CMakeLists.txt ------------------------------------------------==#
+#==--- ripple/CMakeLists.txt ------------------------------------------------==#
 #
 #                      Copyright (c) 2019 Rob Clucas.
 #
@@ -48,7 +48,6 @@ message("-- Clang cxx  compiler option : ${CXX_CLANG}")
 if (EXISTS ${CLANG_PATH})
   set(CLANG_COMPILER_PATH "${CLANG_PATH}/bin/clang++")
 endif()
-
 
 # If clang for CXX then set the CXX compiler:
 if (${CXX_CLANG})

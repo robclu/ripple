@@ -1,4 +1,4 @@
-//==--- ripple/tests/utility/number_tests.hpp -------------- -*- C++ -*- ---==//
+//==--- ripple/core/tests/utility/number_tests.hpp -------------- -*- C++ -*- ---==//
 //            
 //                                Ripple
 // 
@@ -16,7 +16,7 @@
 #ifndef RIPPLE_TESTS_UTILITY_NUMBER_TESTS_HPP
 #define RIPPLE_TESTS_UTILITY_NUMBER_TESTS_HPP
 
-#include <ripple/utility/number.hpp>
+#include <ripple/core/utility/number.hpp>
 #include <gtest/gtest.h>
 
 //==--- [int64] ------------------------------------------------------------==//

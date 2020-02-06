@@ -16,9 +16,9 @@
 #ifndef RIPPLE_TESTS_EXECUTION_DEVICE_THREAD_INDEX_TESTS_HPP
 #define RIPPLE_TESTS_EXECUTION_DEVICE_THREAD_INDEX_TESTS_HPP
 
-#include <ripple/container/device_block.hpp>
-#include <ripple/execution/thread_index.hpp>
-#include <ripple/functional/invoke.hpp>
+#include <ripple/core/container/device_block.hpp>
+#include <ripple/core/execution/thread_index.hpp>
+#include <ripple/core/functional/invoke.hpp>
 #include <gtest/gtest.h>
 
 template <size_t Dims>

@@ -1,4 +1,4 @@
-//==--- ripple/tests/algorithm/device_reduce_tests.hpp ----- -*- C++ -*- ---==//
+//==--- ripple/core/tests/algorithm/device_reduce_tests.hpp ----- -*- C++ -*- ---==//
 //            
 //                                Ripple
 // 
@@ -16,7 +16,7 @@
 #ifndef RIPPLE_TESTS_ALGORITHM_DEVICE_REDUCE_TESTS_HPP
 #define RIPPLE_TESTS_ALGORITHM_DEVICE_REDUCE_TESTS_HPP
 
-#include <ripple/algorithm/reduce.hpp>
+#include <ripple/core/algorithm/reduce.hpp>
 #include <gtest/gtest.h>
 
 // Functor to define a sum operation for reduction.

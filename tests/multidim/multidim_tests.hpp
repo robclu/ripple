@@ -1,4 +1,4 @@
-//==--- ripple/tests/multidim/multidim_tests.hpp ----------- -*- C++ -*- ---==//
+//==--- ripple/core/tests/multidim/multidim_tests.hpp ----------- -*- C++ -*- ---==//
 //            
 //                                Ripple
 // 

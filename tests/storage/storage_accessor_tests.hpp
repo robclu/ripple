@@ -1,4 +1,4 @@
-//==--- ripple/tests/storage/storage_accessor_tests.hpp ------*- C++ -*- ---==//
+//==--- ripple/core/tests/storage/storage_accessor_tests.hpp ------*- C++ -*- ---==//
 //            
 //                                Ripple
 // 
@@ -16,9 +16,9 @@
 #ifndef RIPPLE_TESTS_STORAGE_ACCESSOR_TESTS_HPP
 #define RIPPLE_TESTS_STORAGE_ACCESSOR_TESTS_HPP
 
-#include <ripple/storage/owned_storage.hpp>
-#include <ripple/storage/strided_storage_view.hpp>
-#include <ripple/storage/contiguous_storage_view.hpp>
+#include <ripple/core/storage/owned_storage.hpp>
+#include <ripple/core/storage/strided_storage_view.hpp>
+#include <ripple/core/storage/contiguous_storage_view.hpp>
 
 TEST(storage_storage_access, can_assign_between_strided_and_owned) {
   using e_3i_t        = ripple::StorageElement<int, 3>;

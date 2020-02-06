@@ -16,8 +16,8 @@
 #ifndef RIPPLE_TESTS_MULTIDIM_STATIC_MULTIDIM_SPACE_TESTS_HPP
 #define RIPPLE_TESTS_MULTIDIM_STATIC_MULTIDIM_SPACE_TESTS_HPP
 
-#include <ripple/multidim/static_multidim_space.hpp>
-#include <ripple/utility/dim.hpp>
+#include <ripple/core/multidim/static_multidim_space.hpp>
+#include <ripple/core/utility/dim.hpp>
 #include <gtest/gtest.h>
 
 TEST(multidim_static_multidim_space, size_and_step_1d) {

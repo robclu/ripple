@@ -1,4 +1,4 @@
-//==--- ripple/tests/algorithm_device.cu -------------------- -*- C++ -*- ---==//
+//==--- ripple/core/tests/algorithm_device.cu -------------------- -*- C++ -*- ---==//
 //            
 //                                Ripple
 // 

@@ -1,4 +1,4 @@
-//==--- ripple/tests/container/device_block_tests.hpp ------ -*- C++ -*- ---==//
+//==--- ripple/core/tests/container/device_block_tests.hpp ------ -*- C++ -*- ---==//
 //            
 //                                Ripple
 // 
@@ -16,13 +16,13 @@
 #ifndef RIPPLE_TESTS_CONTAINER_DEVICE_BLOCK_TESTS_HPP
 #define RIPPLE_TESTS_CONTAINER_DEVICE_BLOCK_TESTS_HPP
 
-#include <ripple/container/block_traits.hpp>
-#include <ripple/container/device_block.hpp>
-#include <ripple/execution/static_execution_params.hpp>
-#include <ripple/functional/invoke.hpp>
-#include <ripple/storage/storage_descriptor.hpp>
-#include <ripple/storage/stridable_layout.hpp>
-#include <ripple/utility/dim.hpp>
+#include <ripple/core/container/block_traits.hpp>
+#include <ripple/core/container/device_block.hpp>
+#include <ripple/core/execution/static_execution_params.hpp>
+#include <ripple/core/functional/invoke.hpp>
+#include <ripple/core/storage/storage_descriptor.hpp>
+#include <ripple/core/storage/stridable_layout.hpp>
+#include <ripple/core/utility/dim.hpp>
 #include <gtest/gtest.h>
 
 TEST(container_device_block, can_create_block_1d) {

@@ -1,4 +1,4 @@
-//==--- ripple/tests/utility/range_tests.hpp --------------- -*- C++ -*- ---==//
+//==--- ripple/core/tests/utility/range_tests.hpp --------------- -*- C++ -*- ---==//
 //            
 //                                Ripple
 // 
@@ -16,7 +16,7 @@
 #ifndef RIPPLE_TESTS_UTILITY_RANGE_TESTS_HPP
 #define RIPPLE_TESTS_UTILITY_RANGE_TESTS_HPP
 
-#include <ripple/utility/range.hpp>
+#include <ripple/core/utility/range.hpp>
 #include <gtest/gtest.h>
 
 TEST(utility_range, can_create_simple_range) {

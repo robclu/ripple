@@ -1,4 +1,4 @@
-//==--- ripple/tests/container/tuple_tests.hpp ------------- -*- C++ -*- ---==//
+//==--- ripple/core/tests/container/tuple_tests.hpp ------------- -*- C++ -*- ---==//
 //            
 //                                Ripple
 // 
@@ -16,7 +16,7 @@
 #ifndef RIPPLE_TESTS_CONTAINER_TUPLE_TESTS_HPP
 #define RIPPLE_TESTS_CONTAINER_TUPLE_TESTS_HPP
 
-#include <ripple/container/tuple.hpp>
+#include <ripple/core/container/tuple.hpp>
 #include <gtest/gtest.h>
 
 //==--- [creation] ---------------------------------------------------------==//

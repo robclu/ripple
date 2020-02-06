@@ -1,4 +1,4 @@
-//==--- ripple/tests/boundary/ghost_index_tests.hpp -------- -*- C++ -*- ---==//
+//==--- ripple/core/tests/boundary/ghost_index_tests.hpp -------- -*- C++ -*- ---==//
 //            
 //                                Ripple
 // 
@@ -16,7 +16,7 @@
 #ifndef RIPPLE_TESTS_BOUNDARY_GHOST_INDEX_TESTS_HPP
 #define RIPPLE_TESTS_BOUNDARY_GHOST_INDEX_TESTS_HPP
 
-#include <ripple/boundary/ghost_index.hpp>
+#include <ripple/core/boundary/ghost_index.hpp>
 #include <gtest/gtest.h>
 
 TEST(boundary_ghost_index, can_determine_location) {

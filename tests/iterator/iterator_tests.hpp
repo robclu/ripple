@@ -1,4 +1,4 @@
-//==--- ripple/tests/iterator/iterator_tests.hpp ----------- -*- C++ -*- ---==//
+//==--- ripple/core/tests/iterator/iterator_tests.hpp ----------- -*- C++ -*- ---==//
 //            
 //                                Ripple
 // 

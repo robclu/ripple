@@ -1,4 +1,4 @@
-//==--- ripple/tests/boundary/device_load_boundary_tests.hpp -*- C++ -*- ---==//
+//==--- ripple/core/tests/boundary/device_load_boundary_tests.hpp -*- C++ -*- ---==//
 //            
 //                                Ripple
 // 
@@ -16,10 +16,10 @@
 #ifndef RIPPLE_TESTS_CONTAINER_DEVICE_LOAD_BOUNDARY_TESTS_HPP
 #define RIPPLE_TESTS_CONTAINER_DEVICE_LOAD_BOUNDARY_TESTS_HPP
 
-#include <ripple/boundary/load_boundary.hpp>
-#include <ripple/boundary/boundary_loader.hpp>
-#include <ripple/container/device_block.hpp>
-#include <ripple/functional/invoke.hpp>
+#include <ripple/core/boundary/load_boundary.hpp>
+#include <ripple/core/boundary/boundary_loader.hpp>
+#include <ripple/core/container/device_block.hpp>
+#include <ripple/core/functional/invoke.hpp>
 #include <gtest/gtest.h>
 
 //==--- [NOTE] -------------------------------------------------------------==//

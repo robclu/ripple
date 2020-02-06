@@ -1,4 +1,4 @@
-//==--- ripple/tests/multidim/offset_to_tests.hpp ---------- -*- C++ -*- ---==//
+//==--- ripple/core/tests/multidim/offset_to_tests.hpp ---------- -*- C++ -*- ---==//
 //            
 //                                Ripple
 // 
@@ -17,7 +17,7 @@
 #ifndef RIPPLE_TESTS_MULTIDIM_OFFSET_TO_TESTS_HPP
 #define RIPPLE_TESTS_MULTIDIM_OFFSET_TO_TESTS_HPP
 
-#include <ripple/multidim/offset_to.hpp>
+#include <ripple/core/multidim/offset_to.hpp>
 
 constexpr auto size_x         = std::size_t{20};
 constexpr auto size_y         = std::size_t{30};

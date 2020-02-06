@@ -1,4 +1,4 @@
-//==--- ripple/tests/storage/owned_storage_tests.hpp ---------*- C++ -*- ---==//
+//==--- ripple/core/tests/storage/owned_storage_tests.hpp ---------*- C++ -*- ---==//
 //            
 //                                Ripple
 // 
@@ -16,7 +16,7 @@
 #ifndef RIPPLE_TESTS_OWNED_STORAGE_TESTS_HPP
 #define RIPPLE_TESTS_OWNED_STORAGE_TESTS_HPP
 
-#include <ripple/storage/owned_storage.hpp>
+#include <ripple/core/storage/owned_storage.hpp>
 
 TEST(storage_owned_storage, can_get_number_of_components_for_types) {
   using e_3i_t      = ripple::StorageElement<int, 3>;

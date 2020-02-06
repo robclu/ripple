@@ -1,4 +1,4 @@
-//==--- ripple/tests/storage/strided_storage_tests.hpp -------*- C++ -*- ---==//
+//==--- ripple/core/tests/storage/strided_storage_tests.hpp -------*- C++ -*- ---==//
 //            
 //                                Ripple
 // 
@@ -16,8 +16,8 @@
 #ifndef RIPPLE_TESTS_STRIDED_STORAGE_TESTS_HPP
 #define RIPPLE_TESTS_STRIDED_STORAGE_TESTS_HPP
 
-#include <ripple/storage/strided_storage_view.hpp>
-#include <ripple/utility/dim.hpp>
+#include <ripple/core/storage/strided_storage_view.hpp>
+#include <ripple/core/utility/dim.hpp>
 
 TEST(storage_strided_storage_view, can_get_number_of_components_for_types) {
   using e_3i_t      = ripple::StorageElement<int, 3>;

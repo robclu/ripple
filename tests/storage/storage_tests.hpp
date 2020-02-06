@@ -1,4 +1,4 @@
-//==--- ripple/tests/storage/storage_tests.hpp ------------- -*- C++ -*- ---==//
+//==--- ripple/core/tests/storage/storage_tests.hpp ------------- -*- C++ -*- ---==//
 //            
 //                                Ripple
 // 

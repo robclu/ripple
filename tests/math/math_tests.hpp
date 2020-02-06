@@ -1,4 +1,4 @@
-//==--- ripple/tests/math/math_tests.hpp ------------------- -*- C++ -*- ---==//
+//==--- ripple/core/tests/math/math_tests.hpp ------------------- -*- C++ -*- ---==//
 //            
 //                                Ripple
 // 
@@ -16,7 +16,7 @@
 #ifndef RIPPLE_TESTS_MATH_TESTS_HPP
 #define RIPPLE_TESTS_MATH_TESTS_HPP
 
-#include <ripple/math/math.hpp>
+#include <ripple/core/math/math.hpp>
 #include <gtest/gtest.h>
 
 TEST(math_tests, sign_signed_int) {

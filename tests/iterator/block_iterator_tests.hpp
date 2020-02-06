@@ -1,4 +1,4 @@
-//==--- ripple/tests/iterator/blck_iterator_tests.hpp ------ -*- C++ -*- ---==//
+//==--- ripple/core/tests/iterator/blck_iterator_tests.hpp ------ -*- C++ -*- ---==//
 //            
 //                                Ripple
 // 
@@ -16,11 +16,11 @@
 #ifndef RIPPLE_TESTS_ITERATOR_BLOCK_ITERATOR_TESTS_HPP
 #define RIPPLE_TESTS_ITERATOR_BLOCK_ITERATOR_TESTS_HPP
 
-#include <ripple/container/host_block.hpp>
-#include <ripple/container/vec.hpp>
-#include <ripple/iterator/block_iterator.hpp>
-#include <ripple/storage/storage_descriptor.hpp>
-#include <ripple/storage/stridable_layout.hpp>
+#include <ripple/core/container/host_block.hpp>
+#include <ripple/core/container/vec.hpp>
+#include <ripple/core/iterator/block_iterator.hpp>
+#include <ripple/core/storage/storage_descriptor.hpp>
+#include <ripple/core/storage/stridable_layout.hpp>
 #include <gtest/gtest.h>
 
 // This is a test class for creating a class which can be stored in a strided

@@ -16,7 +16,7 @@
 #ifndef RIPPLE_TESTS_CONTAINER_BLOCK_MEMORY_PROPERTIES_TESTS_HPP
 #define RIPPLE_TESTS_CONTAINER_BLOCK_MEMORY_PROPERTIES_TESTS_HPP
 
-#include <ripple/container/block_memory_properties.hpp>
+#include <ripple/core/container/block_memory_properties.hpp>
 #include <gtest/gtest.h>
 
 TEST(container_block_memory_props, can_copy_memory_properties) {

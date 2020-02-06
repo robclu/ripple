@@ -16,8 +16,8 @@
 #ifndef RIPPLE_TESTS_MULTIDIM_DYNAMIC_MULTIDIM_SPACE_TESTS_HPP
 #define RIPPLE_TESTS_MULTIDIM_DYNAMIC_MULTIDIM_SPACE_TESTS_HPP
 
-#include <ripple/multidim/dynamic_multidim_space.hpp>
-#include <ripple/utility/dim.hpp>
+#include <ripple/core/multidim/dynamic_multidim_space.hpp>
+#include <ripple/core/utility/dim.hpp>
 #include <gtest/gtest.h>
 
 //==--- [no padding] -------------------------------------------------------==//

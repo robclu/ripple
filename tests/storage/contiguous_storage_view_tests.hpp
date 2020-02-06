@@ -16,7 +16,7 @@
 #ifndef RIPPLE_TESTS_CONTIGUOUS_STORAGE_VIEW_TESTS_HPP
 #define RIPPLE_TESTS_CONTIGUOUS_STORAGE_VIEW_TESTS_HPP
 
-#include <ripple/storage/contiguous_storage_view.hpp>
+#include <ripple/core/storage/contiguous_storage_view.hpp>
 
 //==--- [allocation size] --------------------------------------------------==//
 

@@ -1,4 +1,4 @@
-//==--- ripple/tests/alogithm/algorithm_tests_device.hpp --- -*- C++ -*- ---==//
+//==--- ripple/core/tests/alogithm/algorithm_tests_device.hpp --- -*- C++ -*- ---==//
 //            
 //                                Ripple
 // 

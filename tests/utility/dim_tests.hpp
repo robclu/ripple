@@ -1,4 +1,4 @@
-//==--- ripple/tests/utility/dim_tests.hpp ----------------- -*- C++ -*- ---==//
+//==--- ripple/core/tests/utility/dim_tests.hpp ----------------- -*- C++ -*- ---==//
 //            
 //                                Ripple
 // 
@@ -16,7 +16,7 @@
 #ifndef RIPPLE_TESTS_UTILITY_DIM_TESTS_HPP
 #define RIPPLE_TESTS_UTILITY_DIM_TESTS_HPP
 
-#include <ripple/utility/dim.hpp>
+#include <ripple/core/utility/dim.hpp>
 #include <gtest/gtest.h>
 
 

@@ -1,4 +1,4 @@
-//==--- ripple/tests/functional/invocable_tests.hpp -------- -*- C++ -*- ---==//
+//==--- ripple/core/tests/functional/invocable_tests.hpp -------- -*- C++ -*- ---==//
 //            
 //                                Ripple
 // 
@@ -16,7 +16,7 @@
 #ifndef RIPPLE_TESTS_FUNCTIONAL_INVOCABLE_TESTS_HPP
 #define RIPPLE_TESTS_FUNCTIONAL_INVOCABLE_TESTS_HPP
 
-#include <ripple/functional/invocable.hpp>
+#include <ripple/core/functional/invocable.hpp>
 #include <gtest/gtest.h>
 
 TEST(functional_invocable, can_store_lambda_and_invoke_it) {

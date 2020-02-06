@@ -1,4 +1,4 @@
-//==--- ripple/tests/boundary.cpp -------------------------- -*- C++ -*- ---==//
+//==--- ripple/core/tests/boundary.cpp -------------------------- -*- C++ -*- ---==//
 //            
 //                                Ripple
 // 

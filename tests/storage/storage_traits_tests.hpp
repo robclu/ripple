@@ -1,4 +1,4 @@
-//==--- ripple/tests/storage/storage_traits_tests.hpp --------*- C++ -*- ---==//
+//==--- ripple/core/tests/storage/storage_traits_tests.hpp --------*- C++ -*- ---==//
 //            
 //                                Ripple
 // 
@@ -16,11 +16,11 @@
 #ifndef RIPPLE_TESTS_STORAGE_STORAGE_TRAITS_TESTS_HPP
 #define RIPPLE_TESTS_STORAGE_STORAGE_TRAITS_TESTS_HPP
 
-#include <ripple/multidim/dynamic_multidim_space.hpp>
-#include <ripple/storage/storage_descriptor.hpp>
-#include <ripple/storage/storage_traits.hpp>
-#include <ripple/storage/stridable_layout.hpp>
-#include <ripple/utility/number.hpp>
+#include <ripple/core/multidim/dynamic_multidim_space.hpp>
+#include <ripple/core/storage/storage_descriptor.hpp>
+#include <ripple/core/storage/storage_traits.hpp>
+#include <ripple/core/storage/stridable_layout.hpp>
+#include <ripple/core/utility/number.hpp>
 #include <gtest/gtest.h>
 
 TEST(storage_storage_traits, can_determine_layout_types) {

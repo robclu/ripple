@@ -1,4 +1,4 @@
-#==--- ripple/tests/CMakeLists.txt ------------------------------------------==#
+#==--- ripple/core/tests/CMakeLists.txt ------------------------------------------==#
 #
 #                      Copyright (c) 2019 Rob Clucas
 #

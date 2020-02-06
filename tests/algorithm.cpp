@@ -1,4 +1,4 @@
-//==--- ripple/tests/algorithm.cpp ------------------------- -*- C++ -*- ---==//
+//==--- ripple/core/tests/algorithm.cpp ------------------------- -*- C++ -*- ---==//
 //            
 //                                Ripple
 // 

@@ -1,4 +1,4 @@
-//==--- ripple/tests/functional.cpp ------------------------ -*- C++ -*- ---==//
+//==--- ripple/core/tests/functional.cpp ------------------------ -*- C++ -*- ---==//
 //            
 //                                Ripple
 // 

@@ -1,4 +1,4 @@
-//==--- ripple/tests/container/vec_tests.cpp --------------- -*- C++ -*- ---==//
+//==--- ripple/core/tests/container/vec_tests.cpp --------------- -*- C++ -*- ---==//
 //            
 //                                Ripple
 // 
@@ -16,7 +16,7 @@
 #ifndef RIPPLE_TESTS_CONTAINER_VEC_TESTS_HPP
 #define RIPPLE_TESTS_CONTAINER_VEC_TESTS_HPP
 
-#include <ripple/container/vec.hpp>
+#include <ripple/core/container/vec.hpp>
 #include <gtest/gtest.h>
 
 TEST(container_vec, can_create_vec_default_constructor) {

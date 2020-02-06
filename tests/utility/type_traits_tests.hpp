@@ -1,4 +1,4 @@
-//==--- ripple/tests/utility/type_traits_tests.hpp --------- -*- C++ -*- ---==//
+//==--- ripple/core/tests/utility/type_traits_tests.hpp --------- -*- C++ -*- ---==//
 //            
 //                                Ripple
 // 
@@ -16,7 +16,7 @@
 #ifndef RIPPLE_TESTS_UTILITY_TYPE_TRAITS_TESTS_HPP
 #define RIPPLE_TESTS_UTILITY_TYPE_TRAITS_TESTS_HPP
 
-#include <ripple/utility/type_traits.hpp>
+#include <ripple/core/utility/type_traits.hpp>
 #include <gtest/gtest.h>
 
 TEST(utility_type_traits, all_arithmetic) {
@@ -129,8 +129,6 @@ TEST(utility_type_traits, can_get_arity_and_args_of_host_device_lambda) {
   EXPECT_TRUE(t1);
   EXPECT_TRUE(t2);
 }
-
-
 
 
 #endif // RIPPLE_TESTS_UTILITY_TYPE_TRAITS_TESTS_HPP
