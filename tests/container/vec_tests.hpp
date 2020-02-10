@@ -20,12 +20,12 @@
 #include <gtest/gtest.h>
 
 TEST(container_vec, can_create_vec_default_constructor) {
-  auto v = ripple::Vec<float, 3>();
+  auto v = ripple::vec_3d_t<float>();
   EXPECT_TRUE(v.size() == 3);
 }
 
 TEST(container_vec, can_create_vec_with_values_and_modify_them) {
-  auto v = ripple::Vec<int, 3>(1, 2, 3);
+  auto v = ripple::vec_3d_t<int>(1, 2, 3);
   EXPECT_EQ(v[0], 1);
   EXPECT_EQ(v[1], 2);
   EXPECT_EQ(v[2], 3);
@@ -38,7 +38,7 @@ TEST(container_vec, can_create_vec_with_values_and_modify_them) {
 }
 
 TEST(container_vec, can_create_set_and_modify_vec_values) {
-  auto v = ripple::Vec<int, 3>();
+  auto v = ripple::vec_3d_t<int>();
   v[0] = 1; v[1] = 2; v[2] = 3;
   EXPECT_EQ(v[0], 1);
   EXPECT_EQ(v[1], 2);
@@ -46,7 +46,7 @@ TEST(container_vec, can_create_set_and_modify_vec_values) {
 }
 
 TEST(container_vec, can_add_vecs) {
-  auto v = ripple::Vec<int, 3>(1, 2, 3);
+  auto v = ripple::vec_3d_t<int>(1, 2, 3);
   v += v;
   EXPECT_EQ(v[0], 2);
   EXPECT_EQ(v[1], 4);
@@ -54,7 +54,7 @@ TEST(container_vec, can_add_vecs) {
 }
 
 TEST(container_vec, can_add_vecs_and_scalar) {
-  auto v = ripple::Vec<int, 3>(1, 2, 3);
+  auto v = ripple::vec_3d_t<int>(1, 2, 3);
   v += 5;
   EXPECT_EQ(v[0], 6);
   EXPECT_EQ(v[1], 7);
@@ -72,7 +72,7 @@ TEST(container_vec, can_add_vecs_and_scalar) {
 }
 
 TEST(container_vec, can_subtract_vecs) {
-  auto v = ripple::Vec<int, 3>(1, 2, 3);
+  auto v = ripple::vec_3d_t<int>(1, 2, 3);
   v -= (v + v);
   EXPECT_EQ(v[0], -1);
   EXPECT_EQ(v[1], -2);
@@ -80,7 +80,7 @@ TEST(container_vec, can_subtract_vecs) {
 }
 
 TEST(container_vec, can_subtract_vecs_and_scalar) {
-  auto v = ripple::Vec<int, 3>(11, 12, 13);
+  auto v = ripple::vec_3d_t<int>(11, 12, 13);
   v -= 5;
   EXPECT_EQ(v[0], 6);
   EXPECT_EQ(v[1], 7);
@@ -106,7 +106,7 @@ TEST(container_vec, can_multiply_vecs) {
 }
 
 TEST(container_vec, can_multiply_vecs_and_scalar) {
-  auto v = ripple::Vec<int, 3>(1, 2, 3);
+  auto v = ripple::vec_3d_t<int>(1, 2, 3);
   v *= 5;
   EXPECT_EQ(v[0], 5);
   EXPECT_EQ(v[1], 10);
@@ -124,8 +124,8 @@ TEST(container_vec, can_multiply_vecs_and_scalar) {
 }
 
 TEST(container_vec, can_divide_vecs) {
-  auto u = ripple::Vec<int, 3>(2, 3, 4);
-  auto v = ripple::Vec<int, 3>(12, 21, 36);
+  auto u = ripple::vec_3d_t<int>(2, 3, 4);
+  auto v = ripple::vec_3d_t<int>(12, 21, 36);
   v /= u;
   EXPECT_EQ(v[0], 6);
   EXPECT_EQ(v[1], 7);
@@ -133,7 +133,7 @@ TEST(container_vec, can_divide_vecs) {
 }
 
 TEST(container_vec, can_divide_vecs_and_scalar) {
-  auto v = ripple::Vec<int, 3>(10, 20, 30);
+  auto v = ripple::vec_3d_t<int>(10, 20, 30);
   v /= 5;
   EXPECT_EQ(v[0], 2);
   EXPECT_EQ(v[1], 4);

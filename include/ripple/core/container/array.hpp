@@ -154,7 +154,6 @@ struct Array {
     return *impl();
   }
 
-
   /// Overload of operator- to subtract each element of array \p a from each
   /// element in this array, returning a new array with the same implementation
   /// type as the this array (if copyable), the second array (if copyable), or
@@ -193,7 +192,6 @@ struct Array {
   }
 
   //==--- [operator {*,*=} overloads] --------------------------------------==//
-
 
   /// Overload of operator*= to multiply each element of array \p a with each
   /// element of this array. If the sizes of the arrays are different, this will

@@ -17,9 +17,6 @@
 #ifndef RIPPLE_STORAGE_STRIDABLE_LAYOUT_HPP
 #define RIPPLE_STORAGE_STRIDABLE_LAYOUT_HPP
 
-#include "storage_layout.hpp"
-#include "storage_traits.hpp"
-
 namespace ripple {
 
 /// The StridableLayout class defines a static interface for classes to implement
@@ -36,4 +33,4 @@ struct StridableLayout {};
 
 } // namespace ripple
 
-#endif // RIPPLE_STORAGE_AUTO_LAYOUT_HPP
+#endif // RIPPLE_STORAGE_STRIDABLE_LAYOUT_HPP

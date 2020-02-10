@@ -18,7 +18,6 @@
 
 #include "detail/storage_traits_impl_.hpp"
 #include "layout_traits.hpp"
-#include "storage_element_traits.hpp"
 
 namespace ripple {
 
@@ -150,13 +149,6 @@ template <typename T>
 static constexpr auto is_storage_layout_v = 
   detail::IsStorageLayout<std::decay_t<T>>::value;
 
-/// Returns true if the type T is a StorageElement type, otherwise returns
-/// false.
-/// \tparam T The type to determine if is a StoageElement type.
-template <typename T>
-static constexpr auto is_storage_element_v = 
-  detail::IsStorageElement<std::decay_t<T>>::value;
-
 /// Returns true if the type T has template parameters and one of the template
 /// parameters is a StorageLayout type.
 ///
@@ -176,11 +168,6 @@ static constexpr auto storage_layout_kind_v =
   detail::StorageLayoutKind<T>::value;
 
 //==-- [aliases] -----------------------------------------------------------==//
-
-/// Alias for storage element traits.
-/// \tparam T The type to get the traits for.
-template <typename T>
-using storage_element_traits_t = StorageElementTraits<std::decay_t<T>>;
 
 /// Alias for storage layout traits.
 /// \tparam T The type to get the traits for.

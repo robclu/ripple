@@ -16,7 +16,9 @@
 #ifndef RIPPLE_STORAGE_STORAGE_ELEMENT_TRAITS_HPP
 #define RIPPLE_STORAGE_STORAGE_ELEMENT_TRAITS_HPP
 
+#include "storage_layout.hpp"
 #include <ripple/core/utility/portability.hpp>
+
 namespace ripple {
 
 /// The StorageElement class defines a class which can specify a type to store,
@@ -62,8 +64,98 @@ struct StorageElementTraits<StorageElement<T, Values>> {
   /// Defines the alignment requirement for the storage.
   static constexpr auto align_size   = alignof(value_t);
 };
-  
 
+
+
+//==--- [is storage element] -----------------------------------------------==//
+
+namespace detail {
+
+/// Defines a class to determine of the type T is a layout type.
+/// \tparam T The type to determine if is a storage layout type.
+template <typename T>
+struct IsStorageLayout : std::false_type {
+  /// Defines that the type is not a storage layout type.
+  static constexpr auto value = false;
+};
+
+/// Specialization for the case of the IsStorageLayout struct for the case the
+/// type to check is a StorageLayout.
+/// \tparam Layout The kind of the layout for the storage.
+template <LayoutKind Layout>
+struct IsStorageLayout<StorageLayout<Layout>> : std::true_type {
+  /// Defines that the type is a storage layout type.
+  static constexpr auto value = true;
+};
+
+/// Defines a class to determine of the type T is a storage element type.
+/// \tparam T The type to determine if is a storage element type.
+template <typename T>
+struct IsStorageElement : std::false_type {
+  /// Defines that the type is not a storage element type.
+  static constexpr auto value = false;
+};
+
+/// Specialization for the case of the IsStorageElement struct for the case the
+/// type to check is a StorageElement.
+/// \tparam T     The type for the element.
+/// \tparam Value The number of values for the type.
+template <typename T, std::size_t Values>
+struct IsStorageElement<StorageElement<T, Values>> : std::true_type {
+  /// Defines that the type is a storage element type.
+  static constexpr auto value = true;
+};
+
+
+/// Defines a struct to determine if the type T has a storage layout type
+/// template parameter.
+/// \tparam T The type to determine if has a storage layout parameter.
+template <typename T>
+struct HasStorageLayout {
+  /// Returns that the type does not have a storage layout paramter.
+  static constexpr auto value = false;
+};
+
+/// Specialization for the case that the type has template parameters.
+/// \tparam T  The type to determine if has a storage layout parameter.
+/// \tparam Ts The types for the type T.
+template <template <class...> typename T, typename... Ts>
+struct HasStorageLayout<T<Ts...>> {
+  /// Returns that the type does not have a storage layout paramter.
+  static constexpr auto value = std::disjunction_v<IsStorageLayout<Ts>...>;
+};
+
+} // namespace detail
+
+/// Returns true if the type T is a StorageElement type, otherwise returns
+/// false.
+/// \tparam T The type to determine if is a StoageElement type.
+template <typename T>
+static constexpr auto is_storage_element_v = 
+  detail::IsStorageElement<std::decay_t<T>>::value;
+
+//==-- [aliases] -----------------------------------------------------------==//
+
+/// Alias for storage element traits.
+/// \tparam T The type to get the traits for.
+template <typename T>
+using storage_element_traits_t = StorageElementTraits<std::decay_t<T>>;
+
+//==--- [enables] ----------------------------------------------------------==//
+
+/// Define a valid type if the type T is a StorageElement, otherwise does not
+/// define a valid type.
+/// \tparam T The type to base the enable on.
+template <typename T>
+using storage_element_enable_t = std::enable_if_t<is_storage_element_v<T>, int>;
+
+/// Define a valid type if the type T is not a StorageElement, otherwise does
+/// not define a valid type.
+/// \tparam T The type to base the enable on.
+template <typename T>
+using non_storage_element_enable_t =
+  std::enable_if_t<!is_storage_element_v<T>, int>;
+  
 } // namespace ripple
 
 #endif // RIPPLE_STORAGE_STORAGE_ELEMENT_TRAITS_HPP

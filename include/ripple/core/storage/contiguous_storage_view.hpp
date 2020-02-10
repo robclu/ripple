@@ -17,6 +17,7 @@
 #ifndef RIPPLE_STORAGE_CONTIGUOUS_STORAGE_VIEW_HPP
 #define RIPPLE_STORAGE_CONTIGUOUS_STORAGE_VIEW_HPP
 
+#include "owned_storage.hpp"
 #include "storage_traits.hpp"
 #include "storage_accessor.hpp"
 

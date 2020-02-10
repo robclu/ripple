@@ -16,6 +16,7 @@
 #ifndef RIPPLE_CONTAINER_ARRAY_TRAITS_HPP
 #define RIPPLE_CONTAINER_ARRAY_TRAITS_HPP
 
+#include <ripple/core/utility/number.hpp>
 #include <ripple/core/utility/type_traits.hpp>
 
 namespace ripple {
@@ -29,9 +30,20 @@ namespace ripple {
 template <typename Impl> struct Array;
 
 /// The Vec class implements the Array interface to store data in AoS format.
-/// \tparam T     The type of the data for the vector.
-/// \tparam Size  The size of the vector.
-template <typename T, std::size_t S> struct Vec;
+/// \tparam T      The type of the data for the vector.
+/// \tparam Size   The size of the vector.
+/// \tparam Layout The storage layout of the vector.
+template <
+  typename T   ,
+  typename Size, 
+  typename Layout = contiguous_owned_t
+> struct VecImpl;
+
+template <typename T, size_t Size>
+using Vec = VecImpl<T, Num<Size>>;
+
+template <typename T, size_t Size, typename Layout>
+using Vector = VecImpl<T, Num<Size>, Layout>;
 
 //==--- [traits] -----------------------------------------------------------==//
 
@@ -41,34 +53,33 @@ template <typename T, std::size_t S> struct Vec;
 template <typename T>
 struct ArrayTraits {
   /// The value type for the array.
-  using value_t       = std::decay_t<T>;
-  /// The type used to store data of type T in an array.
-  using storage_t     = Vec<T, 1>;
+  using value_t  = std::decay_t<T>;
+  /// Defines the type of the layout for the array.
+  using layout_t = contiguous_owned_t;
   /// Defines the type of the array.
-  using array_t       = Vec<T, 1>;
-  
+  using array_t = VecImpl<value_t, Num<1>, layout_t>;
+
   /// Returns the number of elements in the array.  
-  static constexpr auto size            = 1;
-  /// Returns the number of bytes required to allocate an element.  
-  static constexpr auto elem_alloc_size = sizeof(value_t);
+  static constexpr auto size = 1;
 };
 
 /// Specialization of the ArrayTraits class for the Vec class.
-/// \tparam T    The type of the data for the vec.
-/// \tparam Size The size  of the vector.
-template <typename T, std::size_t Size>
-struct ArrayTraits<Vec<T, Size>> {
+/// \tparam T      The type of the data for the vec.
+/// \tparam Size   The size  of the vector.
+/// \tparam Layout The storage layout of the vector.
+template <typename T, typename Size, typename Layout>
+struct ArrayTraits<VecImpl<T, Size, Layout>> {
+ private:
+ public:
   /// The value type stored in the vector.
-  using value_t   = std::decay_t<T>;
-  /// The type to use to store the vector data in an array when not SoA.
-  using storage_t = value_t;
+  using value_t  = std::decay_t<T>;
   /// The array type.
-  using array_t   = Vec<T, Size>;
+  using array_t  = VecImpl<T, Size, Layout>;
+  /// Defines the type of the layout for the array.
+  using layout_t = Layout;
 
   /// Returns the number of elements in the array.  
-  static constexpr auto size            = Size;
-  /// Returns the number of bytes required to allocate a Vec element.  
-  static constexpr auto elem_alloc_size = sizeof(value_t) * size;
+  static constexpr auto size = Size::value;
 };
 
 /// Specialization of the ArrayTraits class for the case that it's celled using
@@ -82,19 +93,46 @@ private:
   using impl_traits_t = ArrayTraits<Impl>;
 public:
   /// Defines the value type of the array.
-  using value_t   = typename impl_traits_t::value_t;
-  /// Defines the storage type for the array.
-  using storage_t = typename impl_traits_t::storage_t;
+  using value_t  = typename impl_traits_t::value_t;
   /// The array type.
-  using array_t   = typename impl_traits_t::array_t;
+  using array_t  = typename impl_traits_t::array_t;
+  /// Defines the type of the layout for the implementation.
+  using layout_t = typename impl_traits_t::layout_t;
 
   /// Returns the number of elements in the array.  
-  static constexpr auto size            = impl_traits_t::size;
-  /// Returns the number of bytes required to allocate an element.
-  static constexpr auto elem_alloc_size = impl_traits_t::elem_alloc_size;
+  static constexpr auto size = impl_traits_t::size;
 };
 
 //==--- [aliases & constants] ----------------------------------------------==//
+
+/// Alias for a vector to store data of type T with Size elements.
+/// \tparam T     The type to store in the vector.
+/// \tparam Size  The size of the vector.
+template <typename T, size_t Size>
+using Vec = VecImpl<T, Num<Size>>;
+
+/// Alias for a vector to store data of type T with Size elements with the given
+/// Layout.
+/// \tparam T      The type to store in the vector.
+/// \tparam Size   The size of the vector.
+/// \tparam Layout The layout to store the vector data.
+template <typename T, size_t Size, typename Layout>
+using Vector = VecImpl<T, Num<Size>, Layout>;
+
+/// Defines an alias to create a contiguous 1D vector of type T.
+/// \tparam T The type of the data for the vector.
+template <typename T>
+using vec_1d_t = VecImpl<T, Num<1>>;
+
+/// Defines an alias to create a contiguous 2D vector of type T.
+/// \tparam T The type of the data for the vector.
+template <typename T>
+using vec_2d_t = VecImpl<T, Num<2>>;
+
+/// Defines an alias to create a contiguous 3D vector of type T.
+/// \tparam T The type of the data for the vector.
+template <typename T>
+using vec_3d_t = VecImpl<T, Num<3>>;
 
 /// Gets the array traits for the type T.
 /// \tparam T The type to get the array traits for.
@@ -123,12 +161,15 @@ static constexpr bool is_array_v =
 template <
   typename ImplA,
   typename ImplB,
-  typename StorageA  = typename array_traits_t<ImplA>::storage_t,
-  typename StorageB  = typename array_traits_t<ImplB>::storage_t,
-  bool     ValidityA = !std::is_pointer_v<StorageA>,
-  bool     ValidityB = !std::is_pointer_v<StorageB>,
-  typename Fallback  =
-    Vec<typename array_traits_t<ImplA>::value_t, array_traits_t<ImplA>::size>
+  typename LayoutA   = typename array_traits_t<ImplA>::layout_t,
+  typename LayoutB   = typename array_traits_t<ImplB>::layout_t,
+  bool     ValidityA = std::is_same_v<LayoutA, contiguous_owned_t>,
+  bool     ValidityB = std::is_same_v<LayoutB, contiguous_owned_t>,
+  typename Fallback  = VecImpl<
+    typename array_traits_t<ImplA>::value_t, 
+    Num<array_traits_t<ImplA>::size>,
+    contiguous_owned_t
+  >
 >
 using array_impl_t = std::conditional_t<
   ValidityA, ImplA, std::conditional_t<ValidityB, ImplB, Fallback>   
