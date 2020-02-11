@@ -38,7 +38,7 @@ ripple_include_directories(
 )
 ripple_library_directories(${CUDA_LIB_DIRS} ${GTEST_LIB_DIRS})
 
-#==--- [tests] --------------------------------------------------------------==#
+#===== [core tests] ---------------------------------------------------------==#
 
 ripple_add_executable(
   all_device_tests ${ripple_SOURCE_DIR}/tests/all_device.cu
@@ -182,7 +182,14 @@ ripple_target_link_libraries(
   utility_tests ${GTEST_BOTH_LIBRARIES}
 )
 
-#==--------------------------------------------------------------------------==#
+#===== [fvm tests] ----------------------------------------------------------==#
+
+ripple_add_executable(
+  state_tests ${ripple_SOURCE_DIR}/tests/state.cpp
+)
+ripple_target_link_libraries(
+  state_tests ${GTEST_BOTH_LIBRARIES}
+)
 
 # This creates all the targets, and is required to be called to enable the
 # functionality which allows both CPU and GPU code to be compiled with either

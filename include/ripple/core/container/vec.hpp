@@ -47,11 +47,11 @@ struct VecImpl : public Array<VecImpl<T, Size, Layout>>  {
   /// Defines the type of the descriptor for the storage.
   using descriptor_t = StorageDescriptor<Layout, StorageElement<T, elements>>;
   /// Defines the storage type for the array.
-  using storage_t   = typename descriptor_t::storage_t;
+  using storage_t    = typename descriptor_t::storage_t;
   /// Defines the value type of the array data.
-  using value_t     = std::decay_t<T>;
+  using value_t      = std::decay_t<T>;
   /// Defines the type of this vector.
-  using self_t      = VecImpl<T, Size, Layout>;
+  using self_t       = VecImpl<T, Size, Layout>;
 
  public:
   //==--- [construction] ---------------------------------------------------==//
@@ -145,6 +145,7 @@ struct VecImpl : public Array<VecImpl<T, Size, Layout>>  {
   /// \tparam I The index of the element to get.
   template <size_t I>
   ripple_host_device constexpr auto at() const -> const value_t& {
+    static_assert((I < elements), "Compile time index out of range!");
     return _storage.template get<0, I>();
   }
 
@@ -153,6 +154,7 @@ struct VecImpl : public Array<VecImpl<T, Size, Layout>>  {
   /// \tparam I The index of the element to get.
   template <size_t I>
   ripple_host_device constexpr auto at() -> value_t& {
+    static_assert((I < elements), "Compile time index out of range!");
     return _storage.template get<0, I>();
   }
    

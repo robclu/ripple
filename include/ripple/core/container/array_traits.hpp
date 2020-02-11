@@ -16,6 +16,7 @@
 #ifndef RIPPLE_CONTAINER_ARRAY_TRAITS_HPP
 #define RIPPLE_CONTAINER_ARRAY_TRAITS_HPP
 
+#include <ripple/core/storage/storage_layout.hpp>
 #include <ripple/core/utility/number.hpp>
 #include <ripple/core/utility/type_traits.hpp>
 
@@ -37,13 +38,9 @@ template <
   typename T   ,
   typename Size, 
   typename Layout = contiguous_owned_t
-> struct VecImpl;
+> 
+struct VecImpl;
 
-template <typename T, size_t Size>
-using Vec = VecImpl<T, Num<Size>>;
-
-template <typename T, size_t Size, typename Layout>
-using Vector = VecImpl<T, Num<Size>, Layout>;
 
 //==--- [traits] -----------------------------------------------------------==//
 
@@ -69,7 +66,6 @@ struct ArrayTraits {
 /// \tparam Layout The storage layout of the vector.
 template <typename T, typename Size, typename Layout>
 struct ArrayTraits<VecImpl<T, Size, Layout>> {
- private:
  public:
   /// The value type stored in the vector.
   using value_t  = std::decay_t<T>;
