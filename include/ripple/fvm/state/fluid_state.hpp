@@ -273,7 +273,7 @@ class FluidState : public Array<FluidState<T, Dims, Layout>> {
   ripple_host_device auto set_pressure(value_t p, const Eos<EosImpl>& eos)
   -> void {
     const auto rho_v_sq = rho_v_squared_sum();
-    energy() = p / (eos.adi() - _1) + value_t{0.5} * rho_v_sq / rho();
+    energy() = p / (eos.adi() - _1) + (value_t{0.5} * rho_v_sq / rho());
   }
 
   //==--- [flux] -----------------------------------------------------------==//
@@ -288,14 +288,18 @@ class FluidState : public Array<FluidState<T, Dims, Layout>> {
   -> flux_vec_t {
     flux_vec_t f;
     const auto p = pressure(eos);
+    const auto v = rho_v(dim) / rho();
 
     f.template at<0>() = rho_v(dim);
-    f.template at<1>() = rho_v(dim) * (energy() + p);
-    f[v_offset + dim]  = rho_v(dim) * rho_v(dim) + p;
+    f.template at<1>() = v * (energy() + p);
+    f[v_offset + dim]  = rho_v(dim) * v + p;
 
+    // Set the remaining velocity components:
+    size_t shift = 0;
     unrolled_for<dims - 1>([&] (auto d) {
-      const auto dd    = (d == dim ? d + 1 : d);
-      f[v_offset + dd] = rho_v(dd) + rho_v(dim);
+      if (d == dim) shift++;
+
+      f[v_offset + d + shift] = rho_v(d + shift) * v;
     });
     return f;
   }
@@ -308,7 +312,7 @@ class FluidState : public Array<FluidState<T, Dims, Layout>> {
     auto v_sq = value_t{0};
     unrolled_for<dims>([&] (auto d) {
       constexpr auto dim = size_t{d};
-      v_sq += rho_v<dim>() + rho_v<dim>();
+      v_sq += rho_v<dim>() * rho_v<dim>();
     });
     return v_sq;
   }
