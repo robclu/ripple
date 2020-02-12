@@ -17,6 +17,7 @@
 #define RIPPLE_FV_STATE_FLUID_STATE_HPP
 
 #include "state_traits.hpp"
+#include <ripple/fvm/eos/eos.hpp>
 #include <ripple/core/container/array.hpp>
 #include <ripple/core/container/vec.hpp>
 #include <ripple/core/storage/storage_descriptor.hpp>
@@ -56,11 +57,15 @@ class FluidState : public Array<FluidState<T, Dims, Layout>> {
   static constexpr auto elements = dims + 2;
   /// Defines the offset to the velocity components.
   static constexpr auto v_offset = 2;
+  /// Defines a constexpt value of 1 which is used throught the state.
+  static constexpr auto _1       = T{1};
 
   //==--- [aliases] --------------------------------------------------------==//
   
   /// Defines the type of this state.
   using self_t       = FluidState;
+  /// Defines the value type of the state data.
+  using value_t      = T;
   /// Defines the type for the storage descriptor for the state. The descriptor
   /// needs to store two elements for the density and the pressure, and dims
   /// elements for the velocity componenets.
@@ -129,14 +134,14 @@ class FluidState : public Array<FluidState<T, Dims, Layout>> {
   /// Overload of operator[] to enable array functionality on the state. This
   /// returns a reference to the \p ith stored element.
   /// \param i The index of the element to return.
-  ripple_host_device auto operator[](size_t i) -> T& {
+  ripple_host_device auto operator[](size_t i) -> value_t& {
     return _storage.template get<0>(i);
   }
 
   /// Overload of operator[] to enable array functionality on the state. This
   /// returns a constant reference to the \p ith stored element.
   /// \param i The index of the element to return.
-  ripple_host_device auto operator[](size_t i) const -> const T& {
+  ripple_host_device auto operator[](size_t i) const -> const value_t& {
     return _storage.template get<0>(i);
   }
 
@@ -150,12 +155,12 @@ class FluidState : public Array<FluidState<T, Dims, Layout>> {
   //==--- [density] --------------------------------------------------------==//
   
   /// Returns a reference to the density of the fluid.
-  ripple_host_device auto rho() -> T& {
+  ripple_host_device auto rho() -> value_t& {
     return _storage.template get<0, 0>();
   }
 
   /// Returns a const reference to the density of the fluid.
-  ripple_host_device auto rho() const -> const T& {
+  ripple_host_device auto rho() const -> const value_t& {
     return _storage.template get<0, 0>();
   }
 
@@ -166,7 +171,7 @@ class FluidState : public Array<FluidState<T, Dims, Layout>> {
   /// \param  dim The dimension to get the component for.
   /// \tparam Dim The type of the dimension specifier.
   template <typename Dim>
-  ripple_host_device auto rho_v(Dim&& dim) -> T& {
+  ripple_host_device auto rho_v(Dim&& dim) -> value_t& {
     return _storage.template get<0>(v_offset + static_cast<size_t>(dim));
   }
 
@@ -175,7 +180,7 @@ class FluidState : public Array<FluidState<T, Dims, Layout>> {
   /// \param  dim The index of the dimension for the component for.
   /// \tparam Dim The type of the dimension specifier.
   template <typename Dim>
-  ripple_host_device auto rho_v(Dim&& dim) const -> const T& {
+  ripple_host_device auto rho_v(Dim&& dim) const -> const value_t& {
     return _storage.template get<0>(v_offset + static_cast<size_t>(dim));
   }
 
@@ -184,7 +189,7 @@ class FluidState : public Array<FluidState<T, Dims, Layout>> {
   /// the component at compile time.
   /// \tparam Dim The dimension to get the velocity for.
   template <size_t Dim>
-  ripple_host_device auto rho_v() -> T& {
+  ripple_host_device auto rho_v() -> value_t& {
     static_assert((Dim < dims), "Dimension out of range!");
     return _storage.template get<0, v_offset + Dim>();
   }
@@ -194,7 +199,7 @@ class FluidState : public Array<FluidState<T, Dims, Layout>> {
   /// offset to the component at compile time.
   /// \tparam Dim The dimension to get the velocity for.
   template <size_t Dim>
-  ripple_host_device auto rho_v() const -> const T& {
+  ripple_host_device auto rho_v() const -> const value_t& {
     static_assert((Dim < dims), "Dimension out of range!");
     return _storage.template get<0, v_offset + Dim>();
   }
@@ -203,7 +208,7 @@ class FluidState : public Array<FluidState<T, Dims, Layout>> {
   /// \param  dim The dimension to get the velocity for.
   /// \tparam Dim The type of the dimension specifier.
   template <typename Dim>
-  ripple_host_device auto v(Dim&& dim) const -> T {
+  ripple_host_device auto v(Dim&& dim) const -> value_t {
     return rho_v(static_cast<size_t>(dim)) / rho();
   }
 
@@ -211,7 +216,7 @@ class FluidState : public Array<FluidState<T, Dims, Layout>> {
   /// computes the offset to the velocity component at compile time.
   /// \tparam Dim The dimension to get the velocity for.
   template <size_t Dim>
-  ripple_host_device auto v() const -> T {
+  ripple_host_device auto v() const -> value_t {
     return rho_v<Dim>()/ rho();
   }
 
@@ -220,7 +225,7 @@ class FluidState : public Array<FluidState<T, Dims, Layout>> {
   /// \param  value The value to set the velocity to.
   /// \tparam Dim   The type of the dimension specifier.
   template <typename Dim>
-  ripple_host_device auto set_v(Dim&& dim, T value) -> void {
+  ripple_host_device auto set_v(Dim&& dim, value_t value) -> void {
     rho_v(static_cast<size_t>(dim)) = value * rho();
   }
 
@@ -229,19 +234,19 @@ class FluidState : public Array<FluidState<T, Dims, Layout>> {
   /// \param  value The value to set the velocity to.
   /// \tparam Dim   The dimension to set the velocity in.
   template <size_t Dim>
-  ripple_host_device auto set_v(T value) -> void {
+  ripple_host_device auto set_v(value_t value) -> void {
     rho_v<Dim>() = value * rho();
   }
 
   //==--- [energy] ---------------------------------------------------------==//
  
   /// Returns a reference to the energy of the fluid. 
-  ripple_host_device auto energy() -> T& {
+  ripple_host_device auto energy() -> value_t& {
     return _storage.template get<0, 1>();
   }
 
   /// Returns a constant reference to the energy of the fluid.
-  ripple_host_device auto energy() const -> const T& {
+  ripple_host_device auto energy() const -> const value_t& {
     return _storage.template get<0, 1>();
   }
 
@@ -251,23 +256,62 @@ class FluidState : public Array<FluidState<T, Dims, Layout>> {
   /// for the fluid.
   /// \param  eos     The equation of state to use to compute the pressure.
   /// \tparam EosImpl The implementation of the equation of state interface.
-  //template <typename EosImpl>
-  //ripple_host_device auto pressure(const Eos<EosImpl>& eos) const -> T {
-  //
-  //}
+  template <typename EosImpl>
+  ripple_host_device auto pressure(const Eos<EosImpl>& eos) const -> value_t {
+    auto rho_v_sq = rho_v_squared_sum();
+    return (eos.adi() - _1) * (energy() - value_t{0.5} * rho_v_sq / rho());
+
+  }
+
+  /// Sets the pressure of the state. Since the pressure is not stored, this
+  /// computes the energy required for the state to have the given pressure \p
+  /// p.
+  /// \param  p       The value of the pressure for the state.
+  /// \param  eos     The equation of state to use to compute the pressure.
+  /// \tparam EosImpl The implementation of the equation of state interface.
+  template <typename EosImpl>
+  ripple_host_device auto set_pressure(value_t p, const Eos<EosImpl>& eos)
+  -> void {
+    const auto rho_v_sq = rho_v_squared_sum();
+    energy() = p / (eos.adi() - _1) + value_t{0.5} * rho_v_sq / rho();
+  }
 
   //==--- [flux] -----------------------------------------------------------==//
   
   /// Returns the flux for the state, in dimension \p dim.
-  /// \param  dim The dimension to get the flux in.
-  /// \tparam Dim The type of the dimension specifier.
-  template <typename Dim>
-  ripple_host_device auto flux(Dim&& dim) const -> flux_vec_t {
+  /// \param  eos     The equation of state to use.
+  /// \param  dim     The dimension to get the flux in.
+  /// \tparam EosImpl The implementation of the eqaution of state.
+  /// \tparam Dim     The type of the dimension specifier.
+  template <typename EosImpl, typename Dim>
+  ripple_host_device auto flux(const Eos<EosImpl>& eos, Dim&& dim) const 
+  -> flux_vec_t {
+    flux_vec_t f;
+    const auto p = pressure(eos);
 
+    f.template at<0>() = rho_v(dim);
+    f.template at<1>() = rho_v(dim) * (energy() + p);
+    f[v_offset + dim]  = rho_v(dim) * rho_v(dim) + p;
+
+    unrolled_for<dims - 1>([&] (auto d) {
+      const auto dd    = (d == dim ? d + 1 : d);
+      f[v_offset + dd] = rho_v(dd) + rho_v(dim);
+    });
+    return f;
   }
   
  private:
   storage_t _storage; //!< Storage for the state data.
+
+  /// Returns the sum of the rho_v components squared.
+  ripple_host_device auto rho_v_squared_sum() const -> value_t {
+    auto v_sq = value_t{0};
+    unrolled_for<dims>([&] (auto d) {
+      constexpr auto dim = size_t{d};
+      v_sq += rho_v<dim>() + rho_v<dim>();
+    });
+    return v_sq;
+  }
 };
 
 } // namespace ripple::fv

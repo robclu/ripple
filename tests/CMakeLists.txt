@@ -185,6 +185,13 @@ ripple_target_link_libraries(
 #===== [fvm tests] ----------------------------------------------------------==#
 
 ripple_add_executable(
+  eos_tests ${ripple_SOURCE_DIR}/tests/eos.cpp
+)
+ripple_target_link_libraries(
+  eos_tests ${GTEST_BOTH_LIBRARIES}
+)
+
+ripple_add_executable(
   state_tests ${ripple_SOURCE_DIR}/tests/state.cpp
 )
 ripple_target_link_libraries(
