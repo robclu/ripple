@@ -16,7 +16,7 @@
 #ifndef RIPPLE_FV_STATE_FLUID_STATE_HPP
 #define RIPPLE_FV_STATE_FLUID_STATE_HPP
 
-#include "state_traits.hpp"
+#include "state.hpp"
 #include <ripple/fvm/eos/eos.hpp>
 #include <ripple/core/container/array.hpp>
 #include <ripple/core/container/vec.hpp>
@@ -48,7 +48,9 @@ namespace ripple::fv {
 /// \tparam Dims   The number of dimensions for the fluid.
 /// \tparam Layout The layout type for the data.
 template <typename T, typename Dims, typename Layout>
-class FluidState : public Array<FluidState<T, Dims, Layout>> {
+class FluidState : 
+  public Array<FluidState<T, Dims, Layout>>,
+  public State<FluidState<T, Dims, Layout>> {
   //==--- [constants] ------------------------------------------------------==//
   
   /// Defines the number of dimensions for the state.
@@ -64,8 +66,10 @@ class FluidState : public Array<FluidState<T, Dims, Layout>> {
   
   /// Defines the type of this state.
   using self_t       = FluidState;
+  /// Defines the type of the traits for the state.
+  using traits_t     = StateTraits<self_t>;
   /// Defines the value type of the state data.
-  using value_t      = T;
+  using value_t      = typename traits_t::value_t;
   /// Defines the type for the storage descriptor for the state. The descriptor
   /// needs to store two elements for the density and the pressure, and dims
   /// elements for the velocity componenets.
@@ -77,7 +81,7 @@ class FluidState : public Array<FluidState<T, Dims, Layout>> {
   //==--- [aliases] --------------------------------------------------------==//
 
   /// Defines the type of the flux vector.
-  using flux_vec_t = Vector<T, elements, contiguous_owned_t>;
+  using flux_vec_t = typename traits_t::flux_vec_t;
 
   //==--- [construction] ---------------------------------------------------==//
   
