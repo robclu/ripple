@@ -88,6 +88,13 @@ struct StateTraits<State<Impl>> {
   using flux_vec_t          = typename traits_t::flux_vec_t;
 };
 
+//==--- [aliases] ----------------------------------------------------------==//
+
+/// Alias for the traits of the type T, after decaying the type.
+/// \tparam T The type to get the state traits for.
+template <typename T>
+using state_traits_t = StateTraits<std::decay_t<T>>;
+
 } // namespace fv
 
 /// Specialization of the ArrayTraits for a fluid state.

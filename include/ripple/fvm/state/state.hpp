@@ -181,6 +181,22 @@ class State {
   -> flux_vec_t {
     return impl()->flux(eos, std::forward<Dim>(dim));
   }
+
+  //==--- [direct access] --------------------------------------------------==//
+
+  /// Overload of operator[] to enable array functionality on the state. This
+  /// returns a reference to the \p ith stored element.
+  /// \param i The index of the element to return.
+  ripple_host_device auto operator[](size_t i) -> value_t& {
+    return impl()->operator[](i);
+  }
+
+  /// Overload of operator[] to enable array functionality on the state. This
+  /// returns a constant reference to the \p ith stored element.
+  /// \param i The index of the element to return.
+  ripple_host_device auto operator[](size_t i) const -> const value_t& {
+    return impl()->operator[](i);
+  }
 };
 
 } // namespace ripple::fv

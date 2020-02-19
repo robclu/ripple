@@ -18,5 +18,6 @@
 
 #include "fluid_state_tests.hpp"
 #include "state_element_tests.hpp"
+#include "state_initializer_tests.hpp"
 
 #endif // RIPPLE_TESTS_STATE_STATE_TESTS_HPP

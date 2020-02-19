@@ -43,6 +43,34 @@ struct StateElement {
   }
 };
 
+namespace detail {
+
+/// Class to determine if the type T is a StateElement type. This is the
+/// default implementation for the case that the type T is not a state element.
+/// \tparam T The type to determine if is a state element.
+template <typename T>
+struct IsStateElement {
+  /// Returns that the type is not a state element type.
+  static constexpr auto value = false;
+};
+
+/// Specialization for a StateElement type.
+/// \tparam Char  The type of the characters for the element name.
+/// \tparam Chars The characters which name the element.
+template <typename Char, Char... Chars>
+struct IsStateElement<StateElement<Char, Chars...>> {
+  /// Returns that the type is a state element.
+  static constexpr auto value = true;
+};
+
+} // namespace detail
+
+/// Returns true if the type T is a state element, otherwise it returns false.
+/// \tparam T The type to determine if is a state element.
+template <typename T>
+static constexpr auto is_state_element_v = 
+  detail::IsStateElement<std::decay_t<T>>::value;
+
 /// Utility function which can be used with declval to easily define new state
 /// element type aliases, for example:
 /// \begin{code}
