@@ -20,6 +20,25 @@
 #include <math.h>
 
 namespace ripple::math {
+
+//==--- [hash] -------------------------------------------------------------==//
+
+/// Constexpr hash function to compute the hash of the \p input.
+/// \param input The input of to compute the hash of.
+ripple_host_device constexpr auto hash(char const* input) -> unsigned int {
+  return *input 
+    ? static_cast<unsigned int>(*input) + 33 * hash(input + 1)
+    : 5381;
+}
+
+/// Literal operator to perform a hash on string literals.
+/// \tparam input The input string to hash.
+ripple_host_device constexpr auto operator "" _hash(
+  const char* input, unsigned long
+)  -> unsigned int {
+  return hash(input);
+} 
+
 namespace detail {
 
 //==--- [sign] -------------------------------------------------------------==//
