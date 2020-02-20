@@ -99,6 +99,16 @@ struct StaticExecParams : public
     return Padding;
   }
 
+  /// Returns the target architecture for the computation.
+  ripple_host_device constexpr auto target_arch() const -> ComputeArch {
+    return _arch;
+  }
+
+  /// Returns a reference to the target architecture for the computation.
+  ripple_host_device constexpr auto target_arch() -> ComputeArch& {
+    return _arch;
+  }
+
   //==--- [creation] -------------------------------------------------------==//
 
   /// Returns an iterator over a memory space pointed to by \p data, for a
@@ -122,6 +132,8 @@ struct StaticExecParams : public
   }
 
  private:
+  ComputeArch _arch = ComputeArch::device;  //!< Arch for the execution.
+
   //==--- [methods] --------------------------------------------------------==//
   
   /// Implementation to return the size of the execution space in the x

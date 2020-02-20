@@ -22,6 +22,13 @@
 
 namespace ripple {
 
+//==--- [enums] ------------------------------------------------------------==//
+
+enum class ComputeArch : uint8_t {
+  device = 0,   //!< Computation should be on the device.
+  host   = 1    //!< Computation should be on the host.
+};
+
 //==--- [forward declarations] ---------------------------------------------==//
 
 /// Defines a void type for a void shared memory execution parameter.

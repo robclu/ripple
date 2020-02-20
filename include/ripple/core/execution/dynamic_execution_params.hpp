@@ -98,6 +98,16 @@ struct DynamicExecParams : public ExecParams<DynamicExecParams<Shared>> {
     return _space.padding();
   }
 
+  /// Returns the target architecture for the computation.
+  ripple_host_device constexpr auto target_arch() const -> ComputeArch {
+    return _arch;
+  }
+
+  /// Returns a reference to the target architecture for the computation.
+  ripple_host_device constexpr auto target_arch() -> ComputeArch& {
+    return _arch;
+  }
+
   //==--- [creation] -------------------------------------------------------==//
 
   /// Returns an iterator over a memory space pointed to by \p data.
@@ -122,7 +132,8 @@ struct DynamicExecParams : public ExecParams<DynamicExecParams<Shared>> {
     return allocator_t::allocation_size(size<Dims>());
   }
  private:
-  space_t _space; //!< The space defining the execution region.
+  space_t     _space;                       //!< The execution space.
+  ComputeArch _arch = ComputeArch::device;  //!< The arch for the computation.
 };
 
 } // namespace ripple

@@ -68,6 +68,16 @@ struct ExecParams {
     return impl()->padding();
   }
 
+  /// The target architecture for the execution.
+  ripple_host_only constexpr auto target_arch() const -> ComputeArch {
+    return impl()->target_arch();
+  }
+
+  /// Returns a reference to the target architecture for the execution.
+  ripple_host_only constexpr auto target_arch() -> ComputeArch& {
+    return impl()->target_arch();
+  }
+
   //==--- [creation] -------------------------------------------------------==//
 
   /// Returns an iterator over a memory space pointed to by \p data, for a
