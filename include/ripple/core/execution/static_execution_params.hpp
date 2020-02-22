@@ -155,6 +155,28 @@ struct StaticExecParams : public
   }
 };
 
+//==--- [functions] --------------------------------------------------------==//
+
+/// Creates default dynamic execution execution paramters for the device.
+/// \tparam Dims    The number of dimensions for the parameters.
+/// \tparam Shared  The type of the shared memory for the parameters.
+template <size_t Dims, typename Shared = VoidShared>
+ripple_host_device auto static_device_params() 
+-> default_shared_exec_params_t<Dims, Shared> {
+  return default_shared_exec_params_t<Dims, Shared>();
+}
+
+/// Creates default dynamic execution execution paramters for the host.
+/// \tparam Dims    The number of dimensions for the parameters.
+/// \tparam Shared  The type of the shared memory for the parameters.
+template <size_t Dims, typename Shared = VoidShared>
+ripple_host_device auto static_host_params() 
+-> default_shared_exec_params_t<Dims, Shared> {
+  auto params = default_shared_exec_params_t<Dims, Shared>();
+  params.target_arch() = ComputeArch::host;
+  return params;
+}
+
 } // namespace ripple
 
 #endif // RIPPLE_EXECUTION_STATIC_EXECUTION_PARAMS_HPP

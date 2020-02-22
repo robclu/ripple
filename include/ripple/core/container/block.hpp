@@ -29,9 +29,10 @@ namespace ripple {
 ///
 /// \tparam T     The type of the data for the block.
 /// \tparam Dims  The number of dimensions for the block.
+template <typename T, size_t Dimensions>
 struct Block {
   /// Defines the type of the type for the block index.
-  using index_t        = size_t[Dims];
+  using index_t        = size_t[Dimensions];
   /// Defines the type of the host block for the grid.
   using host_block_t   = HostBlock<T, Dimensions>;
   /// Defines the type of the device block for the grid.
@@ -62,7 +63,7 @@ struct Block {
       // On the host, so copy to the device:
       case State::updated_host: {
         cudaSetDevice(gpu_id);
-        device_data = host_data;
+        device_data.copy_data(host_data);
         break;
       }
       // Work submitted to the device, just need a synchronization to ensure
@@ -88,11 +89,11 @@ struct Block {
       case State::submitted_device:
       case State::updated_device:
         cudaSetDevice(gpu_id);
-        host_data = device_data;
+        host_data.copy_data(device_data);
         cudaStreamSynchronize(device_data.stream());
         return;
       // Work has been submitted to the host, so data is already on the host.
-      case State::submitted_device:
+      case State::submitted_host:
         break;
       default:
         break;

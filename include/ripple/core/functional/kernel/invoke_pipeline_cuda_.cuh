@@ -154,23 +154,13 @@ template <typename T, size_t Dims, typename... Ops>
 auto invoke(DeviceBlock<T, Dims>& block, Pipeline<Ops...>& pipeline) 
 -> void {
 #if defined(__CUDACC__)
-  auto exec_params = default_shared_exec_params_t<Dims, T>{};
+  auto exec_params       = default_shared_exec_params_t<Dims, T>{};
   auto [threads, blocks] = get_exec_size(block, exec_params);
-  if (!block.uses_own_stream()) {
-    detail::invoke_static_shared_pipeline<<<
-      blocks, threads
-    >>>(
-      block.begin(), exec_params, pipeline
-    );
-    ripple_check_cuda_result(cudaDeviceSynchronize());
-  } else {
-    detail::invoke_static_shared_pipeline<<<
-      blocks, threads, 0, block.stream()
-    >>>(
-      block.begin(), exec_params, pipeline
-    );
-    ripple_check_cuda_result(cudaStreamSynchronize(block.stream()));
-  }
+
+  detail::invoke_static_shared_pipeline<<<blocks, threads, 0, block.stream()>>>(
+    block.begin(), exec_params, pipeline
+  );
+  ripple_check_cuda_result(cudaStreamSynchronize(block.stream()));
 #endif // __CUDACC__
 }
 

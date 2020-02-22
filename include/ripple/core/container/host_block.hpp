@@ -198,11 +198,19 @@ class HostBlock {
     return *this;
   }
 
-  //==--- [conversion to device] -------------------------------------------==//
+  //==--- [device blocks] --------------------------------------------------==//
 
   /// Returns the host block as a device block.
   auto as_device() const -> device_block_t {
     return device_block_t{*this};
+  }
+
+  //==--- [copying data] ---------------------------------------------------==//
+  
+  /// Copies the data from the \p other block into this block.
+  /// \param other The other block to copy the data from.
+  auto copy_data(const device_block_t& other) -> void {
+    copy_from_device(other);
   }
 
   //==--- [access] ---------------------------------------------------------==//
@@ -250,7 +258,7 @@ class HostBlock {
   }
 
   //==--- [interface] ------------------------------------------------------==//
-
+  
   /// Reallocates the data.
   auto reallocate() -> void {
     cleanup();
@@ -364,8 +372,6 @@ class HostBlock {
       _data                 = nullptr;
       _mem_props.allocated  = false;
       _mem_props.must_free  = false;
-      _mem_props.pinned     = false;
-      _mem_props.async_copy = false;
     }
   }
 
@@ -374,13 +380,9 @@ class HostBlock {
   auto copy_from_device(const device_block_t& other) {
     const auto alloc_size = allocator_t::allocation_size(_space.size());
     if (_mem_props.async_copy && _mem_props.pinned) {
-      if (other.uses_own_stream()) {
-        cuda::memcpy_device_to_host_async(
-          _data, other._data, alloc_size, other.stream()
-        );
-      } else {
-        cuda::memcpy_device_to_host_async(_data, other._data, alloc_size);
-      }
+      cuda::memcpy_device_to_host_async(
+        _data, other._data, alloc_size, other.stream()
+      );
       return;
     }
     cuda::memcpy_device_to_host(_data, other._data, alloc_size);

@@ -14,3 +14,4 @@
 //==------------------------------------------------------------------------==//
 
 #include "device_block_tests.hpp"
+#include "device_grid_tests.hpp"

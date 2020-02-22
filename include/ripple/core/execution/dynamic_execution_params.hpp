@@ -136,6 +136,36 @@ struct DynamicExecParams : public ExecParams<DynamicExecParams<Shared>> {
   ComputeArch _arch = ComputeArch::device;  //!< The arch for the computation.
 };
 
+//==--- [functions] --------------------------------------------------------==//
+
+/// Creates default dynamic execution execution paramters for the device.
+/// \tparam Dims    The number of dimensions for the parameters.
+/// \tparam Shared  The type of the shared memory for the parameters.
+template <size_t Dims, typename Shared = VoidShared>
+ripple_host_device auto dynamic_device_params() 
+-> DynamicExecParams<Shared> {
+  constexpr auto size_x = (Dims == 1 ? 1024 : Dims == 2 ? 32 : 8);
+  constexpr auto size_y = (Dims == 1 ? 1    : Dims == 2 ? 16 : 8);
+  constexpr auto size_z = (Dims == 1 ? 1    : Dims == 2 ? 1  : 8);
+
+  return DynamicExecParams<Shared>(size_x, size_y, size_z);
+}
+
+/// Creates default dynamic execution execution paramters for the host.
+/// \tparam Dims    The number of dimensions for the parameters.
+/// \tparam Shared  The type of the shared memory for the parameters.
+template <size_t Dims, typename Shared = VoidShared>
+ripple_host_device auto dynamic_host_params() 
+-> DynamicExecParams<Shared> {
+  constexpr auto size_x = (Dims == 1 ? 1024 : Dims == 2 ? 32 : 8);
+  constexpr auto size_y = (Dims == 1 ? 1    : Dims == 2 ? 16 : 8);
+  constexpr auto size_z = (Dims == 1 ? 1    : Dims == 2 ? 1  : 8);
+
+  auto params = DynamicExecParams<Shared>(size_x, size_y, size_z);
+  params.target_arch() = ComputeArch::host;
+  return params;
+}
+
 } // namespace ripple
 
 #endif // RIPPLE_EXECUTION_DYNAMIC_EXECUTION_PARAMS_HPP

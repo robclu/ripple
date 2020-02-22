@@ -22,6 +22,8 @@
 
 namespace ripple {
 
+//==--- []
+
 //==--- [pipeline invoke] --------------------------------------------------==//
 
 /// This invokes the \p pipeline on each element of the \p block. 

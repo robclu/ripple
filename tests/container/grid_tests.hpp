@@ -69,23 +69,4 @@ TEST(container_grid, can_access_simple_elements_1d) {
   }
 }
 
-//==--- [invoke] -----------------------------------------------------------==//
-
-TEST(container_grid, can_invoke_no_padding_1d) {
-  constexpr auto size_x = size_t{100};
-  auto topo = ripple::Topology();
-  ripple::grid_1d_t<real_t> g(topo, size_x);
-    
-  auto pipeline = ripple::make_pipeline(
-    [] ripple_host_device (auto it) {
-      *it = real_t{global_idx(ripple::dim_x)};
-    }
-  );
-  ripple::invoke(g, pipeline);
-
-  for (auto i : ripple::range(g.size())) {
-    EXPECT_EQ(*g(i), static_cast<real_t>(i));
-  }
-}
-
 #endif // RIPPLE_TESTS_CONTAINER_GRID_TESTS_HPP

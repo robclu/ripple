@@ -18,12 +18,12 @@
 
 #include "block_traits.hpp"
 #include "grid_traits.hpp"
-#include "device_block.hpp"
-#include "host_block.hpp"
+#include "block.hpp"
 #include <ripple/core/arch/topology.hpp>
 #include <ripple/core/functional/pipeline.hpp>
 #include <ripple/core/multidim/dynamic_multidim_space.hpp>
 #include <ripple/core/utility/dim.hpp>
+#include <bitset>
 #include <thread>
 
 namespace ripple {
@@ -56,11 +56,18 @@ class Grid {
   static constexpr auto streams_per_gpu = size_t{8};
 
  public:
+  //==--- [aliases] --------------------------------------------------------==//
+  
+  /// Defines the type of the gpu mask for the grid.
+  using gpu_mask_t = std::bitset<16>;
+
   //==--- [construction] ---------------------------------------------------==//
 
   /// Initializes the size of each of the dimensions of the grid. This
   /// constructor will create blocks with the largest size such that the minimum
   /// number of blocks are used which fit into the device memory.
+  ///
+  /// By default this creates the grid to run on a single gpu.
   ///
   /// \param  topo  A reference to the system topology.
   /// \param  sizes The sizes of the dimensions for the grid.
@@ -70,7 +77,7 @@ class Grid {
     all_arithmetic_size_enable_t<Dimensions, Sizes...> = 0
   >
   Grid(Topology& topo, Sizes&&... sizes) 
-  : _space{std::forward<Sizes>(sizes)...}, _topo{topo} {
+  : _space{std::forward<Sizes>(sizes)...}, _topo{topo}, _gpu_mask{1} {
     resize_block_size(dims_v);
     default_allocation();
   }
@@ -79,6 +86,8 @@ class Grid {
   /// memory for the grid, with padding data for the boundary of the grid. This
   /// constructor is only enabled when the number of arguments matches the
   /// dimensionality of the grid and the \p sizes are numeric types.
+  ///
+  /// By default this creates the grid to run on a single gpu.
   ///
   /// \param  topo    A reference to the system topology.
   /// \param  padding The amount of padding for the grid.
@@ -89,7 +98,31 @@ class Grid {
     all_arithmetic_size_enable_t<Dimensions, Sizes...> = 0
   >
   Grid(Topology& topo, size_t padding, Sizes&&... sizes) 
-  : _space{padding, std::forward<Sizes>(sizes)...}, _topo{topo} {
+  : _space{padding, std::forward<Sizes>(sizes)...}, _topo{topo}, _gpu_mask{1} {
+    resize_block_size(dims_v); 
+    default_allocation();
+  }
+
+  /// Initializes the size of each of the dimensions of the grid, allocating the
+  /// memory for the grid, with padding data for the boundary of the grid. This
+  /// constructor is only enabled when the number of arguments matches the
+  /// dimensionality of the grid and the \p sizes are numeric types.
+  ///
+  /// This also allows a mask for which gpus to use to be set.
+  ///
+  /// \param  topo    A reference to the system topology.
+  /// \param  padding The amount of padding for the grid.
+  /// \param  mask    The mask for which gpus can be used.
+  /// \param  sizes   The sizes of the dimensions for the grid.
+  /// \tparam Sizes   The types of other dimension sizes.
+  template <
+    typename... Sizes,      
+    all_arithmetic_size_enable_t<Dimensions, Sizes...> = 0
+  >
+  Grid(Topology& topo, size_t padding, gpu_mask_t mask, Sizes&&... sizes) 
+  : _space{padding, std::forward<Sizes>(sizes)...}, 
+    _topo{topo}, 
+    _gpu_mask{mask} {
     resize_block_size(dims_v); 
     default_allocation();
   }
@@ -127,30 +160,10 @@ class Grid {
   /// \tparam Indices The types of the indices.
   template <typename... Indices>
   ripple_host_only auto operator()(Indices&&... is) -> host_iter_t {
-    auto block = _blocks.begin();
-    auto indices = std::array<size_t, Dimensions>{static_cast<size_t>(is)...};
-    auto offsets = std::array<size_t, Dimensions>{0};
-    // Offset to the correct block:
-    unrolled_for<Dimensions>([&] (auto d) {
-      constexpr auto dim = static_cast<size_t>(d);
-      // Automatic round down to get the block index:
-      offsets[dim] = indices[dim] / _block_size.size(dim);
-      block.shift(dim, offsets[dim]);
+    return single_gpu()
+      ? access_single_gpu(std::forward<Indices>(is)...)
+      : access_multi_gpu(std::forward<Indices>(is)...);
 
-      // Compute the offset in the block:
-      offsets[dim] = indices[dim] - offsets[dim] * _block_size.size(dim);
-    });
-
-    // Copy data back from the device, if necessary.
-    block->ensure_host_data_available();
-    
-    // Create and return the iterator ...
-    auto iter = block->host_data.begin();
-    unrolled_for<Dimensions>([&] (auto d) {
-      constexpr auto dim = static_cast<size_t>(d);
-      iter.shift(dim, offsets[dim]);
-    });
-    return iter;
   }
 
   //==--- [interface] ------------------------------------------------------==//
@@ -178,65 +191,52 @@ class Grid {
     return _space.internal_size(std::forward<Dim>(dim));
   }
 
-  //==--- [pipeline invoke] ------------------------------------------------==//
- 
-  template <typename... Ops>
-  auto invoke(Pipeline<Ops...>& pipeline) -> void {
-    // First version:
-    //    This is single threaded and simply invokes each block on its assigned
-    //    GPU.
-    invoke(_blocks, [&] (auto block_it) {
-      block_it->ensure_device_data_available();
-
-      invoke(block_it->device_data, pipeline);
-    });
+  /// Returns a const reference to the gpu mask for the grid.
+  auto gpu_mask() const -> const gpu_mask_t& {
+    return _gpu_mask;
   }
 
-/* 
+  /// Returns the max number of gpus which this grid may use.
+  auto num_gpus_used() const -> size_t {
+    return _gpu_mask.count();
+  }
+
+  /// Returns true if the grid is only running in single gpu mode.
+  auto single_gpu() const -> bool {
+    return num_gpus_used() == size_t{1};
+  }
+
+  //==--- [pipeline invoke] ------------------------------------------------==//
+
+  /// Applies the \p pipeline to the grid, performing the operations in the
+  /// pipeline.
+  /// \param  pipeline The pipeline to apply to the grid.
+  /// \tparam Ops      The operations in the pipeline.
   template <typename... Ops>
-  auto invoke(Pipeline<Ops...>& pipeline) {
-    std::vector<std::thread> runners();
-    for (size_t i : range(_topo.num_gpus())) {
-      runners.push_back([] (size_t thread_id) {
-        const auto start = thread_id * blocks_per_gpu_x;
-        const auto end   = start + blocks_per_gpu_x;
-        invoke(_blocks, sub_range_t<dimx_t>{start, end}, [] (auto block_it) {
-          auto pipeline = make_pipeline(
-            // Start by moving the data and the padding to the device:
-            [&] (auto it) {
-              it->ensure_device_data_available();
-              it->ensure_device_padding_available();
-            },
-            // Next, invoke the pipeline on the device block:
-            [&] (auto it) {
-              it->data_state = Block::State::not_updated_device;
-              it->padding_state = Block::State::not_updated_device;
-              invoke(it->device_data, pipeline);
-            },
-            // Set the state of the data for the block:
-            [&] (auto it) {
-              it->data_state = Block::State::updated_device;
-              it->padding_state = Block::State::updated_device;
-            }
-          );
-        });
-      }, i);
+  auto apply_pipeline(Pipeline<Ops...>& pipeline) -> void {
+    if (single_gpu()) {
+      auto block = _blocks.begin();
+      invoke(block->device_data, pipeline);
+      block->data_state = block_state_t::updated_device;
     }
-  };
- */
+  }
+
  private:
   space_t    _space;        //!< The space for the grid.
   space_t    _block_size;   //!< The size of the blocks in the grid.
   blocks_t   _blocks;       //!< Blocks for the grid.
   Topology&  _topo;         //!< Topology for the system.
+  gpu_mask_t _gpu_mask;     //!< Max number of gpus for the grid.
 
   //==--- [resize] ---------------------------------------------------------==//
 
   /// Defines the size of the default blocks for 1D. The default is to split
-  /// the x dimension across GPUs.
+  /// the x dimension across the allowed number of gpus for the grid.
   auto resize_block_size(dimx_t) -> void {
     _block_size = DynamicMultidimSpace<1>{
-      std::min(block_size_x, _space.internal_size(dim_x) / _topo.num_gpus())
+      single_gpu() 
+        ? _space.internal_size(dim_x)
+        : std::min(block_size_x, _space.internal_size(dim_x) / num_gpus_used())
     };
   }
 
@@ -244,7 +244,9 @@ class Grid {
   /// the x dimension across GPUs. 
   auto resize_block_size(dimy_t) -> void {
     _block_size = DynamicMultidimSpace<2>{
-      std::min(block_size_x, _space.internal_size(dim_x) / _topo.num_gpus()),
+      single_gpu()
+        ? _space.internal_size(dim_x)
+        : std::min(block_size_x, _space.internal_size(dim_x) / num_gpus_used()),
       _space.internal_size(dim_y)
     };
   }
@@ -253,7 +255,9 @@ class Grid {
   /// the x dimension across GPUs. 
   auto resize_block_size(dimz_t) -> void {
     _block_size = DynamicMultidimSpace<3>{
-      std::min(block_size_x, _space.internal_size(dim_x) / _topo.num_gpus()),
+      single_gpu()
+        ? _space.internal_size(dim_x)
+        : std::min(block_size_x, _space.internal_size(dim_x) / num_gpus_used()),
       _space.internal_size(dim_y),
       _space.internal_size(dim_z)
     };
@@ -265,6 +269,7 @@ class Grid {
   auto allocate_blocks() -> void {
     unrolled_for<Dimensions>([&] (auto dim) {
       const auto blocks_for_dim = 
+        single_gpu() ? 1 : 
         static_cast<size_t>(std::ceil(
             static_cast<float>(_space.internal_size(dim)) / 
             _block_size.internal_size(dim)
@@ -289,13 +294,12 @@ class Grid {
   ///   - If no GPU has any memory remaining, then use an already allocated
   ///   block's memory to share.
   auto allocate_data_for_blocks() -> void {
-    std::vector<size_t> stream_ids(_topo.num_gpus());
+    std::vector<size_t> stream_ids(num_gpus_used());
     for (auto& stream_id : stream_ids) { stream_id = 0; }
 
     // Currently this assumes data is split along x dimension.
-    const auto blocks_per_gpu_x = _blocks.size(dim_x) / _topo.num_gpus();
+    const auto blocks_per_gpu_x = _blocks.size(dim_x) / num_gpus_used();
     invoke(_blocks, [&] (auto b) {
-
       // Set the host component of the block to enable asynchronous operations
       // so that we can overlap compute and transfer:
       b->host_data.set_op_kind(BlockOpKind::asynchronous);
@@ -318,15 +322,20 @@ class Grid {
       auto       gpu_id  = global_idx(dim_x) / blocks_per_gpu_x;
       size_t     tries   = 0;
       const auto mem_req = b->device_data.mem_requirement();
+      while (!_gpu_mask.test(gpu_id)) {
+        gpu_id = (gpu_id + 1) % _gpu_mask.size();
+      }
       while (mem_req >= _topo.gpus[gpu_id].mem_remaining() &&
-             tries < _topo.num_gpus()) {
-        gpu_id = (gpu_id + 1) % _topo.num_gpus();
+             tries < num_gpus_used()) {
+        do {
+          gpu_id = (gpu_id + 1) % _gpu_mask.size();
+        } while (!_gpu_mask.test(gpu_id));
         tries++;
       }
 
       // Here a block needs to be found to share the data with, but for now,
       // this functionality is not implemented.
-      if (tries == _topo.num_gpus()) {
+      if (tries == num_gpus_used()) {
         assert(false);
       }
       b->gpu_id = gpu_id;
@@ -335,11 +344,10 @@ class Grid {
       cudaSetDevice(gpu_id);
       auto& gpu       = _topo.gpus[gpu_id];
       auto& stream_id = stream_ids[gpu_id];
-      b->device_data.set_stream(&gpu.streams[stream_id]);
+      b->device_data.set_stream(gpu.streams[stream_id]);
       b->device_data.reallocate();
-      b->data_data   = state_t::updated_device;
-      gpu.mem_alloc += mem_req; 
-      stream_id      = (stream_id + 1) % gpu.streams.size();
+      gpu.mem_alloc   += mem_req; 
+      stream_id        = (stream_id + 1) % gpu.streams.size();
     });
   }
 
@@ -349,6 +357,57 @@ class Grid {
   auto default_allocation() -> void {
     allocate_blocks();
     allocate_data_for_blocks();
+  }
+
+  //==--- [access] ---------------------------------------------------------==//
+  
+  /// Gets an iterator to the element at the location specified by the \p is 
+  /// indices, for the case that only a single gpu is being used by the grid.
+  ///
+  /// \param  is      The indices to get the element at.
+  /// \tparam Indices The types of the indices.
+  template <typename... Indices>
+  ripple_host_only auto access_single_gpu(Indices&&... is) -> host_iter_t {
+    auto block = _blocks.begin();
+
+    // Copy data back from the device, if necessary.
+    block->ensure_host_data_available();
+    auto it = block->host_data.operator()(std::forward<Indices>(is)...);
+    block->data_state = block_state_t::updated_host;
+    return it;
+  }
+
+  /// Gets an iterator to the element at the location specified by the \p is 
+  /// indices, for the case that multiple gpus are being used by the grid.
+  ///
+  /// \param  is      The indices to get the element at.
+  /// \tparam Indices The types of the indices.
+  template <typename... Indices>
+  ripple_host_only auto access_multi_gpu(Indices&&... is) -> host_iter_t {
+    auto block   = _blocks.begin();
+    auto indices = std::array<size_t, Dimensions>{static_cast<size_t>(is)...};
+    auto offsets = std::array<size_t, Dimensions>{0};
+    // Offset to the correct block:
+    unrolled_for<Dimensions>([&] (auto d) {
+      constexpr auto dim = static_cast<size_t>(d);
+      // Automatic round down to get the block index:
+      offsets[dim] = indices[dim] / _block_size.size(dim);
+      block.shift(dim, offsets[dim]);
+
+      // Compute the offset in the block:
+      offsets[dim] = indices[dim] - offsets[dim] * _block_size.size(dim);
+    });
+
+    // Copy data back from the device, if necessary.
+    block->ensure_host_data_available();
+    
+    // Create and return the iterator ...
+    auto iter = block->host_data.begin();
+    unrolled_for<Dimensions>([&] (auto d) {
+      constexpr auto dim = static_cast<size_t>(d);
+      iter.shift(dim, offsets[dim]);
+    });
+    return iter;
   }
 };
 

@@ -283,17 +283,9 @@ auto invoke(DeviceBlock<T, Dims>& block, Callable&& callable, Args&&... args)
   using exec_params_t = default_exec_params_t<Dims>;
   auto [threads, blocks] = get_exec_size(block, exec_params_t{});
 
-  if (!block.uses_own_stream()) {
-    detail::invoke<<<blocks, threads>>>(
-      block.begin(), callable, args...
-    );
-    ripple_check_cuda_result(cudaDeviceSynchronize());
-  } else {
-    detail::invoke<<<blocks, threads, 0, block.stream()>>>(
-      block.begin(), callable, args...
-    );
-    ripple_check_cuda_result(cudaStreamSynchronize(block.stream()));
-  }
+  detail::invoke<<<blocks, threads, 0, block.stream()>>>(
+    block.begin(), callable, args...
+  );
 #endif // __CUDACC__
 }
 
@@ -328,22 +320,10 @@ auto invoke(
   using exec_params_t = default_exec_params_t<Dims1>;
   auto [threads, blocks] = get_exec_size(block_1, exec_params_t{});
 
-  if (block_1.uses_own_stream()) {
-    detail::invoke<<<blocks, threads, 0, block_1.stream()>>>(
-      block_1.begin(), block_2.begin(), callable, args...
-    );
-    ripple_check_cuda_result(cudaStreamSynchronize(block_1.stream()));
-  } else if (block_2.uses_own_stream()) {
-    detail::invoke<<<blocks, threads, 0, block_2.stream()>>>(
-      block_1.begin(), block_2.begin(), callable, args...
-    );
-    ripple_check_cuda_result(cudaStreamSynchronize(block_2.stream()));
-  } else {
-    detail::invoke<<<blocks, threads>>>(
-      block_1.begin(), block_2.begin(), callable, args...
-    );
-    ripple_check_cuda_result(cudaDeviceSynchronize());
-  }
+  detail::invoke<<<blocks, threads, 0, block_1.stream()>>>(
+    block_1.begin(), block_2.begin(), callable, args...
+  );
+  ripple_check_cuda_result(cudaStreamSynchronize(block_1.stream()));
 #endif // __CUDACC__
 }
 
@@ -377,17 +357,10 @@ auto invoke(
 ) -> void {
 #if defined(__CUDACC__)
   auto [threads, blocks] = get_exec_size(block, exec_params);
-  if (!block.uses_own_stream()) {
-    detail::invoke<<<blocks, threads>>>(
-      block.begin(), callable, args...
-    );
-    ripple_check_cuda_result(cudaDeviceSynchronize());
-  } else {
-    detail::invoke<<<blocks, threads, 0, block.stream()>>>(
-      block.begin(), callable, args...
-    );
-    ripple_check_cuda_result(cudaStreamSynchronize(block.stream()));
-  }
+  detail::invoke<<<blocks, threads, 0, block.stream()>>>(
+    block.begin(), callable, args...
+  );
+  ripple_check_cuda_result(cudaStreamSynchronize(block.stream()));
 #endif // __CUDACC__
 }
 
@@ -421,17 +394,10 @@ auto invoke(
 ) -> void {
 #if defined(__CUDACC__)
   auto [threads, blocks] = get_exec_size(block, exec_params);
-  if (!block.uses_own_stream()) {
-    detail::invoke_static_shared<<<blocks, threads>>>(
-      block.begin(), exec_params, callable, args...
-    );
-    ripple_check_cuda_result(cudaDeviceSynchronize());
-  } else {
-    detail::invoke_static_shared<<<blocks, threads, 0, block.stream()>>>(
-      block.begin(), exec_params, callable, args...
-    );
-    ripple_check_cuda_result(cudaStreamSynchronize(block.stream()));
-  }
+  detail::invoke_static_shared<<<blocks, threads, 0, block.stream()>>>(
+    block.begin(), exec_params, callable, args...
+  );
+  ripple_check_cuda_result(cudaStreamSynchronize(block.stream()));
 #endif // __CUDACC__
 }
 
@@ -466,19 +432,12 @@ auto invoke(
 #if defined(__CUDACC__)
   auto [threads, blocks] = get_exec_size(block, exec_params);
   auto alloc_size = exec_params.template allocation_size<Dims>();
-  if (!block.uses_own_stream()) {
-    detail::invoke_dynamic_shared<<<blocks, threads, alloc_size>>>(
-      block.begin(), exec_params, callable, args...
-    );
-    ripple_check_cuda_result(cudaDeviceSynchronize());
-  } else {
-    detail::invoke_dynamic_shared<<<
-      blocks, threads, alloc_size, block.stream()
-    >>>(
-      block.begin(), exec_params, callable, args...
-    );
-    ripple_check_cuda_result(cudaStreamSynchronize(block.stream()));
-  }
+  detail::invoke_dynamic_shared<<<
+    blocks, threads, alloc_size, block.stream()
+  >>>(
+    block.begin(), exec_params, callable, args...
+  );
+  ripple_check_cuda_result(cudaStreamSynchronize(block.stream()));
 #endif
 }
 
