@@ -288,13 +288,13 @@ class DeviceBlock {
   //==--- [stream] ---------------------------------------------------------==//
 
   /// Returns the stream used by the block.
-  auto stream() const -> stream_t {
+  auto stream() const -> const stream_t& {
     return _stream;
   }
 
   /// Sets the stream for the block.
   /// \param stream The stream to set for the block.
-  auto set_stream(stream_t stream) -> void {
+  auto set_stream(const stream_t& stream) -> void {
     _stream = stream;
   }
 
@@ -330,13 +330,9 @@ class DeviceBlock {
   /// \p other The other block to copy data from.
   auto copy_from_host(const host_block_t& other) {
     const auto alloc_size = allocator_t::allocation_size(_space.size());
-  //  if (other._mem_props.async_copy && other._mem_props.pinned) {
-      cuda::memcpy_host_to_device_async(
-        _data, other._data, alloc_size, _stream
-      );
- //     return;
- //   }
-//    cuda::memcpy_host_to_device(_data, other._data, alloc_size);
+    cuda::memcpy_host_to_device_async(
+      _data, other._data, alloc_size, _stream
+    );
   }
 
   /// Copies data from the host block \p other into this block.

@@ -52,4 +52,3 @@ TEST(container_block_memory_props, can_move_memory_properties) {
 }
 
 #endif // RIPPLE_TESTS_CONTAINER_BLOCK_MEMORY_PROPERTIES_TESTS_HPP
-

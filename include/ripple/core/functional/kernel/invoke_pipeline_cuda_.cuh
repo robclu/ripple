@@ -69,15 +69,14 @@ ripple_device_only auto invoke_shared_pipeline(
 ) -> void {
 #if defined(__CUDACC__)
   bool in_range = true;
-  // Shift higher dimensions ...
-  unrolled_for<Dims>([&] (auto d) {
-    constexpr auto dim     = d;
-    const auto idx         = global_idx(dim);
-    const auto must_shift = 
-      idx             < it.size(dim)        &&
-      thread_idx(dim) < shared_it.size(dim) &&
-      in_range;
-    if (must_shift) {
+  unrolled_for<Dims>([&] (auto _dim) {
+    constexpr auto dim = size_t{_dim};
+    const     auto idx = global_idx(dim);
+
+    // NOTE: No need for bounds check on shared iterator, since it's a 1-1
+    // mapping to the global iterator, so we only need to test the global
+    // iterator for the bound.
+    if (in_range && idx < it.size(dim)/*&& thread_idx(dim) < threads*/) {
       it.shift(dim, idx);
       shared_it.shift(dim, thread_idx(dim) + shared_it.padding());
     } else {
@@ -85,18 +84,19 @@ ripple_device_only auto invoke_shared_pipeline(
     }
   });
 
-  if (!in_range) {
+  if (!in_range) { 
     return;
   }
 
+  // Load in the internal data:
   using it_1_t = std::decay_t<decltype(*it)>;
   using it_2_t = std::decay_t<decltype(*shared_it)>;
-  constexpr auto same_type =
-    std::is_same_v<it_1_t, it_2_t> || std::is_convertible_v<it_1_t, it_2_t>;
+  if (std::is_same_v<it_1_t, it_2_t> || std::is_convertible_v<it_1_t, it_2_t>) {
+    *shared_it = *it;
+  }
 
   // Load in the padding data:
-  if (same_type && shared_it.padding() > 0) {
-    *shared_it = *it;
+  if (shared_it.padding() > 0) {
     load_internal_boundary<Dims>(it, shared_it);
   }
   sync_block();

@@ -379,13 +379,9 @@ class HostBlock {
   /// \p other The other block to copy data from.
   auto copy_from_device(const device_block_t& other) {
     const auto alloc_size = allocator_t::allocation_size(_space.size());
-    if (_mem_props.async_copy && _mem_props.pinned) {
-      cuda::memcpy_device_to_host_async(
-        _data, other._data, alloc_size, other.stream()
-      );
-      return;
-    }
-    cuda::memcpy_device_to_host(_data, other._data, alloc_size);
+    cuda::memcpy_device_to_host_async(
+      _data, other._data, alloc_size, other.stream()
+    );
   }
 
   // Shifts an iterator by the padding in each direction.

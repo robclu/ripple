@@ -1,4 +1,4 @@
-//==--- ripple/core/tests/container.cpp ------------------------- -*- C++ -*- ---==//
+//==--- ripple/tests/contaienr.cpp ------------------------- -*- C++ -*- ---==//
 //            
 //                                Ripple
 // 
@@ -9,7 +9,7 @@
 //==------------------------------------------------------------------------==//
 //
 /// \file  container.cpp
-/// \brief This file is the main function for executing container tests.
+/// \brief This file contains the main function for container tests.
 //
 //==------------------------------------------------------------------------==//
 

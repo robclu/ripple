@@ -23,4 +23,3 @@
 #include "vec_tests.hpp"
 
 #endif // RIPPLE_TESTS_CONTAINER_CONTAINER_TESTS_HPP
-

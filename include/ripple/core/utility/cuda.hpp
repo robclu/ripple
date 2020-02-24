@@ -235,7 +235,9 @@ static inline auto free_device(Ptr* ptr) -> void {
 template <typename Ptr>
 static inline auto allocate_host_pinned(Ptr** host_ptr, std::size_t bytes) 
 -> void {
-  ripple_check_cuda_result(cudaMallocHost((void**)host_ptr, bytes));
+  ripple_check_cuda_result(
+    cudaHostAlloc((void**)host_ptr, bytes, cudaHostAllocPortable)
+  );
 }
 
 /// Frees the pointer \p ptr which was allocated as pinned memory..

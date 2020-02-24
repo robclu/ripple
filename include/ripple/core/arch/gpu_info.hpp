@@ -54,6 +54,7 @@ struct GpuInfo {
   
   /// Constructor to initialise the info with a specific index.
   GpuInfo(index_t idx) : index(idx) {
+    cudaSetDevice(index);
     for (auto& stream : streams) {
       cudaStreamCreate(&stream);
     }
@@ -62,8 +63,9 @@ struct GpuInfo {
   /// Destructor which cleans up the streams.
   ~GpuInfo() {
     // Currently causing a segfault, so we can't clean up the streams ...
+    //cudaSetDevice(index);
     //for (auto& stream : streams) {
-    //   cudaStreamDestroy(stream);
+    //  cudaStreamDestroy(stream);
     //}
   }
 
@@ -77,10 +79,9 @@ struct GpuInfo {
     cudaDeviceProp device_props;
     int can_access_peer;
     for (auto dev : range(num_devices)) {
+      // Constructor sets the device to the current device.
       auto& info = devices.emplace_back(dev);
-      cudaSetDevice(dev);
       cudaGetDeviceProperties(&device_props, dev);
-
       info.mem_size = device_props.totalGlobalMem;
 
       // Determine if peer to peer is supported:

@@ -628,4 +628,3 @@ TEST(container_device_block, can_invoke_with_pipeline_1d) {
 
 #endif // RIPPLE_TESTS_CONTAINER_DEVICE_BLOCK_TESTS_HPP
 
-
