@@ -16,6 +16,9 @@
 #ifndef RIPPLE_TESTS_STATE_FLUID_STATE_TESTS_HPP
 #define RIPPLE_TESTS_STATE_FLUID_STATE_TESTS_HPP
 
+#include <ripple/core/container/grid.hpp>
+#include <ripple/core/execution/dynamic_execution_params.hpp>
+#include <ripple/core/functional/invoke.hpp>
 #include <ripple/fvm/eos/ideal_gas.hpp>
 #include <ripple/fvm/state/fluid_state.hpp>
 #include <gtest/gtest.h>
@@ -313,5 +316,7 @@ TEST(state_fluid_state, can_divide_states) {
     EXPECT_EQ(s1.rho_v(d), real_t{8});
   });
 }
+
+//==-- [state inside grid] -------------------------------------------------==//
 
 #endif // RIPPLE_TESTS_STATE_FLUID_STATE_TESTS_HPP

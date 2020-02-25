@@ -43,6 +43,7 @@ TEST(state_state_initialzier, can_initializer_fluid_state_1d) {
 }
 
 TEST(state_state_initialzier, can_initializer_fluid_state_2d) {
+  constexpr real_it tol = 1e-6;
   auto initializer = ripple::fv::make_state_initializer(
     1.5_rho, -2.2_v_x, 3.0_p, 3.2_v_y
   );
@@ -52,13 +53,14 @@ TEST(state_state_initialzier, can_initializer_fluid_state_2d) {
 
   initializer.set_state_data(s, g);
 
-  EXPECT_EQ(s.rho()           , real_it{1.5} );
-  EXPECT_EQ(s.pressure(g)     , real_it{3.0} );
-  EXPECT_EQ(s.v(ripple::dim_x), real_it{-2.2});
-  EXPECT_EQ(s.v(ripple::dim_y), real_it{3.2} );
+  EXPECT_NEAR(s.rho()           , real_it{1.5} , tol);
+  EXPECT_NEAR(s.pressure(g)     , real_it{3.0} , tol);
+  EXPECT_NEAR(s.v(ripple::dim_x), real_it{-2.2}, tol);
+  EXPECT_NEAR(s.v(ripple::dim_y), real_it{3.2} , tol);
 }
 
 TEST(state_state_initialzier, can_initializer_fluid_state_3d) {
+  constexpr real_it tol = 1e-6;
   auto initializer = ripple::fv::make_state_initializer(
     1.5_rho, -2.2_v_x, 3.0_p, 3.2_v_y, -1.3_v_z
   );
@@ -68,11 +70,11 @@ TEST(state_state_initialzier, can_initializer_fluid_state_3d) {
 
   initializer.set_state_data(s, g);
 
-  EXPECT_EQ(s.rho()           , real_it{1.5} );
-  EXPECT_EQ(s.pressure(g)     , real_it{3.0} );
-  EXPECT_EQ(s.v(ripple::dim_x), real_it{-2.2});
-  EXPECT_EQ(s.v(ripple::dim_y), real_it{3.2} );
-  EXPECT_EQ(s.v(ripple::dim_z), real_it{-1.3});
+  EXPECT_NEAR(s.rho()           , real_it{1.5} , tol);
+  EXPECT_NEAR(s.pressure(g)     , real_it{3.0} , tol);
+  EXPECT_NEAR(s.v(ripple::dim_x), real_it{-2.2}, tol);
+  EXPECT_NEAR(s.v(ripple::dim_y), real_it{3.2} , tol);
+  EXPECT_NEAR(s.v(ripple::dim_z), real_it{-1.3}, tol);
 }
 
 #endif // RIPPLE_TESTS_STATE_STATE_INITIALIZER_TESTS_HPP

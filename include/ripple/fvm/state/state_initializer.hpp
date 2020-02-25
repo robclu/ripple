@@ -17,6 +17,7 @@
 #define RIPPLE_STATE_STATE_INITIALIZER_HPP
 
 #include "state_traits.hpp"
+#include "state_element.hpp"
 #include <ripple/core/algorithm/unrolled_for.hpp>
 #include <ripple/core/container/tuple.hpp>
 #include <ripple/core/math/math.hpp>

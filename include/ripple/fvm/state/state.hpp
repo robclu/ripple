@@ -184,6 +184,13 @@ class State {
 
   //==--- [direct access] --------------------------------------------------==//
 
+  /// Returns the size of the state.
+  ripple_host_device constexpr auto size() -> size_t {
+    return impl()->size();
+  }
+
+  //==--- [direct access] --------------------------------------------------==//
+
   /// Overload of operator[] to enable array functionality on the state. This
   /// returns a reference to the \p ith stored element.
   /// \param i The index of the element to return.

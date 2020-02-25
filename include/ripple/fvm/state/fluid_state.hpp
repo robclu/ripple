@@ -149,6 +149,13 @@ class FluidState :
     return _storage.template get<0>(i);
   }
 
+  //==--- [size] -----------------------------------------------------------==//
+  
+  /// Returns the size of the state.
+  ripple_host_device constexpr auto size() const -> size_t {
+    return elements;
+  }
+
   //==--- [dimensions] -----------------------------------------------------==//
   
   /// Returns the number of spatial dimensions for the state.

@@ -20,10 +20,12 @@
 #include "grid_traits.hpp"
 #include "block.hpp"
 #include <ripple/core/arch/topology.hpp>
-#include <ripple/core/functional/pipeline.hpp>
+#include <ripple/core/functional/invoke.hpp>
 #include <ripple/core/multidim/dynamic_multidim_space.hpp>
 #include <ripple/core/utility/dim.hpp>
 #include <bitset>
+#include <cassert>
+#include <cmath>
 #include <thread>
 
 namespace ripple {
@@ -190,7 +192,7 @@ class Grid {
   /// \param dim The dimension to get the size of.
   /// \param Dim The type of the dimension specifier.
   template <typename Dim>
-  auto size(Dim&& dim) const -> std::size_t {
+  auto size(Dim&& dim) const -> size_t {
     return _space.internal_size(std::forward<Dim>(dim));
   }
 
@@ -219,6 +221,9 @@ class Grid {
   auto apply_pipeline(Pipeline<Ops...>& pipeline) -> void {
     if (single_gpu()) {
       auto block = _blocks.begin();
+
+      block->ensure_device_data_available();
+
       invoke(block->device_data, pipeline);
       block->data_state = block_state_t::updated_device;
     }
@@ -340,6 +345,8 @@ class Grid {
       // Update global gpu memory data:
       gpu.mem_alloc += block.device_data.mem_requirement();
       stream_id      = (stream_id + 1) % gpu.streams.size();
+
+      block.data_state = block_state_t::updated_device;
     }
   }
 

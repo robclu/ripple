@@ -18,6 +18,8 @@
 #define RIPPLE_CONTAINER_BLOCK_HPP
 
 #include "block_traits.hpp"
+#include "device_block.hpp"
+#include "host_block.hpp"
 
 namespace ripple {
 

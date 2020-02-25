@@ -198,6 +198,13 @@ ripple_target_link_libraries(
   state_tests ${GTEST_BOTH_LIBRARIES}
 )
 
+ripple_add_executable(
+  state_device_tests ${ripple_SOURCE_DIR}/tests/state_device.cu
+)
+ripple_target_link_libraries(
+  state_device_tests ${GTEST_BOTH_LIBRARIES} ${CUDA_LIBRARIES}
+)
+
 # This creates all the targets, and is required to be called to enable the
 # functionality which allows both CPU and GPU code to be compiled with either
 # clang or nvcc + gcc.
