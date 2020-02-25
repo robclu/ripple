@@ -626,5 +626,39 @@ TEST(container_device_block, can_invoke_with_pipeline_1d) {
   }
 }
 
+TEST(container_device_block, can_invoke_pipeline_multi_blocks_1d) {
+  constexpr size_t size_x = 10;
+  ripple::device_block_1d_t<dev_block_test_t> b1(size_x);
+  ripple::device_block_1d_t<float>            b2(size_x);
+
+  auto pipeline = ripple::make_pipeline(
+    [] ripple_host_device (auto it1, auto it2) {
+      *it2 = static_cast<float>(ripple::global_idx(ripple::dim_x)) / size_x;
+     
+      const auto inside = *it2 <= 0.5f;
+      it1->flag() = inside ? -1    : 1;
+      it1->v(0)   = inside ? 4.4f  : 2.2f;
+      it1->v(1)   = inside ? 5.5f  : 6.6f;
+      it1->v(2)   = inside ? 0.23f : 3.14f;
+    }
+  );
+
+  ripple::invoke(b1, b2, pipeline);
+
+  auto b1h = b1.as_host(); auto b2h = b2.as_host();
+  for (auto i : ripple::range(b1.size())) {
+    const auto b1i    = b1h(i);
+    const auto b2i    = b2h(i);
+    const auto norm_i = static_cast<float>(i) / size_x;
+    const auto inside = norm_i <= 0.5f;
+
+    EXPECT_NEAR(*b2i, norm_i, 1e-6);
+    EXPECT_EQ(b1i->flag(), inside ? -1    : 1);
+    EXPECT_EQ(b1i->v(0)  , inside ? 4.4f  : 2.2f);
+    EXPECT_EQ(b1i->v(1)  , inside ? 5.5f  : 6.6f);
+    EXPECT_EQ(b1i->v(2)  , inside ? 0.23f : 3.14f);
+  }
+}
+
 #endif // RIPPLE_TESTS_CONTAINER_DEVICE_BLOCK_TESTS_HPP
 

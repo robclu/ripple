@@ -22,8 +22,6 @@
 
 namespace ripple {
 
-//==--- []
-
 //==--- [pipeline invoke] --------------------------------------------------==//
 
 /// This invokes the \p pipeline on each element of the \p block. 
@@ -40,6 +38,28 @@ template <typename T, size_t Dims, typename... Ops>
 auto invoke(DeviceBlock<T, Dims>& block, const Pipeline<Ops...>& pipeline)
 -> void {
   kernel::cuda::invoke(block, pipeline);
+}
+
+/// This invokes the \p pipeline on each element of the \p block, passing an
+/// iterator to the elements in the \p other block to the pipeline as well.
+///
+/// This overload is for device blocks and will run each stage of the pipeline
+/// on the GPU.
+/// 
+/// \param  block    The block to invoke the pipeline on.
+/// \param  other    The other block to pass to the pipeline.
+/// \param  pipeline The pipeline to invoke on the block.
+/// \tparam T        The data type for the block.
+/// \tparam U        The data type for the other block.
+/// \tparam Dims     The number of dimensions in the block.
+/// \tparam Ops      The type of the pipeline operations.
+template <typename T, typename U, size_t Dims, typename... Ops>
+auto invoke(
+  DeviceBlock<T, Dims>&   block,
+  DeviceBlock<U, Dims>&   other,
+  const Pipeline<Ops...>& pipeline
+) -> void {
+  kernel::cuda::invoke(block, other, pipeline);
 }
 
 //==--- [simple invoke] ----------------------------------------------------==//
