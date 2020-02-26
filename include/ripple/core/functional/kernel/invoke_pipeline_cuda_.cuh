@@ -26,6 +26,7 @@
 #include <ripple/core/execution/execution_traits.hpp>
 #include <ripple/core/execution/static_execution_params.hpp>
 #include <ripple/core/execution/synchronize.hpp>
+#include <ripple/core/execution/detail/thread_index_impl_.hpp>
 #include <ripple/core/execution/thread_index.hpp>
 #include <ripple/core/iterator/iterator_traits.hpp>
 
@@ -132,6 +133,11 @@ ripple_global auto invoke_static_shared_pipeline(
   constexpr auto dims       = it.dimensions();
   constexpr auto alloc_size = exec_params.template allocation_size<dims>();
   __shared__ char buffer[alloc_size];
+
+  unrolled_for<dims>([&] (auto d) {
+    constexpr auto dim = size_t{d};
+    ::ripple::detail::global_elements(dim) = it.size(dim);
+  });
 
   auto shared_it = 
     exec_params.template iterator<dims>(static_cast<void*>(buffer));
@@ -308,6 +314,11 @@ ripple_global auto invoke_static_shared_pipeline_multi(
   constexpr auto alloc_size_a = params.template allocation_size<dims>();
   constexpr auto alloc_size_b = oth_params.template allocation_size<dims>();
   __shared__ char buffer[alloc_size_a + alloc_size_b];
+
+  unrolled_for<dims>([&] (auto d) {
+    constexpr auto dim = size_t{d};
+    ::ripple::detail::global_elements(dim) = it.size(dim);
+  });
 
   auto shared_it       = params.template iterator<dims>(
     static_cast<void*>(buffer)

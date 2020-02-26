@@ -37,8 +37,23 @@ static thread_local Dim3 block_idx_;
 static thread_local Dim3 block_dim_;
 /// Sizes of the grid.
 static thread_local Dim3 grid_dim_;
+/// Numner of elements in the grid.
+static thread_local Dim3 grid_elements_;
 
 #if defined(__CUDA__) && defined(__CUDA_ARCH__)
+
+/// The number of elements in each dimension.
+ripple_device_only size_t _global_elements[3];
+
+/// Returns the number of elements in the dimension, globally. This can be used
+/// for the case that there are multiple gpus, and therefore the single GPU case
+/// is not the entire grid.
+/// \param  dim The dimension to get the number of elements for.
+/// \tparam Dim The type of the dimension specifier.
+template <typename Dim>
+ripple_host_device inline auto global_elements(Dim&& dim) -> size_t& {
+  return _global_elements[dim];
+}
 
 //==--- [thread idx] -------------------------------------------------------==//
 
@@ -290,6 +305,18 @@ ripple_host_device inline auto grid_size(std::size_t dim) -> std::size_t {
   return dim == dimx_t::value ? grid_size(dim_x) :
          dim == dimy_t::value ? grid_size(dim_y) :
          dim == dimz_t::value ? grid_size(dim_z) : 0;
+}
+
+/// Returns the number of elements in the dimension, globally. This can be used
+/// for the case that there are multiple gpus, and therefore the single GPU case
+/// is not the entire grid.
+/// \param  dim The dimension to get the number of elements for.
+/// \tparam Dim The type of the dimension specifier.
+template <typename Dim>
+ripple_host_device inline auto global_elements(Dim&& dim) -> size_t& {
+  return dim == dimx_t::value ? grid_elements_.x :
+         dim == dimy_t::value ? grid_elements_.y :
+         grid_elements_.z;
 }
 
 #endif // __CUDACC__

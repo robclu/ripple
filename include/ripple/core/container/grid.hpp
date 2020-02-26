@@ -83,8 +83,7 @@ class Grid {
   >
   Grid(Topology& topo, Sizes&&... sizes) 
   : _space{sizes...}, _topo{topo}, _gpu_mask{single_gpu_mask} {
-    resize_block_size(dims_v);
-    default_allocation();
+    reallocate();
   }
 
   /// Initializes the size of each of the dimensions of the grid, allocating the
@@ -104,8 +103,7 @@ class Grid {
   >
   Grid(Topology& topo, size_t padding, Sizes&&... sizes) 
   : _space{padding, sizes...}, _topo{topo}, _gpu_mask{single_gpu_mask} {
-    resize_block_size(dims_v); 
-    default_allocation();
+    reallocate();
   }
 
   /// Initializes the size of each of the dimensions of the grid, allocating the
@@ -126,8 +124,7 @@ class Grid {
   >
   Grid(Topology& topo, size_t padding, gpu_mask_t mask, Sizes&&... sizes) 
   : _space{padding, sizes...}, _topo{topo}, _gpu_mask{mask} {
-    resize_block_size(dims_v); 
-    default_allocation();
+    reallocate();
   }
 
   /// Destructor -- resets the amount of device memory allocated for the blocks
@@ -196,6 +193,12 @@ class Grid {
     return _space.internal_size(std::forward<Dim>(dim));
   }
 
+  /// Returns the amount of padding around the grid, and around each of the
+  /// blocks with make up the grid.
+  auto padding() const -> size_t {
+    return _space.padding();
+  }
+
   /// Returns a const reference to the gpu mask for the grid.
   auto gpu_mask() const -> const gpu_mask_t& {
     return _gpu_mask;
@@ -209,6 +212,28 @@ class Grid {
   /// Returns true if the grid is only running in single gpu mode.
   auto single_gpu() const -> bool {
     return num_gpus_used() == size_t{1};
+  }
+
+  //==--- [resizing] -------------------------------------------------------==//
+  
+  /// Resizes the grid in the \p dim dimension to a size of \p elements. Note 
+  /// that this leaves the grid in a state where behaviour is undefined until a
+  /// call to ``reallocate()`` is made.
+  ///
+  /// \param  dim      The dimension to resize.
+  /// \param  elements The number of elements to resize to.
+  /// \tparam Dim      The type of the dimension specifier.
+  template <typename Dim>
+  auto resize_dim(Dim&& dim, size_t elements) -> void {
+    _space.resize_dim(dim, elements);
+  }
+
+  /// Cleans up and then realocates all data for the grid, on both the host and
+  /// the device. This is expensive, and this should only be done at application
+  /// startup. After a call to ``reallocate()`` all previous data is invalid.
+  auto reallocate() -> void {
+    resize_block_size(dims_v);
+    default_allocation();
   }
 
   //==--- [pipeline invoke] ------------------------------------------------==//
@@ -225,6 +250,28 @@ class Grid {
       block->ensure_device_data_available();
 
       invoke(block->device_data, pipeline);
+      block->data_state = block_state_t::updated_device;
+    }
+  }
+
+  /// Applies the \p pipeline to the grid, performing the operations in the
+  /// pipeline, also passing the \p other grid to the pipeline as the second
+  /// argument to the pipeline.
+  /// \param  other    The other grid to pass to the pipeline.
+  /// \param  pipeline The pipeline to apply to the grid.
+  /// \tparam U        The type of the data for the other grid.
+  /// \tparam Ops      The operations in the pipeline.
+  template <typename U, typename... Ops>
+  auto apply_pipeline(Pipeline<Ops...>& pipeline, Grid<U, Dimensions>& other) 
+  -> void {
+    if (single_gpu()) {
+      auto block_other = other.begin();
+      auto block       = _blocks.begin();
+
+      block->ensure_device_data_available();
+      block_other->ensure_device_data_available();
+
+      invoke(block->device_data, block_other->device_data, pipeline);
       block->data_state = block_state_t::updated_device;
     }
   }
@@ -330,9 +377,9 @@ class Grid {
 
       // Check if there is enough memory on the device to allocate:
       const size_t gpu_id = iter++ / blocks_per_gpu;
-      auto& gpu       = _topo.gpus[gpu_id];
-      auto& stream_id = stream_ids[gpu_id];
-      block.gpu_id    = gpu.index;
+      auto& gpu           = _topo.gpus[gpu_id];
+      auto& stream_id     = stream_ids[gpu_id];
+      block.gpu_id        = gpu.index;
       cudaSetDevice(gpu.index); 
 
       // Allocate the host memory:

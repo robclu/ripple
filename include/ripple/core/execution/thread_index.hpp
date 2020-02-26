@@ -91,7 +91,7 @@ ripple_host_device inline auto global_idx(Dim&& dim) -> std::size_t {
 template <typename Dim>
 ripple_host_device inline auto global_norm_idx(Dim&& dim) -> float {
   return static_cast<float>(global_idx(dim)) 
-    / static_cast<float>(grid_size(dim));
+    / detail::global_elements(dim);
 }
 
 /// Returns the normalized block index in the \p dim dimension, using the number
@@ -103,37 +103,6 @@ ripple_host_device inline auto block_norm_idx(Dim&& dim) -> float {
   return static_cast<float>(block_idx(dim)) 
     / static_cast<float>(block_size(dim));
 }
-
-/// Returns the normalized global index in the \p dim dimension, using the \p
-/// dim_size as the number of elements in the dimension.
-///
-/// This overload is useful for the case that there may be more threads running
-/// than elements in the dimension.
-///
-/// \param  dim      The dimension to get the normalized index for.
-/// \param  dim_size The number of elements in the dimension.
-/// \tparam Dim      The type of the dimension specifier.
-template <typename Dim>
-ripple_host_device inline auto global_norm_idx(Dim&& dim, std::size_t dim_size)
--> float {
-  return static_cast<float>(global_idx(dim)) / static_cast<float>(dim_size);
-}
-
-/// Returns the normalized block index in the \p dim dimension, using the \p
-/// dim_size as the number of elements in the dimension.
-///
-/// This overload is useful for the case that some threads in a block do not
-/// run.
-///
-/// \param  dim      The dimension to get the normalized index for.
-/// \param  dim_size The number of elements in the dimension.
-/// \tparam Dim      The type of the dimension specifier.
-template <typename Dim>
-ripple_host_device inline auto block_norm_idx(Dim&& dim, std::size_t dim_size)
--> float {
-  return static_cast<float>(block_idx(dim)) / static_cast<float>(dim_size);
-}
-
 
 //==--- [utilities] --------------------------------------------------------==//
 
