@@ -17,7 +17,6 @@
 #define RIPPLE_MULTIDIM_MULTIDIM_SPACE_HPP
 
 #include "space_traits.hpp"
-#include <ripple/core/container/vec.hpp>
 #include <ripple/core/utility/type_traits.hpp>
 
 namespace ripple {

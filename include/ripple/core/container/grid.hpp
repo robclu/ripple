@@ -41,8 +41,6 @@ class Grid {
   using device_block_t = DeviceBlock<T, Dimensions>;
   /// Defines the type of the space used by the grid.
   using space_t        = DynamicMultidimSpace<Dimensions>;
-  /// Defines the type of the iterator over host data.
-  using host_iter_t    = typename BlockTraits<host_block_t>::iter_t;
   /// Defines the type of the block for the grid.
   using block_t        = Block<T, Dimensions>;
   /// Defines the type of the state for the block.
@@ -59,12 +57,15 @@ class Grid {
   /// Default mask value for a single gpu.
   static constexpr auto single_gpu_mask  = size_t{1};
 
-
  public:
   //==--- [aliases] --------------------------------------------------------==//
   
   /// Defines the type of the gpu mask for the grid.
-  using gpu_mask_t = std::bitset<16>;
+  using gpu_mask_t    = std::bitset<16>;
+  /// Defines the type of the iterator over host data.
+  using host_iter_t   = typename BlockTraits<host_block_t>::iter_t;
+  /// Defines the type of the iterator over device data.
+  using device_iter_t = typename BlockTraits<device_block_t>::iter_t;
 
   //==--- [construction] ---------------------------------------------------==//
 
@@ -243,7 +244,7 @@ class Grid {
   /// \param  pipeline The pipeline to apply to the grid.
   /// \tparam Ops      The operations in the pipeline.
   template <typename... Ops>
-  auto apply_pipeline(Pipeline<Ops...>& pipeline) -> void {
+  auto apply_pipeline(const Pipeline<Ops...>& pipeline) -> void {
     if (single_gpu()) {
       auto block = _blocks.begin();
 
@@ -262,8 +263,9 @@ class Grid {
   /// \tparam U        The type of the data for the other grid.
   /// \tparam Ops      The operations in the pipeline.
   template <typename U, typename... Ops>
-  auto apply_pipeline(Pipeline<Ops...>& pipeline, Grid<U, Dimensions>& other) 
-  -> void {
+  auto apply_pipeline(
+    const Pipeline<Ops...>& pipeline, Grid<U, Dimensions>& other
+  ) -> void {
     if (single_gpu()) {
       auto block_other = other.begin();
       auto block       = _blocks.begin();
@@ -430,7 +432,6 @@ class Grid {
   /// \tparam Indices The types of the indices.
   template <typename... Indices>
   ripple_host_only auto access_multi_gpu(Indices&&... is) -> host_iter_t {
-    
     auto block = _blocks.begin();
 
     // Copy data back from the device, if necessary.

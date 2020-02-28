@@ -191,12 +191,25 @@ ripple_target_link_libraries(
   eos_tests ${GTEST_BOTH_LIBRARIES}
 )
 
+#------------------------------------------------------------------------------#
+
+ripple_add_executable(
+  material_device_tests ${ripple_SOURCE_DIR}/tests/material_device.cu
+)
+ripple_target_link_libraries(
+  material_device_tests ${GTEST_BOTH_LIBRARIES} ${CUDA_LIBRARIES}
+)
+
+#------------------------------------------------------------------------------#
+
 ripple_add_executable(
   state_tests ${ripple_SOURCE_DIR}/tests/state.cpp
 )
 ripple_target_link_libraries(
   state_tests ${GTEST_BOTH_LIBRARIES}
 )
+
+#------------------------------------------------------------------------------#
 
 ripple_add_executable(
   state_device_tests ${ripple_SOURCE_DIR}/tests/state_device.cu

@@ -18,7 +18,6 @@
 #define RIPPLE_MULTIDIM_OFFSET_TO_HPP
 
 #include "multidim_space.hpp"
-#include <ripple/core/container/vec.hpp>
 
 namespace ripple {
 
@@ -59,9 +58,9 @@ ripple_host_device auto offset_to_soa(
   std::size_t                       element_size,
   Indices&&...                      indices
 ) -> std::size_t {
-  constexpr auto num_indices = sizeof...(Indices);
-  const auto     ids         = Vec<std::size_t, num_indices>{indices...};
-  std::size_t    offset      = ids[0];
+  constexpr auto num_indices      = sizeof...(Indices);
+  const size_t   ids[num_indices] = {indices...};
+  std::size_t    offset           = ids[0];
   unrolled_for<num_indices - 1>([&] (auto i) {
     constexpr auto dim = static_cast<std::size_t>(i) + 1;
     offset += ids[dim] * element_size * space.step(dim); 
@@ -139,9 +138,9 @@ ripple_host_device auto offset_to_aos(
   std::size_t                       element_size,
   Indices&&...                      indices
 ) -> std::size_t {
-  constexpr auto num_indices = sizeof...(Indices);
-  const auto     ids         = Vec<std::size_t, num_indices>{indices...};
-  std::size_t    offset      = ids[0] * element_size;
+  constexpr auto num_indices      = sizeof...(Indices);
+  const size_t   ids[num_indices] = {indices...};
+  std::size_t    offset           = ids[0] * element_size;
   unrolled_for<num_indices - 1>([&] (auto i) {
     constexpr auto dim = static_cast<std::size_t>(i) + 1;
     offset += ids[dim] * element_size * space.step(dim);

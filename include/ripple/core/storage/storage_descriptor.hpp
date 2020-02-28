@@ -20,6 +20,8 @@
 #include "owned_storage.hpp"
 #include "storage_layout.hpp"
 #include "strided_storage_view.hpp"
+#include "storage_layout.hpp"
+#include <ripple/core/utility/portability.hpp>
 
 namespace ripple {
 

@@ -157,8 +157,9 @@ ripple_global auto invoke_static_shared_pipeline(
 /// \tparam Dims      The number of dimensions in the block.
 /// \tparam Ops       The operations in the pipeline.
 template <typename T, size_t Dims, typename... Ops>
-auto invoke(DeviceBlock<T, Dims>& block, Pipeline<Ops...>& pipeline) 
--> void {
+auto invoke_pipeline(
+  DeviceBlock<T, Dims>& block, const Pipeline<Ops...>& pipeline
+) -> void {
 #if defined(__CUDACC__)
   auto exec_params       = default_shared_exec_params_t<Dims, T>{};
   auto [threads, blocks] = get_exec_size(block, exec_params);
@@ -345,10 +346,10 @@ ripple_global auto invoke_static_shared_pipeline_multi(
 /// \tparam Dims      The number of dimensions in the block.
 /// \tparam Ops       The operations in the pipeline.
 template <typename T, typename U, size_t Dims, typename... Ops>
-auto invoke(
-  DeviceBlock<T, Dims>& block, 
-  DeviceBlock<U, Dims>& other,
-  Pipeline<Ops...>&     pipeline
+auto invoke_pipeline(
+  DeviceBlock<T, Dims>&   block, 
+  DeviceBlock<U, Dims>&   other,
+  const Pipeline<Ops...>& pipeline
 )  -> void {
 #if defined(__CUDACC__)
   auto exec_params       = default_shared_exec_params_t<Dims, T>{};

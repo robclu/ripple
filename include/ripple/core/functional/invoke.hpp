@@ -37,7 +37,7 @@ namespace ripple {
 template <typename T, size_t Dims, typename... Ops>
 auto invoke(DeviceBlock<T, Dims>& block, const Pipeline<Ops...>& pipeline)
 -> void {
-  kernel::cuda::invoke(block, pipeline);
+  kernel::cuda::invoke_pipeline(block, pipeline);
 }
 
 /// This invokes the \p pipeline on each element of the \p block, passing an
@@ -59,7 +59,7 @@ auto invoke(
   DeviceBlock<U, Dims>&   other,
   const Pipeline<Ops...>& pipeline
 ) -> void {
-  kernel::cuda::invoke(block, other, pipeline);
+  kernel::cuda::invoke_pipeline(block, other, pipeline);
 }
 
 //==--- [simple invoke] ----------------------------------------------------==//

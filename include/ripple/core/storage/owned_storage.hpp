@@ -20,8 +20,6 @@
 #include "storage_accessor.hpp"
 #include <ripple/core/utility/type_traits.hpp>
 
-#include <iostream>
-
 namespace ripple {
 
 /// Defines an owned contiguous, statically allocated, storage for Ts types.

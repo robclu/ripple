@@ -20,7 +20,7 @@
 
 namespace ripple::fv {
 
-/// The Eos class defines a state interface for equations of state.
+/// The Eos class defines an interface for equations of state.
 /// \tparam Impl The implementation of the iterface.
 template <typename Impl>
 class Eos {

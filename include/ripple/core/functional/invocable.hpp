@@ -80,19 +80,6 @@ public:
   ripple_host_device Invocable(const Functor& functor, Args&&... args) noexcept 
   : _args{arg_tuple_t{std::forward<Args>(args)...}}, _functor{functor} {} 
 
-  /// Takes a functor and and a pack or arguments and stores them as an
-  /// invocable.
-  ///
-  /// This moves both the functor and the arguments into the invocable to avoid
-  /// the case that a reference to a function or one of the arguments was taken
-  /// which goes out of scope.
-  ///
-  /// \param functor The functor to store.
-  /// \param args    The arguments to store.
-  ripple_host_device Invocable(Functor&& functor, Args&&... args) noexcept 
-  : _args{arg_tuple_t{std::forward<Args>(args)...}}, 
-    _functor{std::forward<Functor>(functor)} {}
-
   /// Takes a functor and and a tuple of arguments and stores them as an
   /// invocable.
   ///
@@ -113,12 +100,6 @@ public:
   ripple_host_device Invocable(const Invocable& other) noexcept 
   : _args{other._args}, _functor{other._functor} {}
 
-  /// Move constructor which moves the functor and the arguments from \p other
-  /// into this invocable.
-  /// \param other The other invocable object to move from.
-  ripple_host_device Invocable(Invocable&& other) noexcept 
-  : _args{std::move(other._args)}, _functor{std::move(other._functor)} {}
-
   //==--- [copy & move assignment] -----------------------------------------==//
   
   /// Copy assignment to copy the invocable from the \p other invocable.
@@ -127,14 +108,6 @@ public:
   -> self_t& {
     _args    = other._args;
     _functor = other._functor;
-    return *this;
-  }
-
-  /// Move assignment to move the invocable from the \p other invocable.
-  /// \param other The other invocable to move from.
-  ripple_host_device auto operator=(Invocable&& other) noexcept -> self_t {
-    _args    = std::move(other._args);
-    _functor = std::move(other._functor);
     return *this;
   }
 

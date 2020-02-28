@@ -196,7 +196,7 @@ class BlockIterator {
   }
 
   /// Shifts the iterator by \p amount positions in the block in the \p dim
-  /// dimension, returning a new iterator offset to the location.
+  /// dimension.
   /// \param  dim    The dimension to offset in
   /// \param  amount The amount to offset by.
   /// \tparam Dim    The type of the dimension specifier.

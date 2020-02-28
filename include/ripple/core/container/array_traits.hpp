@@ -34,13 +34,8 @@ template <typename Impl> struct Array;
 /// \tparam T      The type of the data for the vector.
 /// \tparam Size   The size of the vector.
 /// \tparam Layout The storage layout of the vector.
-template <
-  typename T   ,
-  typename Size, 
-  typename Layout = contiguous_owned_t
-> 
+template <typename T, typename Size, typename Layout = contiguous_owned_t>
 struct VecImpl;
-
 
 //==--- [traits] -----------------------------------------------------------==//
 

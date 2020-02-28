@@ -28,10 +28,13 @@ namespace ripple::fv {
 /// \tparam T The type of the data used for computation.
 template <typename T> struct IdealGas;
 
-
 /// The EosTraits type defines traits for an equation of state.
 /// \tparam EqnOfState The equation of state to get the traits for.
 template <typename EqnOfState> struct EosTraits;
+
+/// The Eos type defines an interface for equations of state.
+/// \tparam Impl The implementation of the iterface.
+template <typename Impl> class Eos;
 
 //==--- [specializations]  -------------------------------------------------==//
 
@@ -42,6 +45,13 @@ struct EosTraits<IdealGas<T>> {
   /// Defines the data type used by the equation of state.
   using value_t = std::decay_t<T>;
 };
+
+//==--- [aliases] ----------------------------------------------------------==//
+
+/// Defines the equation of state traits for the decayed type T.
+/// \tparam T The type to get the equation of state traits for.
+template <typename T>
+using eos_traits_t = EosTraits<std::decay_t<T>>;
 
 } // namespace ripple::fv
 

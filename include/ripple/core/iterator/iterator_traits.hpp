@@ -71,9 +71,9 @@ struct IteratorTraits<BlockIterator<T, Space>> {
   //==--- [traits] ---------------------------------------------------------==//
   
   /// Defines the number of dimensions for the iterator.
-  static constexpr size_t dimensions = space_traits_t<Space>::dimensions;
+  static constexpr size_t dimensions  = space_traits_t<Space>::dimensions;
   /// Returns that the traits are for a valid iterator.
-  static constexpr bool  is_iterator = true;
+  static constexpr bool   is_iterator = true;
 };
 
 //==--- [aliases] ----------------------------------------------------------==//

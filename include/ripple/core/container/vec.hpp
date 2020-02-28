@@ -21,6 +21,7 @@
 #include "array_traits.hpp"
 #include "tuple.hpp"
 #include <ripple/core/storage/storage_descriptor.hpp>
+#include <ripple/core/storage/storage_element_traits.hpp>
 #include <ripple/core/storage/storage_traits.hpp>
 #include <ripple/core/utility/portability.hpp>
 
@@ -79,8 +80,9 @@ struct VecImpl : public Array<VecImpl<T, Size, Layout>>  {
   /// different storage layout.
   /// \tparam OtherLayout The layout of the other storage.
   template <typename OtherLayout>
-  ripple_host_device constexpr VecImpl(const VecImpl<T, Size, OtherLayout>& other)
-  : _storage{other._storage} {}
+  ripple_host_device constexpr VecImpl(
+    const VecImpl<T, Size, OtherLayout>& other
+  ) : _storage{other._storage} {}
 
   /// Move constructor to set the vector from another vector with a potentially
   /// different storage layout.
