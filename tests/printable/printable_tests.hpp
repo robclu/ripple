@@ -1,16 +1,16 @@
-//==--- ripple/tests/iterator/iterator_tests.hpp ----------- -*- C++ -*- ---==//
+//==--- ripple/core/printable/printable_tests.hpp ---------- -*- C++ -*- ---==//
 //            
 //                                Ripple
 // 
-//                      Copyright (c) 2019 Rob Clucas.
+//                      Copyright (c) 2020 Rob Clucas.
 //
 //  This file is distributed under the MIT License. See LICENSE for details.
 //
 //==------------------------------------------------------------------------==//
 //
-/// \file  iterator_tests.hpp
-/// \brief This file contains all iterator tests.
+/// \file  printable_tests.hpp
+/// \brief This file contains all printable tests.
 //
 //==------------------------------------------------------------------------==//
 
-#include "block_iterator_tests.hpp"
+#include "printable_element_tests.hpp"

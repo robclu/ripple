@@ -1,19 +1,19 @@
-//==--- ripple/tests/multidim.cpp -------------------------- -*- C++ -*- ---==//
+//==--- ripple/tests/printable.cpp ------------------------- -*- C++ -*- ---==//
 //            
 //                                Ripple
 // 
-//                      Copyright (c) 2019 Rob Clucas.
+//                      Copyright (c) 2020 Rob Clucas.
 //
 //  This file is distributed under the MIT License. See LICENSE for details.
 //
 //==------------------------------------------------------------------------==//
 //
-/// \file  multidim.cpp
-/// \brief This file contains the main function for multidim tests.
+/// \file  printable.cpp
+/// \brief This file contains the main function for printable tests.
 //
 //==------------------------------------------------------------------------==//
 
-#include "multidim/multidim_tests.hpp"
+#include "printable/printable_tests.hpp"
 #include <gtest/gtest.h>
 
 int main(int argc, char** argv) {
