@@ -221,6 +221,13 @@ ripple_target_link_libraries(
 #===== [viz tests] ----------------------------------------------------------==#
 
 ripple_add_executable(
+  io_tests ${ripple_SOURCE_DIR}/tests/io.cpp
+)
+ripple_target_link_libraries(
+  io_tests ${GTEST_BOTH_LIBRARIES}
+)
+
+ripple_add_executable(
   printable_tests ${ripple_SOURCE_DIR}/tests/printable.cpp
 )
 ripple_target_link_libraries(

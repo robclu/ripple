@@ -1,4 +1,4 @@
-//==--- ripple/core/printable/printable_tests.hpp ---------- -*- C++ -*- ---==//
+//==--- ripple/tests/io/io_tests.hpp ----------------------- -*- C++ -*- ---==//
 //            
 //                                Ripple
 // 
@@ -8,15 +8,15 @@
 //
 //==------------------------------------------------------------------------==//
 //
-/// \file  printable_tests.hpp
-/// \brief This file contains all printable tests.
+/// \file  io_tests.hpp
+/// \brief This file contains all io tests.
 //
 //==------------------------------------------------------------------------==//
 
-#ifndef RIPPLE_TESTS_PRINTABLE_PRINTABLE_TESTS_HPP
-#define RIPPLE_TESTS_PRINTABLE_PRINTABLE_TESTS_HPP
+#ifndef RIPPLE_TESTS_IO_IO_TESTS_HPP
+#define RIPPLE_TESTS_IO_IO_TESTS_HPP
 
-#include "printable_element_tests.hpp"
+#include "vtk_writer_tests.hpp"
 
-#endif // RIPPLE_TESTS_PRINTABLE_PRINTABLE_TESTS_HPP
+#endif // RIPPLE_TESTS_IO_IO_TESTS_HPP
 
