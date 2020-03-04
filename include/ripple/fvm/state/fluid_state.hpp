@@ -20,8 +20,11 @@
 #include <ripple/fvm/eos/eos.hpp>
 #include <ripple/core/container/array.hpp>
 #include <ripple/core/container/vec.hpp>
+#include <ripple/core/math/math.hpp>
 #include <ripple/core/storage/storage_descriptor.hpp>
 #include <ripple/core/storage/storage_traits.hpp>
+#include <ripple/viz/printable/printable.hpp>
+#include <ripple/viz/printable/printable_element.hpp>
 
 namespace ripple::fv {
 
@@ -50,7 +53,8 @@ namespace ripple::fv {
 template <typename T, typename Dims, typename Layout>
 class FluidState : 
   public Array<FluidState<T, Dims, Layout>>,
-  public State<FluidState<T, Dims, Layout>> {
+  public State<FluidState<T, Dims, Layout>>,
+  public viz::Printable<FluidState<T, Dims, Layout>> {
   //==--- [constants] ------------------------------------------------------==//
   
   /// Defines the number of dimensions for the state.
@@ -313,6 +317,53 @@ class FluidState :
       f[v_offset + d + shift] = rho_v(d + shift) * v;
     });
     return f;
+  }
+
+  //==--- [printable interface] --------------------------------------------==//
+  
+  /// Returns true if the state has an element with the \p name which can be
+  /// printed.
+  /// \param name The name of the element to check for.
+  ripple_host_only auto has_printable_element(const char* name) const
+  -> bool {
+    return printable_element(name) != viz::PrintableElement::not_found();
+  }
+
+  /// Returns a printable element with the name \p name, using the arguments \p
+  /// eos 
+  /// \param  name The name of the element to get.
+  /// \param  args Optional arguments used to get the elements.
+  /// \tparam Args The type of the arguments.
+  template <typename... Args>
+  ripple_host_device auto printable_element(const char* name, Args&&... args)
+  const -> viz::PrintableElement {
+    using namespace math;
+    const auto scalar = viz::PrintableElement::AttributeKind::scalar;
+    const auto vector = viz::PrintableElement::AttributeKind::vector;
+    switch (hash(name)) {
+      case "density"_hash:
+        return viz::PrintableElement("density", scalar, rho());
+      case "energy"_hash:
+        return viz::PrintableElement("energy", scalar, energy());
+      case "pressure"_hash: {
+        if constexpr (sizeof...(Args) == 1) {
+          return viz::PrintableElement("pressure", scalar, pressure(args...));
+        } else {
+          return viz::PrintableElement::not_found();
+        }
+      }
+      case "velocity"_hash: {
+        auto e = viz::PrintableElement("velocity", vector);
+        unrolled_for<dims>([&] (auto d) {
+          constexpr auto dim = size_t{d};
+          const auto vel = this->template v<dim>();
+          e.add_value(vel);
+        });
+        return e;
+      }
+      default:
+        return viz::PrintableElement::not_found();
+    }
   }
   
  private:

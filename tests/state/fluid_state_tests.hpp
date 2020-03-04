@@ -317,6 +317,36 @@ TEST(state_fluid_state, can_divide_states) {
   });
 }
 
-//==-- [state inside grid] -------------------------------------------------==//
+//==-- [printable tests] ---------------------------------------------------==//
+
+TEST(state_fluid_state, can_get_printable_elements) {
+  fs_3d_t s;
+  const auto rho = real_t{2};
+  const auto e   = real_t{3};
+  const auto v   = real_t{4};
+  const auto p   = real_t{7};
+  s.rho()    = rho;
+  s.energy() = e;
+  ripple::unrolled_for<s.dimensions()>([&] (auto d) {
+    s.set_v(d, v);
+  });
+
+  EXPECT_EQ(s.printable_element("density").first_value(), rho);
+  EXPECT_EQ(s.printable_element("energy").first_value() , e);
+  EXPECT_EQ(s.printable_element("velocity").values()[0] , v);
+  EXPECT_EQ(s.printable_element("velocity").values()[1] , v);
+  EXPECT_EQ(s.printable_element("velocity").values()[2] , v);
+
+  ideal_gas_st gas(1.4);
+  s.set_pressure(p, gas);
+  EXPECT_NEAR(s.printable_element("pressure", gas).first_value(), p, 1e-8);
+}
+
+TEST(state_fluid_state, returns_not_found_on_failure) {
+  fs_3d_t s;
+
+  auto e = ripple::viz::PrintableElement::not_found();
+  EXPECT_TRUE(s.printable_element("non_elem") == e);
+}
 
 #endif // RIPPLE_TESTS_STATE_FLUID_STATE_TESTS_HPP

@@ -16,7 +16,7 @@
 #ifndef RIPPLE_VIZ_PRINTABLE_PRINTABLE_HPP
 #define RIPPLE_VIZ_PRINTABLE_PRINTABLE_HPP
 
-#include "printable_traits.hpp"
+#include "printable_element.hpp"
 #include <ripple/core/utility/portability.hpp>
 
 namespace ripple::viz {

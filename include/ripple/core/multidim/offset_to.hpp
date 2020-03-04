@@ -18,6 +18,7 @@
 #define RIPPLE_MULTIDIM_OFFSET_TO_HPP
 
 #include "multidim_space.hpp"
+#include <ripple/core/algorithm/unrolled_for.hpp>
 
 namespace ripple {
 

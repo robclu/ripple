@@ -89,6 +89,12 @@ class PrintableElement {
     return _values;
   }
 
+  /// Returns the first value from the values, or the only value if there is
+  /// only one.
+  auto first_value() const -> value_t {
+    return _values[0];
+  }
+
   /// Returns a reference to the kind of the element.
   auto kind() -> AttributeKind& {
     return _kind;
