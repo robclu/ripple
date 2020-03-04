@@ -56,4 +56,29 @@ TEST(printable_printable_element_tests, adds_default_zero_vectors) {
   EXPECT_EQ(v[2]    , 0.0);
 }
 
+TEST(printable_printable_element_tests, can_compare_elements) {
+  ripple::viz::PrintableElement p1(
+    "test", ripple::viz::PrintableElement::AttributeKind::vector, 3.14
+  );
+  ripple::viz::PrintableElement p2(
+    "test", ripple::viz::PrintableElement::AttributeKind::vector, 3.14
+  );
+
+  EXPECT_TRUE(p1 == p2);
+}
+
+TEST(printable_printable_element_tests, can_compare_not_found_elements) {
+  auto p1 = ripple::viz::PrintableElement::not_found();
+  auto p2 = ripple::viz::PrintableElement::not_found();
+
+  EXPECT_TRUE(p1 == p2);
+
+  ripple::viz::PrintableElement p3(
+    "test", ripple::viz::PrintableElement::AttributeKind::vector, 3.14
+  );
+
+  EXPECT_TRUE(p1 != p3);
+  EXPECT_TRUE(p2 != p3);
+}
+
 #endif // RIPPLE_TESTS_PRINTABLE_PRINTABLE_ELEMENT_TESTS_HPP

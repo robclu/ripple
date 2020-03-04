@@ -44,7 +44,7 @@ class Printable {
   /// name \p name.
   /// \param name The name of the element to determine if is present in the type
   ///             implementing the printable interface.
-  ripple_host_device auto has_printable_element(const char* name) const
+  ripple_host_only auto has_printable_element(const char* name) const
   -> bool {
     return impl()->has_printable_element(name);
   }
@@ -53,11 +53,11 @@ class Printable {
   /// args if necessary.
   /// \param  name The name of the element to get.
   /// \param  args Optional arguments used to get the elements.
-  /// \tparam args The type of the arguments.
-  template <typename... args>
-  ripple_host_device auto printable_element(const char* name, args&&... args)
+  /// \tparam Args The type of the arguments.
+  template <typename... Args>
+  ripple_host_only auto printable_element(const char* name, Args&&... args)
   const -> PrintableElement {
-    return impl()->printable_element(name, std::forward<args>(args)...);
+    return impl()->printable_element(name, std::forward<Args>(args)...);
   }
 };
 

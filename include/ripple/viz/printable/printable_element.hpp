@@ -17,6 +17,7 @@
 #define RIPPLE_VIZ_PRINTABLE_PRINTABLE_ELEMENT_HPP
 
 #include "printable_traits.hpp"
+#include <cstring>
 #include <string>
 #include <vector>
 
@@ -35,8 +36,9 @@ class PrintableElement {
 
   /// Defines the possible kinds of attributes.
   enum AttributeKind : uint8_t {
-    scalar, //!< Scalar data.
-    vector  //!< Vector data.
+    scalar ,  //!< Scalar data.
+    vector ,  //!< Vector data.
+    invalid   //!< Invalid data.
   };
 
   //==--- [construction] ---------------------------------------------------==//
@@ -52,6 +54,20 @@ class PrintableElement {
   : _values{static_cast<value_t>(values)...},
     _name{std::move(name)}, 
     _kind{kind} {}
+
+  //==--- [comparison] -----------------------------------------------------==//
+  
+  /// Compares this element against another element, returning true if the
+  /// element names match, otherwise returning false.
+  auto operator==(const PrintableElement& other) const -> bool {
+    return std::memcmp(&other._name[0], &_name[0], _name.length()) == 0;
+  }
+
+  /// Compares this element against another element, returning true if the
+  /// element names don't match, otherwise returning true.
+  auto operator!=(const PrintableElement& other) const -> bool {
+    return !(*this == other);
+  }
 
   //==--- [interface] ------------------------------------------------------==//
   
@@ -91,6 +107,13 @@ class PrintableElement {
   /// Returns a constant reference to the name of the element.
   auto name() const -> const std::string& {
     return _name;
+  }
+
+  //==--- [invalid interface] ----------------------------------------------==//
+  
+  /// Returns a PrintableElement with the name 'not found' and an invalid kind.
+  static auto not_found() -> PrintableElement {
+    return PrintableElement("not found", AttributeKind::invalid);
   }
 
  private:
