@@ -68,18 +68,17 @@ class VtkWriter : public Writer<VtkWriter> {
  public:
   //==--- [construction] ---------------------------------------------------==//
   
-  /// Constructor which sets the name of the file to write, as well as the
-  /// elements to write, if there are any.
-  /// \param  filename The name of the file to write to.
-  /// \param  name     The name of the data.
-  /// \param  elements The names of the printable elements.
-  /// \tparam Elements The type of the elements.
+  /// Constructor which sets the base name of the file to write, as well as the
+  /// name of the data, and the elements to write, if there are any.
+  /// \param  filename_base The base name of the file to write to.
+  /// \param  name          The name of the data.
+  /// \param  elements      The names of the printable elements.
+  /// \tparam Elements      The type of the elements.
   template <typename... Elements>
-  VtkWriter(std::string filename, std::string name, Elements&&... elements) 
+  VtkWriter(std::string filename_base, std::string name, Elements&&... elements) 
   : _elements{elements...},
-    _filename(check_filename(filename)), 
+    _filename_base(filename_base),
     _name{name},
-    _ofstream(filename, flags),
     _dims{1, 1, 1} {}
 
   /// Destructor which closes the file if it's open.
@@ -89,13 +88,13 @@ class VtkWriter : public Writer<VtkWriter> {
 
   //==--- [interface] ------------------------------------------------------==//
    
-  /// Tries to open the file for the writer, returning true on sucess, or false
-  /// on failure.
-  auto open() -> void {
-    if (_ofstream.is_open()) {
-      return;
-    }
-    _ofstream.open(_filename, flags);
+  /// Tries to open the file for the writer, using the base filename for the
+  /// writer, appending the \p filename_extra to the base filename, as well as
+  /// the .vtk extension.
+  /// \param filename_extra An extra part to append to the filename.
+  auto open(std::string filename_extra = "") -> void {
+    const auto file = _filename_base + filename_extra + extension_string;
+    _ofstream.open(file, flags);
   }
 
   /// Tries to close the file, returning true on success, or if already closed,
@@ -104,6 +103,14 @@ class VtkWriter : public Writer<VtkWriter> {
     if (_ofstream.is_open()) {
       _ofstream.close();
     }
+    _header_done = false;
+    _ids_done    = false;
+  }
+
+  /// Sets the name of the data to write.
+  /// \param name The name to set for the data.
+  auto set_name(std::string name) {
+    _name = name;
   }
 
   /// Sets the resolution of the data.
@@ -124,17 +131,6 @@ class VtkWriter : public Writer<VtkWriter> {
     _dims[2] = size_z;
   }
 
-  /// Sets the dimensions of the data to write from the \p iterator, which is
-  /// the number of cells the iterator can iterate over.
-  /// \param iterator The iterator to use to set the dimensions.
-  /// \tparam Iterator The type of the iterator.
-  template <typename Iterator>
-  auto set_dimensions(const Iterator& iterator) -> void {
-    for (size_t i : range(iterator.dimensions())) {
-      _dims[i] = iterator.size(i);
-    }
-  }
-
   /// Returns true if the dimesions are valid (none of the dimensions are zero),
   /// otherwise returs true.
   auto dimensions_valid() const -> bool {
@@ -151,6 +147,85 @@ class VtkWriter : public Writer<VtkWriter> {
   }
 
   //==--- [write] ----------------------------------------------------------==//
+
+  /// Writes the metadata for the file, which is the header and the indices.
+  auto write_metadata() -> void {
+    write_header();
+    write_indices();
+  }
+
+  /// Writes the elements from the data which is iterated over by the \p
+  /// iterator which have been configured for the writer.
+  ///
+  /// This will cause a compile time error if the data iterated over by the \p
+  /// iterator does not implement the Printable interface, or if the \p iterator
+  /// is not an iterator.
+  ///
+  /// \param  iterator The iterator to the data to write.
+  /// \tparam Iterator The type of the iterator.
+  template <typename Iterator>
+  auto write(Iterator&& iterator) -> void {
+    static_assert(is_iterator_v<Iterator>, "Can only write an iterator!");
+    static_assert(
+      is_printable_v<decltype(*iterator)>, 
+      "Type to write must implement the Printable interface!"
+    );
+    write_metadata();
+
+    for (auto& element : _elements) {
+      write_element(iterator, element);
+    }
+  }
+
+ private:
+  elements_t    _elements;             //!< The elements of the data to print.
+  std::string   _filename_base;        //!< The base name of the file to write.
+  std::string   _name;                 //!< The name of data to write.
+  std::ofstream _ofstream;             //!< The stream to write the data to.
+  dims_t        _dims;                 //!< The sizes of the dimensions.
+  double        _res         = 1.0;    //!< The resolution of the data.
+  bool          _ids_done    = false;  //!< If inidices have been written.
+  bool          _header_done = false;  //!< If inidices have been written.
+
+  /// Makes the filename for the VTK file from the \p filename string, returning
+  /// the result. This checks that the filename has the VTK extension, and if it
+  /// doesn't, then it adds it.
+  auto check_filename(std::string filename) const -> std::string {
+    if (filename.find(extension_string) == std::string::npos) {
+      return filename + extension_string;
+    }
+    return filename;
+  }
+
+  //==--- [sizes] ----------------------------------------------------------==//
+
+  /// Returns the number of points to output.
+  auto num_points() const -> size_t {
+    return (_dims[0] + 1) * (_dims[1] + 1) * (_dims[2] + 1);
+  }
+
+  /// Returns the number of cells to output.
+  auto num_cells() const -> size_t {
+    return _dims[0] * _dims[1] * _dims[2];
+  }
+
+  //==--- [get string for kind] --------------------------------------------==//
+
+  /// Returns the string for the kind of the printable element.
+  /// \param kind The kind of the printable element.
+  auto get_kind_string(PrintableElement::AttributeKind kind) const 
+  -> std::string {
+    switch (kind) { 
+      case PrintableElement::AttributeKind::scalar:
+        return scalar_string;
+      case PrintableElement::AttributeKind::vector:
+        return vector_string;
+      default:
+        return std::string("INVALID ATTRIBUTE KIND ");
+    }
+  }
+
+  //==--- [write functions] ------------------------------------------------==//
 
   /// Writes the header for the VTK file format to the file.
   auto write_header() -> void {
@@ -187,80 +262,6 @@ class VtkWriter : public Writer<VtkWriter> {
     }
     _ids_done = true;
   }
-
-  /// Writes the elements from the data which is iterated over by the \p
-  /// iterator which have been configured for the writer.
-  ///
-  /// This will cause a compile time error if the data iterated over by the \p
-  /// iterator does not implement the Printable interface, or if the \p iterator
-  /// is not an iterator.
-  ///
-  /// \param  iterator The iterator to the data to write.
-  /// \tparam Iterator The type of the iterator.
-  template <typename Iterator>
-  auto write(Iterator&& iterator) -> void {
-    static_assert(is_iterator_v<Iterator>, "Can only write an iterator!");
-    static_assert(
-      is_printable_v<decltype(*iterator)>, 
-      "Type to write must implement the Printable interface!"
-    );
-    write_header();
-    write_indices(iterator);
-
-    for (auto& element : _elements) {
-      write_element(iterator, element);
-    }
-  }
-
- private:
-  elements_t    _elements;             //!< The elements of the data to print.
-  std::string   _filename;             //!< The name of the file to write to.
-  std::string   _name;                 //!< The name of data to write.
-  std::ofstream _ofstream;             //!< The stream to write the data to.
-  dims_t        _dims;                 //!< The sizes of the dimensions.
-  double        _res         = 1.0;    //!< The resolution of the data.
-  bool          _ids_done    = false;  //!< If inidices have been written.
-  bool          _header_done = false;  //!< If inidices have been written.
-
-  /// Makes the filename for the VTK file from the \p filename string, returning
-  /// the result. This checks that the filename has the VTK extension, and if it
-  /// doesn't, then it adds it.
-  auto check_filename(std::string filename) const -> std::string {
-    if (filename.find(extension_string) == std::string::npos) {
-      return filename + extension_string;
-    }
-    return filename;
-  }
-
-  //==--- [sizes] ----------------------------------------------------------==//
-
-  /// Returns the number of points to output.
-  auto num_points() const -> size_t {
-    return (_dims[0] + 1) * (_dims[1] + 1) * (_dims[2] + 1);
-  }
-
-  /// Returns the number of cells to output.
-  auto num_cells() const -> size_t {
-    return _dims[0] * _dims[1] * _dims[2];
-  }
-
-  //==--- [get string for kind] --------------------------------------------==//
-
-  /// Returns the string for the kind of the printable element.
-  /// \param kind The kind of the printable element.
-  auto get_kind_string(PrintableElement::AttributeKind kind) const 
-  -> std::string {
-    switch (kind) {
-      case PrintableElement::AttributeKind::scalar:
-        return scalar_string;
-      case PrintableElement::AttributeKind::vector:
-        return vector_string;
-      default:
-        return std::string("INVALID ATTRIBUTE KIND ");
-    }
-  }
-
-  //==--- [write functions] ------------------------------------------------==//
 
   /// Writes the header for an element with the \p name, and \p type.
   /// \param type The type of the element to write.
