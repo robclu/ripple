@@ -38,7 +38,7 @@ class VtkWriter : public Writer<VtkWriter> {
   /// and appendable/
   static constexpr auto flags              = std::ios::out | std::ios::app;
   /// Defines the version of the vtk format being used.
-  static constexpr auto version_string     = "# vtk DataFile version 3.0\n";
+  static constexpr auto version_string     = "# vtk DataFile Version 3.0\n";
   /// Defines the output type string for the data file.
   static constexpr auto datatype_string    = "ASCII\n";
   /// Defines the dataset type for the output.
@@ -52,9 +52,9 @@ class VtkWriter : public Writer<VtkWriter> {
   /// Defines the string to specify that cell data are being output.
   static constexpr auto cell_string        = "CELL_DATA ";
   /// Defines the string for scalar data.
-  static constexpr auto scalar_string      = "SCALARS ";
+  static constexpr auto scalar_string      = "SCALARS";
   /// Defines the string for vector data.
-  static constexpr auto vector_string      = "VECTORS ";
+  static constexpr auto vector_string      = "VECTORS";
   /// Defines the string for the extension for VTK files.
   static constexpr auto extension_string   = ".vtk";
 
@@ -79,7 +79,7 @@ class VtkWriter : public Writer<VtkWriter> {
   : _elements{elements...},
     _filename_base(filename_base),
     _name{name},
-    _dims{1, 1, 1} {}
+    _dims{0, 0, 0} {}
 
   /// Destructor which closes the file if it's open.
   ~VtkWriter() {
@@ -105,6 +105,7 @@ class VtkWriter : public Writer<VtkWriter> {
     }
     _header_done = false;
     _ids_done    = false;
+    _dims_set    = false;
   }
 
   /// Sets the name of the data to write.
@@ -124,26 +125,16 @@ class VtkWriter : public Writer<VtkWriter> {
   /// \param size_x The size of the x dimension.
   /// \param size_y The size of the y dimension.
   /// \param size_z The size of the z dimension.
-  auto set_dimensions(size_t size_x, size_t size_y = 1, size_t size_z = 1)
+  auto set_dimensions(size_t size_x, size_t size_y = 0, size_t size_z = 0)
   -> void {
-    _dims[0] = size_x;
+    if (_dims_set) {
+      return;
+    }
+
+    _dims[0] = size_x; 
     _dims[1] = size_y;
     _dims[2] = size_z;
-  }
-
-  /// Returns true if the dimesions are valid (none of the dimensions are zero),
-  /// otherwise returs true.
-  auto dimensions_valid() const -> bool {
-    size_t one_count = 0;
-    for (auto& dim : _dims) {
-      if (dim <= 0) {
-        return false;
-      }
-      if (dim == 1) {
-        one_count++;
-      }
-    }
-    return one_count == 3 ? false : true;
+    _dims_set = true;
   }
 
   //==--- [write] ----------------------------------------------------------==//
@@ -162,18 +153,24 @@ class VtkWriter : public Writer<VtkWriter> {
   /// is not an iterator.
   ///
   /// \param  iterator The iterator to the data to write.
+  /// \param  args     Additional arguments which may be required.
   /// \tparam Iterator The type of the iterator.
-  template <typename Iterator>
-  auto write(Iterator&& iterator) -> void {
+  /// \tparam Args     The types of the additional arguments.
+  template <typename Iterator, typename... Args>
+  auto write(Iterator&& iterator, Args&&... args) -> void {
     static_assert(is_iterator_v<Iterator>, "Can only write an iterator!");
     static_assert(
       is_printable_v<decltype(*iterator)>, 
       "Type to write must implement the Printable interface!"
     );
+
+    // Need to set or check the dimensions:
+    set_dimensions_from_iter(std::forward<Iterator>(iterator));
+    check_dimensions(std::forward<Iterator>(iterator));
     write_metadata();
 
     for (auto& element : _elements) {
-      write_element(iterator, element);
+      write_element(iterator, element, std::forward<Args>(args)...);
     }
   }
 
@@ -186,16 +183,7 @@ class VtkWriter : public Writer<VtkWriter> {
   double        _res         = 1.0;    //!< The resolution of the data.
   bool          _ids_done    = false;  //!< If inidices have been written.
   bool          _header_done = false;  //!< If inidices have been written.
-
-  /// Makes the filename for the VTK file from the \p filename string, returning
-  /// the result. This checks that the filename has the VTK extension, and if it
-  /// doesn't, then it adds it.
-  auto check_filename(std::string filename) const -> std::string {
-    if (filename.find(extension_string) == std::string::npos) {
-      return filename + extension_string;
-    }
-    return filename;
-  }
+  bool          _dims_set    = false;  //!< If the dimensions have beens set.
 
   //==--- [sizes] ----------------------------------------------------------==//
 
@@ -206,7 +194,51 @@ class VtkWriter : public Writer<VtkWriter> {
 
   /// Returns the number of cells to output.
   auto num_cells() const -> size_t {
-    return _dims[0] * _dims[1] * _dims[2];
+    return _dims[0] * _dims[1] * (_dims[2] == 0 ? 1 : _dims[2]);
+  }
+
+  //==--- [dimensions] -----------------------------------------------------==//
+  
+  /// Sets the dimensions for the writer from the iterator to write.
+  /// \param  iterator The iterator to use to set the dimensions.
+  /// \tparam Iterator The type of the iterator.
+  template <typename Iterator>
+  auto set_dimensions_from_iter(Iterator&& iterator) -> void {
+    if (_dims_set) {
+      return;
+    }
+
+    size_t d = 0;
+    while (d < iterator.dimensions()) {
+      _dims[d] = iterator.size(d);
+      d++;
+    }
+    while (d < 3) {
+      _dims[d] = (d == 1) ? 1 : 0;
+      d++;
+    }
+    _dims_set = true;
+  }
+
+  /// Checks the dimensions for the writer from the iterator to write. This
+  /// should only be called if the dimensions have been set, otherwise it
+  /// returns false. If the dimension sizes of the \p iterator match those for
+  /// the writer then this returns true, otherwise it returns false.
+  /// \param  iterator The iterator to check the dimensions for.
+  /// \tparam Iterator The type of the iterator.
+  template <typename Iterator>
+  auto check_dimensions(Iterator&& iterator) -> bool {
+    if (!_dims_set) {
+      return false;
+    }
+
+    size_t d = 0;
+    for (auto d : range(iterator.dimensions())) {
+      if (_dims[d] != iterator.size(d)) {
+        return false;
+      }
+    }
+    return true;
   }
 
   //==--- [get string for kind] --------------------------------------------==//
@@ -260,6 +292,7 @@ class VtkWriter : public Writer<VtkWriter> {
         }
       }
     }
+    _ofstream <<  "\n" << cell_string << num_cells() << "\n";
     _ids_done = true;
   }
 
@@ -267,22 +300,29 @@ class VtkWriter : public Writer<VtkWriter> {
   /// \param type The type of the element to write.
   auto write_element_header(const PrintableElement& element)
   -> void {
-    _ofstream << cell_string << num_cells()      << "\n"
-              << get_kind_string(element.kind()) << " "
-              << element.name()                  << " float\n"
-              << lookup_string;
+    _ofstream << get_kind_string(element.kind()) << " "
+              << element.name()                  << " float\n";
+    if (element.kind() == PrintableElement::AttributeKind::scalar) {
+      _ofstream << lookup_string;
+    }
   }
 
   /// Writes an \p element from the \p iterator to the data file, if the data
   /// iterated over by the \p iterator has a \p element element which can be
   /// written.
+  /// \param  iterator The iterator to the data to write.
   /// \param  element  The name of the element to write to the file.
-  /// \param  iterator The iterator over the data which had the \p element.
+  /// \param  args     Additional arguments which may be required.
   /// \tparam Iterator The type of the iterator.
-  template <typename Iterator>
-  auto write_element(Iterator&& iterator, const std::string& element)
-  -> void {
-    if (!iterator.begin()->has_printable_element(element)) {
+  /// \tparam Args     The types of the additional arguments.
+  template <typename Iterator, typename... Args>
+  auto write_element(
+    Iterator&&         iterator, 
+    const std::string& element ,
+    Args&&...          args
+  ) -> void {
+    const auto element_name = element.c_str();
+    if (!iterator->has_printable_element(element_name)) {
       return;
     }
 
@@ -292,15 +332,15 @@ class VtkWriter : public Writer<VtkWriter> {
     }
 
     auto it = iterator;
-    write_element_header(it->printable_element(element));
+    write_element_header(it->printable_element(element_name, args...));
 
     // We need to write the data in the same order that the indices were
     // written, so we need to eplicitly choose the order of iteration over the
     // data:
-    constexpr auto dims = iterator.dimensions();
-    for (auto k : ripple::range(dims[2])) {
-      for (auto j : ripple::range(dims[1])) {
-        for (auto i : ripple::range(dims[0])) {
+    constexpr auto dims = iterator_traits_t<Iterator>::dimensions;
+    for (auto k : ripple::range(_dims[2] == 0 ? 1 : _dims[2])) {
+      for (auto j : ripple::range(_dims[1])) {
+        for (auto i : ripple::range(_dims[0])) {
           it = iterator;
           if (dims == 3) {
             it.shift(ripple::dim_z, k);
@@ -309,14 +349,14 @@ class VtkWriter : public Writer<VtkWriter> {
             it.shift(ripple::dim_y, j);
           }
           it.shift(ripple::dim_x, i);
-          auto printable_elem = it->printable_element(element);
+          auto printable_elem = it->printable_element(element_name, args...);
           for (auto v : printable_elem.values()) {
             _ofstream << v << " ";
           }
         }
       }
     }  
-    printf("\n\n");
+    _ofstream << "\n\n";
   }
 };
 

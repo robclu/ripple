@@ -70,9 +70,9 @@ class Writer {
   /// \param size_x The size of the x dimension.
   /// \param size_y The size of the y dimension.
   /// \param size_z The size of the z dimension.
-  auto set_dimensions(size_t size_x, size_t size_y = 1, size_t size_z = 1)
+  auto set_dimensions(size_t size_x, size_t size_y = 1, size_t size_z = 0)
   -> void {
-    impl()->set_dimension(size_x, size_y, size_z);
+    impl()->set_dimensions(size_x, size_y, size_z);
   }
 
   /// Returns true if the dimesions are valid (none of the dimensions are zero),
@@ -96,13 +96,15 @@ class Writer {
   /// is not an iterator.
   ///
   /// \param  iterator The iterator to the data to write.
+  /// \param  args     Additional arguments which may be required.
   /// \tparam Iterator The type of the iterator.
-  template <typename Iterator>
-  auto write(Iterator&& iterator) -> void {
-    impl()->write(std::forward<Iterator>(iterator));
+  /// \tparam Args     The types of the additional arguments.
+  template <typename Iterator, typename... Args>
+  auto write(Iterator&& iterator, Args&&... args) -> void {
+    impl()->write(
+      std::forward<Iterator>(iterator), std::forward<Args>(args)...
+    );
   }
-
-  
 };  
 
 } // namespace ripple::viz

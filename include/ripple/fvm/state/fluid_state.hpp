@@ -106,13 +106,14 @@ class FluidState :
   : _storage(other._storage) {}
 
   /// Constructor to create the state from another fluid type with a potentially
-  /// different storage layout, moving the data from the other storage to this
+  /// different storage layout, copying the data from the other storage to this
   /// one.
   /// \param  other The other fluid state to create this one from.
   /// \tparam OtherLayout The storage layout of the other type.
   template <typename OtherLayout>
   ripple_host_device FluidState(FluidState<T, Dims, OtherLayout>&& other)
-  : _storage(std::move(other._storage)) {}
+  : _storage(other._storage) {}
+
 
   //==--- [operator overload] ----------------------------------------------==//
   
@@ -326,7 +327,16 @@ class FluidState :
   /// \param name The name of the element to check for.
   ripple_host_only auto has_printable_element(const char* name) const
   -> bool {
-    return printable_element(name) != viz::PrintableElement::not_found();
+    using namespace math;
+    switch (hash(name)) {
+      case "density"_hash  :
+      case "energy"_hash   :
+      case "pressure"_hash : 
+      case "velocity"_hash :
+        return true;
+      default:
+        return false;
+    }
   }
 
   /// Returns a printable element with the name \p name, using the arguments \p

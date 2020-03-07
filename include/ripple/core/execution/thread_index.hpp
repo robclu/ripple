@@ -85,12 +85,13 @@ ripple_host_device inline auto global_idx(Dim&& dim) -> std::size_t {
 }
 
 /// Returns the normalized global index in the \p dim dimension, using the
-/// global number of threads as the dimension size.
+/// global number of threads as the dimension size. This returns the cell
+/// centered index of the cell.
 /// \param  dim The dimension to get the normalized index for.
 /// \tparam Dim The type of the dimension specifier.
 template <typename Dim>
 ripple_host_device inline auto global_norm_idx(Dim&& dim) -> float {
-  return static_cast<float>(global_idx(dim)) 
+  return (static_cast<float>(global_idx(dim)) + 0.5f) 
     / detail::global_elements(dim);
 }
 

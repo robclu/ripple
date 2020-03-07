@@ -68,6 +68,13 @@ class Grid {
   using device_iter_t = typename BlockTraits<device_block_t>::iter_t;
 
   //==--- [construction] ---------------------------------------------------==//
+  
+  /// Creates an unsized and therefore unallocated grid. This constructor is
+  /// provided for the case that each of the sizes of the grid, as well as the
+  /// padding, are determined dynamically.
+  ///
+  /// \param  topo  A reference to the system topology.
+  Grid(Topology& topo) : _topo{topo}, _gpu_mask{single_gpu_mask} {}
 
   /// Initializes the size of each of the dimensions of the grid. This
   /// constructor will create blocks with the largest size such that the minimum
@@ -161,7 +168,7 @@ class Grid {
   /// \param  is      The indices to get the element at.
   /// \tparam Indices The types of the indices.
   template <typename... Indices>
-  ripple_host_only auto operator()(Indices&&... is) -> host_iter_t {
+  auto operator()(Indices&&... is) -> host_iter_t {
     if (single_gpu()) {
       return access_single_gpu(std::forward<Indices>(is)...);
     }

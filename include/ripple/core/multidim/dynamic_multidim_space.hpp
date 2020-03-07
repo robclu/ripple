@@ -111,6 +111,15 @@ struct DynamicMultidimSpace :
     });
   }
 
+  /// Resizes the \p dim dimensions to have \p size.
+  /// \param  dim  The dimension to resize.
+  /// \param  size The size to resize the dimension to.
+  /// \tparam Dim  The type of the dimension specifier.
+  template <typename Dim>
+  ripple_host_device auto resize_dim(Dim&& dim, size_t size) -> void {
+    _sizes[dim] = size;
+  }
+
   /// Returns the size of the \p dim dimension.
   /// \param  dim  The dimension to get the size of.
   /// \tparam Dim  The type of the dimension.
