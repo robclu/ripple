@@ -32,9 +32,14 @@ struct IdealGas : public Eos<IdealGas<T>> {
   /// implementation.
   static constexpr auto _1 = T{1};
 
+  /// Defines the type of the equation of state.
+  using self_t = IdealGas;
+
  public:
   /// Defines the type of the data used by the material.
   using value_t = std::decay_t<T>;
+
+  //==--- [construction] ---------------------------------------------------==//
 
   /// Sets the value of the gas to have the default adiabatic index of 1.4.
   constexpr IdealGas() = default;
@@ -43,6 +48,45 @@ struct IdealGas : public Eos<IdealGas<T>> {
   /// \param[in] adi_index The adiabatic index of the gas.
   ripple_host_device constexpr IdealGas(value_t adi_index)
   : _adi_index(adi_index) {}
+
+  /// Constructs the equation of state from the \p other equation of state.
+  /// \param other The other equation of state.
+  ripple_host_device constexpr IdealGas(const IdealGas& other)
+  : _adi_index{other._adi_index} {}
+  
+  //==--- [operator overloads] ---------------------------------------------==//
+  
+  /// Overload of copy assignment overload to create the equation of state from
+  /// the \p other equation of state.
+  /// \param other The other equation of state to copy.
+  ripple_host_device constexpr auto operator=(const IdealGas& other) 
+  -> self_t& {
+    _adi_index = other.adi();
+    return *this;
+  }
+
+  /// Overload of copy assignment overload to create the equation of state from
+  /// the \p other equation of state.
+  /// \param other The other equation of state to copy.
+  ripple_host_device constexpr auto operator=(const Eos<IdealGas>& other) 
+  -> self_t& {
+    _adi_index = other.adi();
+    return *this;
+  }
+
+  /// Overload of comparison opertor to compare this equation of state against
+  /// the \p other equation of state. They are equal if they have the same type
+  /// and same adiabatic index.
+  /// \param  other The other equation of state to compare against.
+  /// \tparam Other The type of the other equation of state.
+  template <typename OtherImpl>
+  ripple_host_device constexpr auto operator==(const Eos<OtherImpl>& other)
+  const -> bool {
+    return std::is_same_v<std::decay_t<OtherImpl>, self_t> &&
+      other.adi() == _adi_index;
+  }
+ 
+  //==--- [interface] ------------------------------------------------------==// 
 
   /// Returns a reference to the adiabatic index for the ideal gas.
   ripple_host_device constexpr auto adi() -> value_t& {
@@ -83,7 +127,12 @@ struct IdealGas : public Eos<IdealGas<T>> {
   ripple_host_device constexpr auto sound_speed(const State& state) const 
   -> value_t {
     return std::sqrt(_adi_index * state.pressure(*this) / state.rho());
-  } 
+  }
+
+  /// Returns the name of the equation of sate.
+  ripple_host_device constexpr auto name() const -> const char* {
+    return eos_traits_t<self_t>::name;
+  }
 
  private:
   value_t _adi_index = 1.4; //!< The adiabatic index for the gas.

@@ -18,6 +18,7 @@
 #define RIPPLE_EOS_EOS_TRAITS_HPP
 
 #include <ripple/core/utility/portability.hpp>
+#include <ripple/core/utility/type_traits.hpp>
 
 namespace ripple::fv {
 
@@ -44,6 +45,9 @@ template <typename T>
 struct EosTraits<IdealGas<T>> {
   /// Defines the data type used by the equation of state.
   using value_t = std::decay_t<T>;
+
+  /// Defines the name of the equation of state.
+  static constexpr const char* name = "ideal_gas";
 };
 
 //==--- [aliases] ----------------------------------------------------------==//
@@ -52,6 +56,12 @@ struct EosTraits<IdealGas<T>> {
 /// \tparam T The type to get the equation of state traits for.
 template <typename T>
 using eos_traits_t = EosTraits<std::decay_t<T>>;
+
+/// Returns true if the decayed type T implements the Eos interface.
+/// \tparam T The type to determine if is an equation of state.
+template <typename T>
+static constexpr auto is_eos_v = 
+  std::is_base_of_v<Eos<std::decay_t<T>>, std::decay_t<T>>;
 
 } // namespace ripple::fv
 

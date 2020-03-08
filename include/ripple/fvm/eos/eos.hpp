@@ -43,6 +43,19 @@ class Eos {
   /// Defines the data type used by the equation of state.
   using value_t = typename traits_t::value_t;
 
+  //==--- [operator overloads] ---------------------------------------------==//
+  
+  /// Overload of comparison operator to compare two equations of state.
+  /// \param  other The other equation of state to compare to.
+  /// \tparam Other The type of the other equation of state.
+  template <typename OtherImpl>
+  ripple_host_device constexpr auto operator==(const Eos<OtherImpl>& other)
+  const -> bool {
+    return impl()->operator==(other);
+  }
+
+  //==--- [interface] ------------------------------------------------------==//
+
   /// Returns the value of the adiabatic index for the equation of state.
   ripple_host_device constexpr auto adi() -> value_t& {
     return impl()->adi();
@@ -69,7 +82,13 @@ class Eos {
   ripple_host_device constexpr auto sound_speed(const State& state) const 
   -> value_t {
     return impl()->sound_speed(state);
-  } 
+  }
+
+  /// Returns the name of the equation of state, which must be defined at
+  /// compile time in the traits.
+  ripple_host_device constexpr auto name() const -> const char* {
+    return impl()->name();
+  }
 };
 
 } // namespace ripple::fv
