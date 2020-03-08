@@ -352,8 +352,11 @@ auto invoke_pipeline(
   const Pipeline<Ops...>& pipeline
 )  -> void {
 #if defined(__CUDACC__)
-  auto exec_params       = default_shared_exec_params_t<Dims, T>{};
-  auto oth_exec_params   = default_shared_exec_params_t<Dims, U>{};
+  using t_contig_t = as_contiguous_view_t<T>;
+  using u_contig_t = as_contiguous_view_t<U>;
+
+  auto exec_params       = default_shared_exec_params_t<Dims, t_contig_t>{};
+  auto oth_exec_params   = default_shared_exec_params_t<Dims, u_contig_t>{};
   auto [threads, blocks] = get_exec_size(block, exec_params);
 
   detail::invoke_static_shared_pipeline_multi<<<

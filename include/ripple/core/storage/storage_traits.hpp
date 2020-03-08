@@ -175,6 +175,20 @@ template <typename T>
 using layout_traits_t = 
   LayoutTraits<std::decay_t<T>, is_stridable_layout_v<std::decay_t<T>>>;
 
+/// Returns the type T as a contiguous owned type, if it is not already. If the
+/// type T is not stridable, this will just create an alias to T.
+/// \tparam T The type to get as a contiguous owned type.
+template <typename T>
+using as_contiguous_owned_t = 
+  typename detail::StorageAs<contiguous_owned_t, std::decay_t<T>>::type;
+
+/// Returns the type T as a contiguous view type, if it is not already. If the
+/// type T is not stridable, this will just create an alias to T.
+/// \tparam T The type to get as a contiguous owned type.
+template <typename T>
+using as_contiguous_view_t = 
+  typename detail::StorageAs<contiguous_view_t, std::decay_t<T>>::type;
+
 //==--- [enables] ----------------------------------------------------------==//
 
 /// Define a valid type if the type T is a StorageElement, otherwise does not

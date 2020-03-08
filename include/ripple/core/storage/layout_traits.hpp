@@ -27,7 +27,7 @@ namespace ripple {
 /// the case that the type T does not implement the StridableLayout interface.
 /// \tparam T                 The type to get the layout traits for.
 /// \tparam IsStridableLayout If the type is an StridableLayout type.
-template <typename T, bool IsStridableLayable>
+template <typename T, bool IsStridableLayout>
 struct LayoutTraits {
   //==--- [constants] ------------------------------------------------------==//
 
@@ -81,14 +81,17 @@ struct LayoutTraits<T, true> {
   /// Defines the type of the layout for T.
   static constexpr auto layout_kind         =
     detail::StorageLayoutKind<T>::value;
-    /// True if the Layout is a LayoutKind::strided_view.
+  /// True if the Layout is a LayoutKind::strided_view.
   static constexpr auto is_strided_view     =
     layout_kind == LayoutKind::strided_view;
+  /// True if the Layout is a LayoutKind::contiguous_view
+  static constexpr auto is_contiguous_view  =
+    layout_kind == LayoutKind::contiguous_view;
 
   //==--- [traits] ---------------------------------------------------------==//
 
   /// Defines the type to use when storing in an iterator.
-  using iter_storage_t   =
+  using iter_storage_t   = 
     std::conditional_t<is_strided_view, strided_view_t, contig_view_t>;
   /// Defines the type of the allocator for type T.
   using allocator_t      = typename iter_storage_t::allocator_t;

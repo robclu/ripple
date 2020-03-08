@@ -112,6 +112,7 @@ struct StorageAs<Storage, T<Ts...>> {
 //==--- [storage layout kind] ----------------------------------------------==//
 
 namespace {
+
 /// Declaration of a class to determine the type of a StorageLayout from a list
 /// of types.
 /// \tparam Ts The types to find the StorageLayout type in.
