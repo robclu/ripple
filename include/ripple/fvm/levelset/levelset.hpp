@@ -18,8 +18,12 @@
 
 #include "levelset_traits.hpp"
 #include <ripple/core/container/array.hpp>
+#include <ripple/core/math/math.hpp>
 #include <ripple/core/storage/storage_descriptor.hpp>
 #include <ripple/core/storage/storage_traits.hpp>
+#include <ripple/core/storage/stridable_layout.hpp>
+#include <ripple/viz/printable/printable.hpp>
+#include <ripple/viz/printable/printable_element.hpp>
 
 namespace ripple::fv {
 
@@ -34,7 +38,17 @@ namespace ripple::fv {
 /// \tparam Dims   The number of dimensions for the levelset.
 /// \tparam Layout The layout type for the data.
 template <typename T, typename Dims, typename Layout>
-class Levelset : public Array<Levelset<T, Dims, Layout>> {
+class Levelset : 
+  public StridableLayout<Levelset<T, Dims, Layout>>,
+  public Array<Levelset<T, Dims, Layout>>,
+  public viz::Printable<Levelset<T, Dims, Layout>> {
+
+  //==--- [friends] --------------------------------------------------------==//
+  
+  /// Allows the layout traits type to access the private aliases for the
+  /// levelset, specifically the descriptor for the storage.
+  friend class LayoutTraits<Levelset, true>;
+
   //==--- [constants] ------------------------------------------------------==//
   
   /// Defines the number of dimensions for the state.
@@ -73,8 +87,9 @@ class Levelset : public Array<Levelset<T, Dims, Layout>> {
   /// \param  other       The other levelset to create this one from.
   /// \tparam OtherLayout The storage layout of the other type.
   template <typename OtherLayout>
-  ripple_host_device Levelset(const Levelset<T, Dims, OtherLayout>& other)
-  : _storage(other._storage) {}
+  ripple_host_device Levelset(const Levelset<T, Dims, OtherLayout>& other) {
+    value() = other.value();
+  }
 
   /// Constructor to create the levelset from another fluid type with a 
   /// potentially different storage layout, moving the data from the other 
@@ -82,10 +97,21 @@ class Levelset : public Array<Levelset<T, Dims, Layout>> {
   /// \param  other       The other fluid state to create this one from.
   /// \tparam OtherLayout The storage layout of the other type.
   template <typename OtherLayout>
-  ripple_host_device Levelset(Levelset<T, Dims, OtherLayout>&& other)
-  : _storage(std::move(other._storage)) {}
+  ripple_host_device Levelset(Levelset<T, Dims, OtherLayout>&& other) {
+    value() = other.value();
+  }
   
   //==--- [operator overload] ----------------------------------------------==//
+  
+  /// Overload of copy assignment operator to set the levelset from another
+  /// levelset of a potentially different layout type.
+  /// \param  other       The other levelset to create this one from.
+  /// \tparam OtherLayout The storage layout of the other type.
+  ripple_host_device auto operator=(const Levelset& other)
+  -> self_t& {
+    value() = other.value();
+    return *this;
+  }
   
   /// Overload of copy assignment operator to set the levelset from another
   /// levelset of a potentially different layout type.
@@ -94,7 +120,7 @@ class Levelset : public Array<Levelset<T, Dims, Layout>> {
   template <typename OtherLayout>
   ripple_host_device auto operator=(const Levelset<T, Dims, OtherLayout>& other)
   -> self_t& {
-    _storage = other._storage;
+    value() = other.value();
     return *this;
   }
 
@@ -105,7 +131,7 @@ class Levelset : public Array<Levelset<T, Dims, Layout>> {
   template <typename OtherLayout>
   ripple_host_device auto operator=(Levelset<T, Dims, OtherLayout>&& other)
   -> self_t& {
-    _storage = other._storage;
+    value() = other.value();
     return *this;
   }
 
@@ -161,6 +187,34 @@ class Levelset : public Array<Levelset<T, Dims, Layout>> {
   /// to be inside).
   ripple_host_device constexpr auto outside() const -> bool {
     return !inside();
+  }
+
+  //==--- [printable interface] --------------------------------------------==//
+
+  /// Returns true if the state has an element with the \p name which can be
+  /// printed.
+  /// \param name The name of the element to check for.
+  ripple_host_only auto has_printable_element(const char* name) const
+  -> bool {
+    return printable_element(name) != viz::PrintableElement::not_found();
+  }
+
+  /// Returns a printable element with the name \p name, using the arguments \p
+  /// eos 
+  /// \param  name The name of the element to get.
+  /// \param  args Optional arguments used to get the elements.
+  /// \tparam Args The type of the arguments.
+  template <typename... Args>
+  ripple_host_device auto printable_element(const char* name, Args&&... args)
+  const -> viz::PrintableElement {
+    using namespace math;
+    const auto scalar = viz::PrintableElement::AttributeKind::scalar;
+    switch (hash(name)) {
+      case "levelset"_hash:
+        return viz::PrintableElement("levelset", scalar, value());
+      default:
+        return viz::PrintableElement::not_found();
+    }
   }
 
  private:
