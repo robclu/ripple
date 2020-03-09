@@ -257,7 +257,7 @@ class Grid {
 
       block->ensure_device_data_available();
 
-      invoke(block->device_data, pipeline);
+      invoke_pipeline(block->device_data, pipeline);
       block->data_state = block_state_t::updated_device;
     }
   }
@@ -280,7 +280,47 @@ class Grid {
       block->ensure_device_data_available();
       block_other->ensure_device_data_available();
 
-      invoke(block->device_data, block_other->device_data, pipeline);
+      invoke_pipeline(block->device_data, block_other->device_data, pipeline);
+      block->data_state = block_state_t::updated_device;
+    }
+  }
+
+  /// Applies the \p pipeline to the grid, performing the operations in the
+  /// pipeline, also passing the \p other grid to the pipeline as the second
+  /// argument to the pipeline, and the \p last as the third argument to
+  /// the pipeline, with \p args as additional arguments. 
+  ///
+  /// \param  pipeline The pipeline to apply to the grid.
+  /// \param  other    The other grid to pass to the pipeline.
+  /// \param  last     The last grid to pass to the pipeline.
+  /// \param  args     Additional arguments for the pipeline application.
+  /// \tparam U        The type of the data for the other grid.
+  /// \tparam V        The type of teh data for the last grid.
+  /// \tparam Ops      The operations in the pipeline.
+  /// \tparam Args     The types of additional arguments.
+  template <typename U, typename V, typename... Ops, typename... Args>
+  auto apply_pipeline(
+    const Pipeline<Ops...>& pipeline,
+    Grid<U, Dimensions>&    other   ,
+    Grid<V, Dimensions>&    last    ,
+    Args&&...               args
+  ) -> void {
+    if (single_gpu()) {
+      auto block_last  = last.begin();
+      auto block_other = other.begin();
+      auto block       = _blocks.begin();
+
+      block->ensure_device_data_available();
+      block_other->ensure_device_data_available();
+      block_last->ensure_device_data_available();
+
+      invoke_pipeline(
+        block->device_data      ,
+        block_other->device_data,
+        block_last->device_data ,
+        pipeline                ,
+        std::forward<Args>(args)...
+      );
       block->data_state = block_state_t::updated_device;
     }
   }

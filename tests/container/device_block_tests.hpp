@@ -175,6 +175,9 @@ struct DeviceBlockTest : ripple::StridableLayout<DeviceBlockTest<T, Layout>> {
   using storage_t = typename descriptor_t::storage_t;
   storage_t _storage;
 
+  template <typename OT, typename OLayout>
+  friend class DeviceBlockTest;
+
  public:
 
   // Constructor from storage is required:
@@ -184,6 +187,13 @@ struct DeviceBlockTest : ripple::StridableLayout<DeviceBlockTest<T, Layout>> {
 
   // Assignment to copy from another block test.
   ripple_host_device auto operator=(const DeviceBlockTest& other) 
+  -> DeviceBlockTest& {
+    _storage.copy(other._storage);
+    return *this;
+  }
+
+  template <typename OT, typename OLayout>
+  ripple_host_device auto operator=(const DeviceBlockTest<OT, OLayout>& other)
   -> DeviceBlockTest& {
     _storage.copy(other._storage);
     return *this;
@@ -614,7 +624,7 @@ TEST(container_device_block, can_invoke_with_pipeline_1d) {
     }
   );
 
-  ripple::invoke(b, pipeline);
+  ripple::invoke_pipeline(b, pipeline);
 
   auto b1 = b.as_host();
   for (auto i : ripple::range(b1.size())) {
@@ -643,7 +653,7 @@ TEST(container_device_block, can_invoke_pipeline_multi_blocks_1d) {
     }
   );
 
-  ripple::invoke(b1, b2, pipeline);
+  ripple::invoke_pipeline(b1, b2, pipeline);
 
   auto b1h = b1.as_host(); auto b2h = b2.as_host();
   for (auto i : ripple::range(b1.size())) {
