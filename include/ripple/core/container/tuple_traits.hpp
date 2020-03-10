@@ -123,6 +123,11 @@ using tuple_element_t = typename detail::TupleElement<I, T>::type_t;
 template <typename T>
 static constexpr bool is_tuple_v = detail::IsTuple<std::decay_t<T>>::value;
 
+/// Returns the size of the tuple, if T is a tuple, otherwise returns 0.
+/// \tparam T The type to get the tuple size of.
+template <typename T>
+static constexpr size_t tuple_size_v = tuple_traits_t<T>::size;
+
 //==--- [enables] ----------------------------------------------------------==//
 
 /// Defines a valid type if the type T is a tuple, otherwise does not define a
