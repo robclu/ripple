@@ -92,8 +92,12 @@ class VtkWriter : public Writer<VtkWriter> {
   /// writer, appending the \p filename_extra to the base filename, as well as
   /// the .vtk extension.
   /// \param filename_extra An extra part to append to the filename.
-  auto open(std::string filename_extra = "") -> void {
-    const auto file = _filename_base + filename_extra + extension_string;
+  /// \param path           Path to the directory for the file.
+  auto open(std::string filename_extra = "", std::string path = "") -> void {
+    if (path.length()) {
+      path += "/";
+    }
+    const auto file = path + _filename_base + filename_extra + extension_string;
     _ofstream.open(file, flags);
   }
 

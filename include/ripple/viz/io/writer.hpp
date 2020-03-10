@@ -44,8 +44,9 @@ class Writer {
   /// Tries to open the file for the writer, appending \p filename_extra to any
   /// pre-configured base filename for the writer.
   /// \param filename_extra An extra part to append to the filename.
-  auto open(std::string filename_extra = "") -> void {
-    impl()->open(std::move(filename_extra));
+  /// \param path           The path to the directory to write the file to.
+  auto open(std::string filename_extra = "", std::string path = "") -> void {
+    impl()->open(std::move(filename_extra), std::move(path));
   }
 
   /// Tries to close the file, returning true on success, or if already closed,
@@ -105,7 +106,16 @@ class Writer {
       std::forward<Iterator>(iterator), std::forward<Args>(args)...
     );
   }
-};  
+};
+
+//==--- [traits] -----------------------------------------------------------==//
+
+/// Returns true if the type T implements the Writer interface, otherwise it
+/// returns false.
+/// \tparam T The type to determine if implements the Writer interface.
+template <typename T>
+static constexpr auto is_writer_v =
+  std::is_base_of_v<Writer<std::decay_t<T>>, std::decay_t<T>>;
 
 } // namespace ripple::viz
 
