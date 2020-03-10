@@ -544,7 +544,8 @@ ripple_global auto invoke_static_shared_pipeline_three(
     it_last        ,
     params         ,
     oth_params     ,
-    pipeline
+    pipeline       ,
+    args...
   );
 }
 
