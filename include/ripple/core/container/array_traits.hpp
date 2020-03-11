@@ -182,6 +182,11 @@ using array_value_enable_t = std::enable_if_t<
   std::is_same_v<Type, Value> || std::is_convertible_v<Type, Value>, int
 >;
 
+/// Defines a valis type if the type T is an array.
+/// \tparam T    The type to base the enable on.
+template <typename T>
+using array_enable_t = std::enable_if_t<is_array_v<T>, int>;
+
 } // namespace ripple
 
 #endif // RIPPLE_CONTAINER_ARRAY_TRAITS_HPP
