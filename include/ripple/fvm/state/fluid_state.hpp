@@ -23,6 +23,7 @@
 #include <ripple/core/math/math.hpp>
 #include <ripple/core/storage/storage_descriptor.hpp>
 #include <ripple/core/storage/storage_traits.hpp>
+#include <ripple/core/storage/stridable_layout.hpp>
 #include <ripple/viz/printable/printable.hpp>
 #include <ripple/viz/printable/printable_element.hpp>
 
@@ -52,9 +53,24 @@ namespace ripple::fv {
 /// \tparam Layout The layout type for the data.
 template <typename T, typename Dims, typename Layout>
 class FluidState : 
-  public Array<FluidState<T, Dims, Layout>>,
   public State<FluidState<T, Dims, Layout>>,
+  public StridableLayout<FluidState<T, Dims, Layout>>,
+  public Array<FluidState<T, Dims, Layout>>,
   public viz::Printable<FluidState<T, Dims, Layout>> {
+  //==--- [friends] --------------------------------------------------------==//
+
+  /// Allows the layout traits to acess the private descriptor alias to
+  /// determine the layout properties of the state. 
+  friend struct LayoutTraits<FluidState, true>;
+
+  /// Allows the data from a fluid state with a different layout to be accessed
+  /// by this state.
+  /// \tparam OtherT      The type of the other state's data.
+  /// \tparam OtherDims   The dimensions for the other state.
+  /// \tparam OtherLayout The layout of the other state. 
+  template <typename OtherT, typename OtherDims, typename OtherLayout>
+  friend class FluidState;
+
   //==--- [constants] ------------------------------------------------------==//
   
   /// Defines the number of dimensions for the state.
@@ -114,6 +130,16 @@ class FluidState :
   ripple_host_device FluidState(FluidState<T, Dims, OtherLayout>&& other)
   : _storage(other._storage) {}
 
+  /// Constructor to create the state from an array type (such as for fluxes).
+  /// \param  arr       The array to set the data from.
+  /// \tparam ArrayImpl The type of the array implementation.
+  template <typename ArrayImpl, array_enable_t<ArrayImpl> = 0>
+  ripple_host_device FluidState(const ArrayImpl& arr) {
+    unrolled_for<elements>([&] (auto _i) {
+      constexpr auto i = size_t{_i};
+      this->operator[](i) = arr[i];
+    });
+  }
 
   //==--- [operator overload] ----------------------------------------------==//
   
@@ -125,7 +151,10 @@ class FluidState :
   ripple_host_device auto operator=(
     const FluidState<T, Dims, OtherLayout>& other
   ) -> self_t& {
-    _storage = other._storage;
+    unrolled_for<elements>([&] (auto _i) {
+      constexpr auto i = size_t{_i};
+      this->operator[](i) = other[i];
+    });
     return *this;
   }
 
@@ -136,7 +165,22 @@ class FluidState :
   template <typename OtherLayout>
   ripple_host_device auto operator=(FluidState<T, Dims, OtherLayout>&& other)
   -> self_t& {
-    _storage = other._storage;
+    unrolled_for<elements>([&] (auto _i) {
+      constexpr auto i = size_t{_i};
+      this->operator[](i) = other[i];
+    });
+    return *this;
+  }
+
+  /// Overload of copy assignment operator to set the state from an array type.
+  /// \param  arr       The array to set the data from.
+  /// \tparam ArrayImpl The type of the array implementation.
+  template <typename ArrayImpl, array_enable_t<ArrayImpl> = 0>
+  ripple_host_device auto operator=(const ArrayImpl& arr) -> self_t& {
+    unrolled_for<elements>([&] (auto _i) {
+      constexpr auto i = size_t{_i};
+      this->operator[](i) = arr[i];
+    });
     return *this;
   }
 
@@ -276,7 +320,6 @@ class FluidState :
   ripple_host_device auto pressure(const Eos<EosImpl>& eos) const -> value_t {
     auto rho_v_sq = rho_v_squared_sum();
     return (eos.adi() - _1) * (energy() - value_t{0.5} * rho_v_sq / rho());
-
   }
 
   /// Sets the pressure of the state. Since the pressure is not stored, this
@@ -319,6 +362,23 @@ class FluidState :
     });
     return f;
   }
+
+  //==--- [wavespeed] ------------------------------------------------------==//
+  
+  /// Returns the wavespeed for the state.
+  /// \param  eos     The equation of state for the state data.
+  /// \tparam EosImpl The implemenation of the equation of state interface.
+  template <typename EosImpl>
+  ripple_host_device auto wavespeed(const Eos<EosImpl>& eos) const -> value_t {
+    value_t s = std::abs(rho_v<dim_x>());
+    unrolled_for<dims - 1>([&] (auto d) {
+      constexpr auto dim = size_t{d};
+      s = std::max(s, std::abs(rho_v<dim>()));
+    });
+    return s / rho() + eos.sound_speed(*this);
+  }
+
+
 
   //==--- [printable interface] --------------------------------------------==//
   

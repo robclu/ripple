@@ -44,12 +44,45 @@ class StateInitializer {
 
   /// Sets the data for the \p state. If one of the elements does not match the
   /// state type, then this will create a compile time error for the mismatch.
+  /// \param  state     The state to set the data for.
+  /// \param  eos       The equation of state to use to set the data.
+  /// \tparam StateImpl The implementation type of the state.
+  /// \tparam EosImpl   The implementation of the equation of state.
+  template <
+    typename StateImpl, 
+    typename EosImpl  , state_owned_layout_enable_t<StateImpl> = 0
+  >
+  ripple_host_device auto set_state_data(
+    StateImpl& state, const EosImpl& eos 
+  ) const -> void {
+    set_state_data_impl(state, eos);
+  }
+
+  /// Sets the data for the \p state. If one of the elements does not match the
+  /// state type, then this will create a compile time error for the mismatch.
+  /// \param  state     The state to set the data for.
+  /// \param  eos       The equation of state to use to set the data.
+  /// \tparam StateImpl The implementation type of the state.
+  /// \tparam EosImpl   The implementation of the equation of state.
+  template <
+    typename StateImpl, 
+    typename EosImpl  , state_non_owned_layout_enable_t<StateImpl> = 0
+  >
+  ripple_host_device auto set_state_data(
+    StateImpl state, const EosImpl& eos 
+  ) const -> void {
+    set_state_data_impl(state, eos);
+  }
+
+ private:
+  /// Sets the data for the \p state. If one of the elements does not match the
+  /// state type, then this will create a compile time error for the mismatch.
   /// \tparam StateImpl The implementation type of the state.
   /// \tparam EosImpl   The implementation of the equation of state.
   template <typename StateImpl, typename EosImpl>
-  ripple_host_device auto set_state_data(
-      State<StateImpl>&   state,
-      const Eos<EosImpl>& eos 
+  ripple_host_device auto set_state_data_impl(
+      StateImpl&     state,
+      const EosImpl& eos 
   ) const -> void {
     using namespace ripple::math;
 

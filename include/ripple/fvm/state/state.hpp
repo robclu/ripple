@@ -182,6 +182,16 @@ class State {
     return impl()->flux(eos, std::forward<Dim>(dim));
   }
 
+  //==--- [wavespeed] ------------------------------------------------------==//
+  
+  /// Returns the wavespeed for the state.
+  /// \param  eos     The equation of state for the state data.
+  /// \tparam EosImpl The implemenation of the equation of state interface.
+  template <typename EosImpl>
+  ripple_host_device auto wavespeed(const Eos<EosImpl>& eos) const -> value_t {
+    return impl()->wavespeed(eos);
+  }
+
   //==--- [direct access] --------------------------------------------------==//
 
   /// Returns the size of the state.

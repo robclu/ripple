@@ -50,9 +50,12 @@ template <typename T> struct StateTraits;
 template <typename T, typename Dims, typename Layout>
 struct StateTraits<FluidState<T, Dims, Layout>> {
   /// Defines the number of dimensions for the state.
-  static constexpr auto dimensions = Dims::value;
+  static constexpr auto dimensions      = Dims::value;
   /// Defines the total number of elements in the state.
-  static constexpr auto elements   = dimensions + 2;
+  static constexpr auto elements        = dimensions + 2;
+  /// Defines if the layout is an owned layout.
+  static constexpr auto is_owned_layout =
+    std::is_same_v<contiguous_owned_t, Layout>;
 
   /// Defines the type of the data for the state.
   using value_t             = std::decay_t<T>;
@@ -74,9 +77,11 @@ struct StateTraits<State<Impl>> {
  
  public:
   /// Defines the number of dimensions for the state.
-  static constexpr auto dimensions = traits_t::dimensions;
+  static constexpr auto dimensions      = traits_t::dimensions;
   /// Defines the total number of elements in the state.
-  static constexpr auto elements   = traits_t::elements;
+  static constexpr auto elements        = traits_t::elements;
+  /// Defines if the layout is an owned layout.
+  static constexpr auto is_owned_layout = traits_t::is_owned_layout;
 
   /// Defines the type of the data for the state.
   using value_t             = typename traits_t::value_t;
@@ -94,6 +99,29 @@ struct StateTraits<State<Impl>> {
 /// \tparam T The type to get the state traits for.
 template <typename T>
 using state_traits_t = StateTraits<std::decay_t<T>>;
+
+/// Returns true if the type T implements the State interface, otherwise returns
+/// false.
+/// \tparam T The type to determine if implements the State interface.
+template <typename T>
+static constexpr auto is_state_v =
+  std::is_base_of_v<State<std::decay_t<T>>, std::decay_t<T>>;
+
+//==--- [enables] ----------------------------------------------------------==//
+
+/// Defines a valid type if the layout for the state is an owned layout.
+/// \tparam T The type to base the enable on.
+template <typename T>
+using state_owned_layout_enable_t = std::enable_if_t<
+  state_traits_t<T>::is_owned_layout, int
+>;
+
+/// Defines a valid type if the layout for the state is not an owned layout.
+/// \tparam T The type to base the enable on.
+template <typename T>
+using state_non_owned_layout_enable_t = std::enable_if_t<
+  !state_traits_t<T>::is_owned_layout, int
+>;
 
 } // namespace fv
 
