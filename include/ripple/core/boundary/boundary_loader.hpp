@@ -33,8 +33,8 @@ class BoundaryLoader {
   }
 
  public:
-  /// Loads the front boundary in the \p dim dimension, using the \p value of
-  /// the \p index in the dimension.
+  /// Loads the front boundary in the \p dim dimension, using the value of
+  /// the \p index in the dimension to find the appropriate cell.
   /// \param  it       An iterator to the boundary cell to load.
   /// \param  index    The index of the boundary cell in the dimension.
   /// \param  dim      The dimension to load the boundary in.
@@ -54,8 +54,8 @@ class BoundaryLoader {
     );
   }
 
-  /// Loads the back boundary in the \p dim dimension, using the \p value of
-  /// the \p index in the dimension.
+  /// Loads the back boundary in the \p dim dimension, using the value of
+  /// the \p index in the dimension to find the appropriate cell.
   /// \param  it       An iterator to the boundary cell to load.
   /// \param  index    The index of the boundary cell in the dimension.
   /// \param  dim      The dimension to load the boundary in.

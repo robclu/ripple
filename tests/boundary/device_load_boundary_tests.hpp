@@ -18,6 +18,7 @@
 
 #include <ripple/core/boundary/load_boundary.hpp>
 #include <ripple/core/boundary/boundary_loader.hpp>
+#include <ripple/core/boundary/fo_extrap_loader.hpp>
 #include <ripple/core/container/device_block.hpp>
 #include <ripple/core/functional/invoke.hpp>
 #include <gtest/gtest.h>
@@ -91,6 +92,57 @@ struct ConstantLoader : public ripple::BoundaryLoader<ConstantLoader<T>> {
     *it = value;
   }
 };
+
+//==--- [1st order extrapolation] ------------------------------------------==//
+
+TEST(boundary_device_load_boundary, can_load_boundar_fo_exrap_3d) {
+  using data_t = float;
+  constexpr std::size_t padding = 1;
+  constexpr std::size_t size_x  = 17;
+  constexpr std::size_t size_y  = 32;
+  constexpr std::size_t size_z  = 24;
+
+  ripple::device_block_3d_t<data_t> block(padding, size_x, size_y, size_z);
+  ripple::FOExtrapLoader loader;
+
+  // Fill internal data to const value:
+  ripple::invoke(block, [] ripple_host_device (auto it) {
+    *it = data_t{10};
+  });
+
+  // Load boundaries
+  ripple::load_global_boundary(block, loader);
+
+  auto hblock = block.as_host();
+  auto it     = hblock.begin();
+  auto sum    = data_t{0};
+
+  // Move iterator into the padding area:
+  it.shift(ripple::dim_x, -1 * static_cast<int>(it.padding()));
+  it.shift(ripple::dim_y, -1 * static_cast<int>(it.padding()));
+  it.shift(ripple::dim_z, -1 * static_cast<int>(it.padding()));
+
+  const auto elements_x = hblock.size(ripple::dim_x) + 2 * hblock.padding();
+  const auto elements_y = hblock.size(ripple::dim_y) + 2 * hblock.padding();
+  const auto elements_z = hblock.size(ripple::dim_z) + 2 * hblock.padding();
+  for (auto k = 0; k < elements_z; ++k) {
+    for (auto j = 0; j < elements_y; ++j) {
+      for (auto i = 0; i < elements_x; ++i) {
+        sum += *(it
+          .offset(ripple::dim_x, i)
+          .offset(ripple::dim_y, j)
+          .offset(ripple::dim_z, k)
+        );
+      }
+    }
+  }
+ 
+  const auto pad = 2 * padding; 
+  auto total = data_t{10} * (size_x + pad) * (size_y + pad) * (size_z + pad);
+  EXPECT_EQ(total, sum);
+}
+
+//==--- [other loading] ----------------------------------------------------==//
 
 TEST(boundary_device_load_boundary, can_load_boundary_1d) {
   // Part 1: Test loading of global data:
