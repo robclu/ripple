@@ -95,6 +95,76 @@ struct ConstantLoader : public ripple::BoundaryLoader<ConstantLoader<T>> {
 
 //==--- [1st order extrapolation] ------------------------------------------==//
 
+TEST(boundary_device_load_boundary, can_load_boundar_fo_exrap_1d) {
+  using data_t = float;
+  constexpr std::size_t padding = 3;
+  constexpr std::size_t size_x  = 17;
+
+  ripple::device_block_1d_t<data_t> block(padding, size_x);
+  ripple::FOExtrapLoader loader;
+
+  // Fill internal data to const value:
+  ripple::invoke(block, [] ripple_host_device (auto it) {
+    *it = data_t{10};
+  });
+
+  // Load boundaries
+  ripple::load_global_boundary(block, loader);
+
+  auto hblock = block.as_host();
+  auto it     = hblock.begin();
+  auto sum    = data_t{0};
+
+  // Move iterator into the padding area:
+  it.shift(ripple::dim_x, -1 * static_cast<int>(it.padding()));
+  const auto elements_x = hblock.size(ripple::dim_x) + 2 * hblock.padding();
+  for (auto i = 0; i < elements_x; ++i) {
+    sum += *(it.offset(ripple::dim_x, i));
+  }
+ 
+  const auto pad = 2 * padding; 
+  auto total = data_t{10} * (size_x + pad);
+  EXPECT_EQ(total, sum);
+}
+
+TEST(boundary_device_load_boundary, can_load_boundar_fo_exrap_2d) {
+  using data_t = float;
+  constexpr std::size_t padding = 2;
+  constexpr std::size_t size_x  = 17;
+  constexpr std::size_t size_y  = 32;
+
+  ripple::device_block_2d_t<data_t> block(padding, size_x, size_y);
+  ripple::FOExtrapLoader loader;
+
+  // Fill internal data to const value:
+  ripple::invoke(block, [] ripple_host_device (auto it) {
+    *it = data_t{10};
+  });
+
+  // Load boundaries
+  ripple::load_global_boundary(block, loader);
+
+  auto hblock = block.as_host();
+  auto it     = hblock.begin();
+  auto sum    = data_t{0};
+
+  // Move iterator into the padding area:
+  it.shift(ripple::dim_x, -1 * static_cast<int>(it.padding()));
+  it.shift(ripple::dim_y, -1 * static_cast<int>(it.padding()));
+
+  const auto elements_x = hblock.size(ripple::dim_x) + 2 * hblock.padding();
+  const auto elements_y = hblock.size(ripple::dim_y) + 2 * hblock.padding();
+  for (auto j = 0; j < elements_y; ++j) {
+    for (auto i = 0; i < elements_x; ++i) {
+      sum += *(it.offset(ripple::dim_x, i).offset(ripple::dim_y, j));
+    }
+  }
+ 
+  const auto pad = 2 * padding; 
+  auto total = data_t{10} * (size_x + pad) * (size_y + pad);
+  EXPECT_EQ(total, sum);
+}
+
 TEST(boundary_device_load_boundary, can_load_boundar_fo_exrap_3d) {
   using data_t = float;
   constexpr std::size_t padding = 1;
