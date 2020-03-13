@@ -16,6 +16,7 @@
 #ifndef RIPPLE_TESTS_CONTAINER_DEVICE_GRID_TESTS_HPP
 #define RIPPLE_TESTS_CONTAINER_DEVICE_GRID_TESTS_HPP
 
+#include <ripple/core/boundary/fo_extrap_loader.hpp>
 #include <ripple/core/container/grid.hpp>
 
 // Defines the data type for the tests.
@@ -246,6 +247,38 @@ TEST(container_grid, can_apply_pipeline_on_device_3d_three_grid) {
   }
 }
 
+TEST(container_grid, can_apply_pipeline_on_device_3d_three_grid_non_shared) {
+  constexpr auto size_x = size_t{100};
+  constexpr auto size_y = size_t{100};
+  constexpr auto size_z = size_t{100};
+  auto topo = ripple::Topology();
+  ripple::grid_3d_t<real_t> g1(topo, size_x, size_y, size_z);
+  ripple::grid_3d_t<int_t>  g2(topo, size_x, size_y, size_z);
+  ripple::grid_3d_t<int_t>  g3(topo, size_x, size_y, size_z);
+    
+  auto pipeline = ripple::make_pipeline(
+    [] ripple_host_device (auto it_1, auto it_2, auto it_3) {
+      *it_1 = static_cast<real_t>(global_idx(ripple::dim_x))
+            + static_cast<real_t>(global_idx(ripple::dim_y))
+            + static_cast<real_t>(global_idx(ripple::dim_z));
+      *it_2 = static_cast<int_t>(*it_1);
+      *it_3 = static_cast<int_t>(*it_2);
+    }
+  );
+  g1.apply_pipeline_non_shared(pipeline, g2, g3);
+
+  for (auto k : ripple::range(g1.size(ripple::dim_z))) {
+    for (auto j : ripple::range(g1.size(ripple::dim_y))) {
+      for (auto i : ripple::range(g1.size(ripple::dim_x))) {
+        const auto v = static_cast<real_t>(i + j + k);
+        EXPECT_EQ(*g1(i, j, k), v);
+        EXPECT_EQ(*g2(i, j, k), static_cast<int_t>(v));
+        EXPECT_EQ(*g3(i, j, k), static_cast<int_t>(v));
+      }
+    }
+  }
+}
+
 //==--- [normalizes indices] -----------------------------------------------==//
 
 TEST(container_grid, can_get_normalized_global_index_1d) {
@@ -315,6 +348,62 @@ TEST(container_grid, can_get_normalized_global_index_3d) {
       }
     }
   }
+}
+
+//==--- [boundary loading] -------------------------------------------------==//
+
+TEST(container_grid, can_load_global_boundaries_3d) {
+  constexpr auto size_x   = size_t{10};
+  constexpr auto size_y   = size_t{5};
+  constexpr auto size_z   = size_t{5};
+  constexpr auto padding  = size_t{2};
+  constexpr auto data_val = real_t{10};
+
+  auto topo   = ripple::Topology();
+  auto loader = ripple::FOExtrapLoader();
+
+  ripple::grid_3d_t<real_t> g_in(topo, padding, size_x, size_y, size_z);
+  ripple::grid_3d_t<real_t> g_out(topo,  size_x, size_y, size_z);
+    
+  auto set_pipeline = ripple::make_pipeline(
+    [] ripple_host_device (auto it) { *it = data_val; }
+  );
+  g_in.apply_pipeline(set_pipeline);
+  g_in.load_boundaries(loader);
+
+  constexpr auto cells_dim = padding * 2 + 1;
+  auto sum_pipeline = ripple::make_pipeline(
+    [] ripple_host_device (auto in, auto out) {
+
+      // Shift into the padding;
+      constexpr auto dims = in.dimensions();
+      ripple::unrolled_for<dims>([&] (auto d) {
+        in.shift(d, -static_cast<int64_t>(padding));
+      });
+      auto sum = real_t{0};
+ 
+      // Sum 3 x 3 cells:
+      for (auto z : ripple::range(cells_dim)) {
+        for (auto y : ripple::range(cells_dim)) {
+          for (auto x : ripple::range(cells_dim)) {
+            sum += *in.offset(ripple::dim_x, x).offset(ripple::dim_y, y);
+          }
+        }
+        in.shift(ripple::dim_z, 1);
+      }
+      *out = sum;
+    }
+  );
+  g_in.apply_pipeline(sum_pipeline, g_out);
+
+  const auto cell_sum = cells_dim * cells_dim * cells_dim * data_val;
+  for (auto k : ripple::range(g_out.size(ripple::dim_z))) {
+    for (auto j : ripple::range(g_out.size(ripple::dim_y))) {
+      for (auto i : ripple::range(g_out.size(ripple::dim_x))) {
+        EXPECT_EQ(*g_out(i, j, k), cell_sum);
+      }
+    }
+  } 
 }
 
 #endif // RIPPLE_TESTS_CONTAINER_DEVICE_GRID_TESTS_HPP

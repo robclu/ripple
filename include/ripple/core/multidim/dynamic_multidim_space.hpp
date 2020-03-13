@@ -177,9 +177,20 @@ struct DynamicMultidimSpace :
 
   /// Returns a reference to the size of dimension \p dim, which can be used to
   /// set the size of the dimension.
-  /// \param[in] dim The dimension size to get a refernece to.
+  /// \param  dim The dimension size to get a refernece to.
+  /// \tparam Dim The type of the dimension specifier.
   template <typename Dim>
   ripple_host_device constexpr auto operator[](Dim&& dim) -> std::size_t& {
+    return _sizes[dim];
+  }
+
+  /// Returns a cosnt reference to the size of dimension \p dim, which can be 
+  /// used to detemine the size of one of the dimensions in the space.
+  /// \param  dim The dimension size to get a refernece to.
+  /// \tparam Dim The type of the dimension specifier.
+  template <typename Dim>
+  ripple_host_device constexpr auto operator[](Dim&& dim) const -> 
+  const std::size_t& {
     return _sizes[dim];
   }
 

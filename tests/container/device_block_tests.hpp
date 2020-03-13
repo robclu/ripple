@@ -653,7 +653,7 @@ TEST(container_device_block, can_invoke_pipeline_multi_blocks_1d) {
     }
   );
 
-  ripple::invoke_pipeline(b1, b2, pipeline);
+  ripple::invoke_pipeline(b1, pipeline, b2);
 
   auto b1h = b1.as_host(); auto b2h = b2.as_host();
   for (auto i : ripple::range(b1.size())) {

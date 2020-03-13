@@ -18,11 +18,34 @@
 
 #include "kernel/invoke_cpp_.hpp"
 #include "kernel/invoke_cuda_.cuh"
-#include "kernel/invoke_pipeline_cuda_.cuh"
+#include "kernel/invoke_pipeline_non_shared_cuda_.cuh"
+#include "kernel/invoke_pipeline_shared_cuda_.cuh"
 
 namespace ripple {
 
 //==--- [pipeline invoke] --------------------------------------------------==//
+
+/// This invokes the \p pipeline on each element of the \p block, without any
+/// use of shared memory.
+///
+/// This overload is for device blocks and will run each stage of the pipeline
+/// on the GPU.
+/// 
+/// \param  block    The block to invoke the pipeline on.
+/// \param  pipeline The pipeline to invoke on the block.
+/// \tparam T        The data type for the block.
+/// \tparam Dims     The number of dimensions in the block.
+/// \tparam Ops      The type of the pipeline operations.
+template <typename T, size_t Dims, typename... Ops, typename... Args>
+auto invoke_pipeline_non_shared(
+  DeviceBlock<T, Dims>&   block   , 
+  const Pipeline<Ops...>& pipeline,
+  Args&&...               args
+) -> void {
+  kernel::cuda::invoke_non_shared_pipeline(
+    block, pipeline, std::forward<Args>(args)...
+  );
+}
 
 /// This invokes the \p pipeline on each element of the \p block. 
 ///
@@ -34,73 +57,13 @@ namespace ripple {
 /// \tparam T        The data type for the block.
 /// \tparam Dims     The number of dimensions in the block.
 /// \tparam Ops      The type of the pipeline operations.
-template <typename T, size_t Dims, typename... Ops>
+template <typename T, size_t Dims, typename... Ops, typename... Args>
 auto invoke_pipeline(
   DeviceBlock<T, Dims>&   block   ,
-  const Pipeline<Ops...>& pipeline
-) -> void {
-  kernel::cuda::invoke_pipeline(block, pipeline);
-}
-
-/// This invokes the \p pipeline on each element of the \p block, passing an
-/// iterator to the elements in the \p other block to the pipeline as well.
-///
-/// This overload is for device blocks and will run each stage of the pipeline
-/// on the GPU.
-/// 
-/// \param  block    The block to invoke the pipeline on.
-/// \param  other    The other block to pass to the pipeline.
-/// \param  pipeline The pipeline to invoke on the block.
-/// \tparam T        The data type for the block.
-/// \tparam U        The data type for the other block.
-/// \tparam Dims     The number of dimensions in the block.
-/// \tparam Ops      The type of the pipeline operations.
-template <typename T, typename U, size_t Dims, typename... Ops>
-auto invoke_pipeline(
-  DeviceBlock<T, Dims>&   block,
-  DeviceBlock<U, Dims>&   other,
-  const Pipeline<Ops...>& pipeline
-) -> void {
-  kernel::cuda::invoke_pipeline(block, other, pipeline);
-}
-
-/// This invokes the \p pipeline on each element of the \p block, passing an
-/// iterator to the elements in the \p other block to the pipeline as well, and
-/// the \p last block. This will put the \p block iterator and \p other iterator
-/// into shared memory, while the \p last iterator will be in global memory.
-///
-/// This overload is for device blocks and will run each stage of the pipeline
-/// on the GPU.
-/// 
-/// \param  block    The block to invoke the pipeline on.
-/// \param  other    The other block to pass to the pipeline.
-/// \param  last     The last block to pass to the pipeline.
-/// \param  pipeline The pipeline to invoke on the block.
-/// \param  args     Additional arguments to provide.
-/// \tparam T        The data type for the block.
-/// \tparam U        The data type for the other block.
-/// \tparam V        The data type for the last block.
-/// \tparam Dims     The number of dimensions in the block.
-/// \tparam Ops      The type of the pipeline operations.
-/// \tparam Args     The type of additional arguments.
-template <
-  typename    T   ,
-  typename    U   ,
-  typename    V   ,
-  size_t      Dims,
-  typename... Ops ,
-  typename... Args
->
-auto invoke_pipeline(
-  DeviceBlock<T, Dims>&   block   ,
-  DeviceBlock<U, Dims>&   other   ,
-  DeviceBlock<V, Dims>&   last    ,
   const Pipeline<Ops...>& pipeline,
   Args&&...               args
 ) -> void {
-  kernel::cuda::invoke_pipeline(
-    block, other, last, pipeline, std::forward<Args>(args)...
-  );
+  kernel::cuda::invoke_pipeline(block, pipeline, std::forward<Args>(args)...);
 }
 
 //==--- [simple invoke] ----------------------------------------------------==//

@@ -279,6 +279,11 @@ class DeviceBlock {
     _space.padding() = padding;
   }
 
+  /// Returns the amount of padding for the block.
+  auto padding() const -> size_t {
+    return _space.padding();
+  }
+
   /// Returns the number of bytes required to allocate the internal data for the
   /// block as well as the internal data for the block.
   auto mem_requirement() const -> size_t {
@@ -345,7 +350,38 @@ class DeviceBlock {
   }
 };
 
+//==--- [iterator extraction] ----------------------------------------------==//
+
+/// Extracts the iterator from the \p block.
+/// \param  block The block to extract the iterator from.
+/// \tparam T     Type type of the data for the block.
+/// \tparam Dims  The number of dimension for the block.
+template <typename T, size_t Dims>
+ripple_host_device auto iter_or_ref(DeviceBlock<T, Dims>& block) {
+  return block.begin();
+}
+
+/// Overload of the iterator extraction function for a type which does not have
+/// an iterator, returning a reference to the type which does not have an
+/// iterator.
+/// \param  non_block The non block type without an iterator.
+/// \tparam T         The type to return a reference to.
+template <typename T>
+ripple_host_device auto iter_or_ref(T& non_block) -> T& {
+  return non_block;
+}
+
+/// Overload of the iterator extraction function for a type which does not have
+/// an iterator, returning a constant  reference to the type which does not have
+/// an iterator.
+/// \param  non_block The non block type without an iterator.
+/// \tparam T         The type to return a reference to.
+template <typename T>
+ripple_host_device auto iter_or_ref(const T& non_block) -> const T& {
+  return non_block;
+}
+
 } // namespace ripple
 
-#endif // RIPPLE_CONTAINER_HOST_BLOCK_HPP
+#endif // RIPPLE_CONTAINER_DEVICE_BLOCK_HPP
 

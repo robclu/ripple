@@ -304,11 +304,6 @@ class HostBlock {
     return _space.internal_size(std::forward<Dim>(dim));
   }
 
-  /// Returns the amount of padding for the tensor.
-  auto padding() const -> std::size_t {
-    return _space.padding();
-  }
-
   /// Returns the number of dimensions for the block.
   constexpr auto dimensions() const -> std::size_t {
     return Dimensions;
@@ -332,6 +327,11 @@ class HostBlock {
   /// \param padding The amount of padding for the block.
   auto set_padding(size_t padding) -> void {
     _space.padding() = padding;
+  }
+
+  /// Returns the amount of padding for the block.
+  auto padding() const -> size_t {
+    return _space.padding();
   }
 
   /// Returns the number of bytes required to allocate the internal data for the

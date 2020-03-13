@@ -142,26 +142,26 @@ struct DynamicExecParams : public ExecParams<DynamicExecParams<Shared>> {
 /// \tparam Dims    The number of dimensions for the parameters.
 /// \tparam Shared  The type of the shared memory for the parameters.
 template <size_t Dims, typename Shared = VoidShared>
-ripple_host_device auto dynamic_device_params() 
+ripple_host_device auto dynamic_device_params(size_t padding = 0) 
 -> DynamicExecParams<Shared> {
-  constexpr auto size_x = (Dims == 1 ? 1024 : Dims == 2 ? 32 : 8);
-  constexpr auto size_y = (Dims == 1 ? 1    : Dims == 2 ? 16 : 8);
-  constexpr auto size_z = (Dims == 1 ? 1    : Dims == 2 ? 1  : 8);
+  constexpr auto size_x = (Dims == 1 ? 512 : Dims == 2 ? 32 : 8);
+  constexpr auto size_y = (Dims == 1 ? 1   : Dims == 2 ? 16 : 8);
+  constexpr auto size_z = (Dims == 1 ? 1   : Dims == 2 ? 1  : 4);
 
-  return DynamicExecParams<Shared>(size_x, size_y, size_z);
+  return DynamicExecParams<Shared>(padding, size_x, size_y, size_z);
 }
 
 /// Creates default dynamic execution execution paramters for the host.
 /// \tparam Dims    The number of dimensions for the parameters.
 /// \tparam Shared  The type of the shared memory for the parameters.
 template <size_t Dims, typename Shared = VoidShared>
-ripple_host_device auto dynamic_host_params() 
+ripple_host_device auto dynamic_host_params(size_t padding = 0) 
 -> DynamicExecParams<Shared> {
   constexpr auto size_x = (Dims == 1 ? 1024 : Dims == 2 ? 32 : 8);
   constexpr auto size_y = (Dims == 1 ? 1    : Dims == 2 ? 16 : 8);
   constexpr auto size_z = (Dims == 1 ? 1    : Dims == 2 ? 1  : 8);
 
-  auto params = DynamicExecParams<Shared>(size_x, size_y, size_z);
+  auto params = DynamicExecParams<Shared>(padding, size_x, size_y, size_z);
   params.target_arch() = ComputeArch::host;
   return params;
 }

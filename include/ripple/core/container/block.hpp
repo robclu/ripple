@@ -23,6 +23,15 @@
 
 namespace ripple {
 
+/// Defines the state of the block data.
+enum class BlockState : uint8_t {
+  invalid          = 0,   //!< Data is not valid.
+  updated_host     = 1,   //!< Data is on the host and is updated.
+  submitted_host   = 2,   //!< Data has been submitted on the host.
+  updated_device   = 3,   //!< Data is on the device and is updated.
+  submitted_device = 4    //!< Data has been submitted on the device.
+};
+
 /// Defines a type which wraps a host and device block into a single type, and
 /// which has a state for the different data components in the block.
 ///
@@ -40,15 +49,6 @@ struct Block {
   /// Defines the type of the device block for the grid.
   using device_block_t = DeviceBlock<T, Dimensions>;
 
-  /// Defines the state of the block data.
-  enum class State : uint8_t {
-    invalid          = 0,   //!< Data is not valid.
-    updated_host     = 1,   //!< Data is on the host and is updated.
-    submitted_host   = 2,   //!< Data has been submitted on the host.
-    updated_device   = 3,   //!< Data is on the device and is updated.
-    submitted_device = 4    //!< Data has been submitted on the device.
-  };
-
   //==--- [interface] ------------------------------------------------------==//
   
   /// Ensures that the data is available on the device. This will make a copy
@@ -56,21 +56,21 @@ struct Block {
   auto ensure_device_data_available() -> void {
     switch (data_state) {
       // Already on the device, just return:
-      case State::updated_device:
+      case BlockState::updated_device:
         return;
       // Need to wait for whatever is happening on the host, nothing to do
       // currently ...
-      case State::submitted_host:
+      case BlockState::submitted_host:
         return;
       // On the host, so copy to the device:
-      case State::updated_host: {
+      case BlockState::updated_host: {
         cudaSetDevice(gpu_id);
         device_data.copy_data(host_data);
         break;
       }
       // Work submitted to the device, just need a synchronization to ensure
       // that the operation is finished.
-      case State::submitted_device:
+      case BlockState::submitted_device:
         break;
       default:
         break;
@@ -83,19 +83,19 @@ struct Block {
   auto ensure_host_data_available() -> void {
     switch (data_state) {
       // Already on the host, just return:
-      case State::updated_host:
+      case BlockState::updated_host:
         return;
       // Regardless of what is happening on the device, we need to add the copy
       // operation to the device's work queue, and then synchronize the stream
       // after.
-      case State::submitted_device:
-      case State::updated_device:
+      case BlockState::submitted_device:
+      case BlockState::updated_device:
         cudaSetDevice(gpu_id);
         host_data.copy_data(device_data);
         cudaStreamSynchronize(device_data.stream());
         return;
       // Work has been submitted to the host, so data is already on the host.
-      case State::submitted_host:
+      case BlockState::submitted_host:
         break;
       default:
         break;
@@ -123,15 +123,22 @@ struct Block {
     return host_data.padding() > 0;
   }
 
+  /// Sets the padding for the block to be \p width elements.
+  /// \param width The width of the padding.
+  auto set_padding(size_t width) -> void {
+    host_data.set_padding(width);
+    device_data.set_padding(width);
+  }
+
   //==--- [members] ------------------------------------------------------==//
 
-  host_block_t   host_data;                      //!< Host block data.
-  device_block_t device_data;                    //!< Device block data.
-  index_t        indices;                        //!< Indices of the block.
-  Block*         sibling       = nullptr;        //!< Data sharer.
-  int            gpu_id        = -1;             //!< Device index.
-  State          data_state    = State::invalid; //!< Data state.
-  State          padding_state = State::invalid; //!< Padding state.
+  host_block_t   host_data;                           //!< Host block data.
+  device_block_t device_data;                         //!< Device block data.
+  index_t        indices;                             //!< Indices of the block.
+  Block*         sibling       = nullptr;             //!< Data sharer.
+  int            gpu_id        = -1;                  //!< Device index.
+  BlockState     data_state    = BlockState::invalid; //!< Data state.
+  BlockState     padding_state = BlockState::invalid; //!< Padding state.
 };
 
 } // namespace ripple

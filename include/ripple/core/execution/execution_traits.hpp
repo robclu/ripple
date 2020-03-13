@@ -167,7 +167,7 @@ using default_exec_params_t =
 /// dimension, a grain size of 1, and no padding, for a shared memory type T.
 /// \tparam T   The type of the shared memory.
 template <typename T>
-using shared_exec_params_1d_t = StaticExecParams<1024, 1, 1, 0, T>;
+using shared_exec_params_1d_t = StaticExecParams<512, 1, 1, 0, T>;
 
 /// Defines an alias for 2d execution parameters. 32 threads in the x
 /// dimension, 16 in the y dimension, a grain size of 1, and no padding.

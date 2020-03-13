@@ -20,6 +20,7 @@
 #include "grid_traits.hpp"
 #include "block.hpp"
 #include <ripple/core/arch/topology.hpp>
+#include <ripple/core/boundary/load_boundary.hpp>
 #include <ripple/core/functional/invoke.hpp>
 #include <ripple/core/multidim/dynamic_multidim_space.hpp>
 #include <ripple/core/utility/dim.hpp>
@@ -44,7 +45,7 @@ class Grid {
   /// Defines the type of the block for the grid.
   using block_t        = Block<T, Dimensions>;
   /// Defines the type of the state for the block.
-  using block_state_t  = typename block_t::State;
+  using block_state_t  = BlockState;
   /// Defines the type of the container used for the blocks.
   using blocks_t       = std::vector<block_t>;
 
@@ -177,6 +178,12 @@ class Grid {
   }
 
   //==--- [interface] ------------------------------------------------------==//
+  
+  /// Sets the padding for each block in the grid, as well as the boundary of
+  /// the grid, to be \p width cells.
+  auto set_padding(size_t width) -> void {
+    _space.padding() = width;
+  }
 
   /// Gets a const iterator to the first block in the grid.
   auto begin() const {
@@ -245,83 +252,88 @@ class Grid {
   }
 
   //==--- [pipeline invoke] ------------------------------------------------==//
-
+  
   /// Applies the \p pipeline to the grid, performing the operations in the
-  /// pipeline.
+  /// pipeline, without the use of any shared memory.
+  ///
+  //   If any of the \p args are Grid types, then the corresponding argument in
+  /// the callables for the pipeline must be iterator types, and they will be
+  /// offset to the cell corresponding to their global thread indices.
+  ///
   /// \param  pipeline The pipeline to apply to the grid.
+  /// \param  args     Additional arguments to the pipeline.
   /// \tparam Ops      The operations in the pipeline.
-  template <typename... Ops>
-  auto apply_pipeline(const Pipeline<Ops...>& pipeline) -> void {
+  /// \tparam Args     The types of the additional arguments.
+  template <typename... Ops, typename... Args>
+  auto apply_pipeline_non_shared(
+    const Pipeline<Ops...>& pipeline, Args&&... args
+  ) -> void {
     if (single_gpu()) {
       auto block = _blocks.begin();
 
       block->ensure_device_data_available();
 
-      invoke_pipeline(block->device_data, pipeline);
-      block->data_state = block_state_t::updated_device;
-    }
-  }
-
-  /// Applies the \p pipeline to the grid, performing the operations in the
-  /// pipeline, also passing the \p other grid to the pipeline as the second
-  /// argument to the pipeline.
-  /// \param  other    The other grid to pass to the pipeline.
-  /// \param  pipeline The pipeline to apply to the grid.
-  /// \tparam U        The type of the data for the other grid.
-  /// \tparam Ops      The operations in the pipeline.
-  template <typename U, typename... Ops>
-  auto apply_pipeline(
-    const Pipeline<Ops...>& pipeline, Grid<U, Dimensions>& other
-  ) -> void {
-    if (single_gpu()) {
-      auto block_other = other.begin();
-      auto block       = _blocks.begin();
-
-      block->ensure_device_data_available();
-      block_other->ensure_device_data_available();
-
-      invoke_pipeline(block->device_data, block_other->device_data, pipeline);
-      block->data_state = block_state_t::updated_device;
-    }
-  }
-
-  /// Applies the \p pipeline to the grid, performing the operations in the
-  /// pipeline, also passing the \p other grid to the pipeline as the second
-  /// argument to the pipeline, and the \p last as the third argument to
-  /// the pipeline, with \p args as additional arguments. 
-  ///
-  /// \param  pipeline The pipeline to apply to the grid.
-  /// \param  other    The other grid to pass to the pipeline.
-  /// \param  last     The last grid to pass to the pipeline.
-  /// \param  args     Additional arguments for the pipeline application.
-  /// \tparam U        The type of the data for the other grid.
-  /// \tparam V        The type of teh data for the last grid.
-  /// \tparam Ops      The operations in the pipeline.
-  /// \tparam Args     The types of additional arguments.
-  template <typename U, typename V, typename... Ops, typename... Args>
-  auto apply_pipeline(
-    const Pipeline<Ops...>& pipeline,
-    Grid<U, Dimensions>&    other   ,
-    Grid<V, Dimensions>&    last    ,
-    Args&&...               args
-  ) -> void {
-    if (single_gpu()) {
-      auto block_last  = last.begin();
-      auto block_other = other.begin();
-      auto block       = _blocks.begin();
-
-      block->ensure_device_data_available();
-      block_other->ensure_device_data_available();
-      block_last->ensure_device_data_available();
-
-      invoke_pipeline(
-        block->device_data      ,
-        block_other->device_data,
-        block_last->device_data ,
-        pipeline                ,
-        std::forward<Args>(args)...
+      invoke_pipeline_non_shared(
+        block->device_data, 
+        pipeline          ,
+        extract_device_block(std::forward<Args>(args))...
       );
       block->data_state = block_state_t::updated_device;
+    }
+  }
+
+  /// Applies the \p pipeline to the grid, performing the operations in the
+  /// pipeline.
+  ///
+  /// If any of the \p args are Grid types, then the corresponding argument in
+  /// the callables for the pipeline must be iterator types, and they will be
+  /// offset to the cell corresponding to their global thread indices.
+  ///
+  /// This will put the data for this grid in shared memory, but any additional
+  /// grid types will not be put into shared memory.
+  ///
+  /// \param  pipeline The pipeline to apply to the grid.
+  /// \param  args     Additional arguments for the pipeline.
+  /// \tparam Ops      The operations in the pipeline.
+  /// \tparam Args     The types of the additional argumetns.
+  template <typename... Ops, typename... Args>
+  auto apply_pipeline(const Pipeline<Ops...>& pipeline, Args&&... args) 
+  -> void {
+    if (single_gpu()) {
+      auto block = _blocks.begin();
+      block->ensure_device_data_available();
+
+      invoke_pipeline(
+        block->device_data, 
+        pipeline          , 
+        extract_device_block(std::forward<Args>(args))...
+      );
+      block->data_state = block_state_t::updated_device;
+    }
+  }
+
+  //==--- [boundary loading] -----------------------------------------------==//
+  
+  /// Loads the global boundaries for the grid, using the \p loader and the
+  /// optional additional \p args.
+  ///
+  /// If the \p loader is not an imlementation of the BoundaryLoader interface
+  /// then this will cause a compile time error.
+  ///
+  /// \param  loader The loader to use to set the boundary data.
+  /// \param  args   Additional arguments for the loading.
+  /// \tparam Loader The type of the boudnary loader.
+  /// \tparam Args   The type of the arguments.
+  template <typename Loader, typename... Args>
+  auto load_boundaries(const Loader& loader, Args&&... args) -> void {
+    if (single_gpu()) {
+      auto block = _blocks.begin();
+      block->ensure_device_data_available();
+      load_global_boundary(
+        block->device_data, loader, std::forward<Args>(args)...
+      );
+      block->data_state    = block_state_t::updated_device;
+      block->padding_state = block_state_t::updated_device;
     }
   }
 
@@ -331,6 +343,34 @@ class Grid {
   blocks_t   _blocks;       //!< Blocks for the grid.
   Topology&  _topo;         //!< Topology for the system.
   gpu_mask_t _gpu_mask;     //!< Max number of gpus for the grid.
+
+  //==--- [block extraction] -----------------------------------------------==//
+ 
+  /// Extracts a reference to the device block from the \p grid, ensuring that 
+  /// the data for the grid is on the device.
+  ///
+  /// This overload is for for Grid types, for which the block needs to be
+  /// extracted.
+  ///
+  /// \param  grid The grid to get the device block from.
+  /// \tparam U    The type of the grid data. 
+  template <typename U>
+  auto extract_device_block(Grid<U, Dimensions>& grid) const 
+  -> std::decay_t<decltype(grid.begin()->device_data)>& {
+    auto b = grid.begin();
+    b->ensure_device_data_available();
+    b->data_state = block_state_t::updated_device;
+    return b->device_data;
+  }
+
+  /// Simply returns a reference to the argument \p non_grid, since NonGrid is
+  /// not a grid and doesn't have blocks to extract.
+  /// \param   non_grid The argument to return a reference to.
+  /// \tparamm NonGrid  The type of the argument.
+  template <typename NonGrid>
+  auto extract_device_block(NonGrid& non_grid) const -> NonGrid& {
+    return non_grid;
+  }
 
   //==--- [resize] ---------------------------------------------------------==//
 
@@ -381,7 +421,8 @@ class Grid {
       static_cast<float>(_block_size.internal_size(dims_v))
     );
     for (auto i : range(blocks)) {
-      _blocks.emplace_back();
+      auto& b = _blocks.emplace_back();
+      b.set_padding(_space.padding());
     }
   }
 
@@ -492,4 +533,3 @@ class Grid {
 } // namespace ripple
 
 #endif // RIPPLE_CONTAINER_GRID_HPP
-
