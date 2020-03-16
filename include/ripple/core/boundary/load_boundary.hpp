@@ -21,6 +21,7 @@
 #include "detail/load_internal_boundary_impl_.hpp"
 #include <ripple/core/execution/execution_traits.hpp>
 #include <ripple/core/execution/thread_index.hpp>
+#include <ripple/core/functional/pipeline.hpp>
 
 namespace ripple {
 
@@ -37,7 +38,7 @@ template <typename Block, typename Loader, typename... Args>
 ripple_host_device auto load_global_boundary(
   Block&& block, Loader&& loader, Args&&... args
 ) -> void {
-  invoke(block,
+  invoke_pipeline_non_shared(block, make_pipeline(
     [] (auto it, auto&& loader, auto&&... args) {
       constexpr auto dims = it.dimensions();
       using dim_spec_t    = std::conditional_t<
@@ -53,7 +54,7 @@ ripple_host_device auto load_global_boundary(
       detail::load_global_boundary(
         dim_spec_t{}, it, indices, loader, args...
       );
-    },
+    }),
     std::forward<Loader>(loader),
     std::forward<Args>(args)...
   );
@@ -80,7 +81,7 @@ ripple_host_device auto load_global_boundary(
 /// \tparam IteratorTo   The type of the to iterator.
 template <std::size_t Dims, typename IteratorFrom, typename IteratorTo>
 ripple_host_device auto load_internal_boundary(
-    IteratorFrom&& it_from, IteratorTo&& it_to
+  IteratorFrom&& it_from, IteratorTo&& it_to
 ) -> void {
   /// More both iterators to the top left of the domain:
   unrolled_for<Dims>([&] (auto d) {
