@@ -34,7 +34,7 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
   /// Defines the type of the pointer to the data.
   using ptr_t     = void*;
   /// Defines the type of the storage.
-  using storage_t = StridedStorageView<Ts...>;
+  using storage_t = StridedStorageView;
 
   //==--- [traits] ---------------------------------------------------------==//
 
@@ -314,13 +314,13 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
       constexpr std::size_t type_idx = i;
       constexpr auto        values   = 
         element_components_v<nth_element_t<type_idx, Ts...>>;
-
+      
       copy_from_to<type_idx, values>(from, *this);
     });
   }
 
   //==--- [operator overload] ----------------------------------------------==//
-  
+
   /// Overload of operator= to set the data for the StridedStorageView from
   /// another StorageAccessor. This returns the StridedStorageView with the
   /// data copied from \p from.

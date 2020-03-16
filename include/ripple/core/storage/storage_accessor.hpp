@@ -157,7 +157,8 @@ template <
   indexable_enable_t<Values> = 0
 >
 ripple_host_device auto copy_from_to(const ImplFrom& from, ImplTo& to) -> void {
-  unrolled_for<Values>([&from, &to] (auto J) {
+  unrolled_for<Values>([&from, &to] (auto j) {
+    constexpr auto J = size_t{j};
     to.template get<I, J>() = from.template get<I, J>();
   });
 }
