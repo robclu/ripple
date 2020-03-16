@@ -117,9 +117,8 @@ class FluidState :
   /// one.
   /// \param  other The other fluid state to create this one from.
   /// \tparam OtherLayout The storage layout of the other type.
-  template <typename OtherLayout>
-  ripple_host_device FluidState(const FluidState<T, Dims, OtherLayout>& other)
-  : _storage(other._storage) {}
+  ripple_host_device FluidState(const FluidState& other)
+  : _storage{other._storage} {}
 
   /// Constructor to create the state from another fluid type with a potentially
   /// different storage layout, copying the data from the other storage to this
@@ -127,22 +126,29 @@ class FluidState :
   /// \param  other The other fluid state to create this one from.
   /// \tparam OtherLayout The storage layout of the other type.
   template <typename OtherLayout>
-  ripple_host_device FluidState(FluidState<T, Dims, OtherLayout>&& other)
-  : _storage(other._storage) {}
+  ripple_host_device FluidState(const FluidState<T, Dims, OtherLayout>& other) 
+  : _storage{other._storage} {}
 
   /// Constructor to create the state from an array type (such as for fluxes).
   /// \param  arr       The array to set the data from.
   /// \tparam ArrayImpl The type of the array implementation.
   template <typename ArrayImpl, array_enable_t<ArrayImpl> = 0>
   ripple_host_device FluidState(const ArrayImpl& arr) {
-    unrolled_for<elements>([&] (auto _i) {
-      constexpr auto i = size_t{_i};
-      this->operator[](i) = arr[i];
-    });
+    copy(arr);
   }
 
   //==--- [operator overload] ----------------------------------------------==//
-  
+
+  /// Overload of copy assignment operator to set the state from another state
+  /// of a potentially different layout type.
+  /// \param  other The other fluid state to create this one from.
+  /// \tparam OtherLayout The storage layout of the other type.
+  ripple_host_device auto operator=(const FluidState& other) -> self_t& {
+    copy(other);
+    return *this;
+  }
+
+
   /// Overload of copy assignment operator to set the state from another state
   /// of a potentially different layout type.
   /// \param  other The other fluid state to create this one from.
@@ -151,24 +157,7 @@ class FluidState :
   ripple_host_device auto operator=(
     const FluidState<T, Dims, OtherLayout>& other
   ) -> self_t& {
-    unrolled_for<elements>([&] (auto _i) {
-      constexpr auto i = size_t{_i};
-      this->operator[](i) = other[i];
-    });
-    return *this;
-  }
-
-  /// Overload of move  assignment operator to set the state from another state
-  /// of a potentially different layout type.
-  /// \param  other The other fluid state to create this one from.
-  /// \tparam OtherLayout The storage layout of the other type.
-  template <typename OtherLayout>
-  ripple_host_device auto operator=(FluidState<T, Dims, OtherLayout>&& other)
-  -> self_t& {
-    unrolled_for<elements>([&] (auto _i) {
-      constexpr auto i = size_t{_i};
-      this->operator[](i) = other[i];
-    });
+    copy(other);
     return *this;
   }
 
@@ -177,10 +166,7 @@ class FluidState :
   /// \tparam ArrayImpl The type of the array implementation.
   template <typename ArrayImpl, array_enable_t<ArrayImpl> = 0>
   ripple_host_device auto operator=(const ArrayImpl& arr) -> self_t& {
-    unrolled_for<elements>([&] (auto _i) {
-      constexpr auto i = size_t{_i};
-      this->operator[](i) = arr[i];
-    });
+    copy(arr);
     return *this;
   }
 
@@ -447,6 +433,17 @@ class FluidState :
       v_sq += rho_v<dim>() * rho_v<dim>();
     });
     return v_sq;
+  }
+
+  /// Copies the data from the \p arr array type to this state.
+  /// \param  arr The array type to copy data from.
+  /// \tparam Arr The type of the array.
+  template <typename Arr>
+  ripple_host_device auto copy(const Arr& arr) -> void {
+    unrolled_for<elements>([&] (auto _i) {
+      constexpr size_t i = _i;
+      _storage.template get<0, i>() = arr[i];
+    });
   }
 };
 
