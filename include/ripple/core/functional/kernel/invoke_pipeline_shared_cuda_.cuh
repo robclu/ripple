@@ -180,9 +180,13 @@ auto invoke_pipeline(
   DeviceBlock<T, Dims>& block, const Pipeline<Ops...>& pipeline, Args&&... args
 ) -> void {
 #if defined(__CUDACC__)
+  // Always use contiguous storage for shared data, because for every benchmark
+  // it has proven to be faster.
+  using shared_t = as_contiguous_view_t<T>;
+
   // Shared memory, don't need to allocate data for padding:
   if (block.padding() == 0) {
-    auto exec_params       = default_shared_exec_params_t<Dims, T>{};
+    auto exec_params       = default_shared_exec_params_t<Dims, shared_t>{};
     auto [threads, blocks] = get_exec_size(block, exec_params);
 
     detail::invoke_static_shared_pipeline_multi<<<
@@ -198,7 +202,7 @@ auto invoke_pipeline(
   }
 
   // Block has padding, need to dynamicall allocate:
-  auto exec_params       = dynamic_device_params<Dims, T>(block.padding());
+  auto exec_params       = dynamic_device_params<Dims, shared_t>(block.padding());
   auto [threads, blocks] = get_exec_size(block, exec_params);
 
   const auto mem_req = exec_params.template allocation_size<Dims>();
@@ -229,9 +233,13 @@ auto invoke_pipeline(
   DeviceBlock<T, Dims>& block, const Pipeline<Ops...>& pipeline
 ) -> void {
 #if defined(__CUDACC__)
+  // Always use contiguous storage for shared data, because for every benchmark
+  // it has proven to be faster.
+  using shared_t = as_contiguous_view_t<T>;
+
   // Shared memory, don't need to allocate data for padding:
   if (block.padding() == 0) {
-    auto exec_params       = default_shared_exec_params_t<Dims, T>{};
+    auto exec_params       = default_shared_exec_params_t<Dims, shared_t>{};
     auto [threads, blocks] = get_exec_size(block, exec_params);
 
     detail::invoke_static_shared_pipeline_multi<<<
@@ -244,7 +252,7 @@ auto invoke_pipeline(
   }
 
   // Block has padding, need to dynamicall allocate:
-  auto exec_params       = dynamic_device_params<Dims, T>(block.padding());
+  auto exec_params       = dynamic_device_params<Dims, shared_t>(block.padding());
   auto [threads, blocks] = get_exec_size(block, exec_params);
 
   const auto mem_req = exec_params.template allocation_size<Dims>();

@@ -40,7 +40,7 @@ struct Consumer {};
 /// \tparam Dim      The type of the dimension specifier.
 template <typename Iterator, typename Dim, iterator_enable_t<Iterator> = 0>
 ripple_device_only auto shift_iter_in_dim(
-  Iterator&& it, size_t amount, Dim&& dim
+  Iterator& it, size_t amount, Dim&& dim
 )-> Consumer {
   it.shift(dim, amount);
   return Consumer();
@@ -55,7 +55,7 @@ ripple_device_only auto shift_iter_in_dim(
 /// \tparam Dim      The type of the dimension specifier.
 template <typename Dim, typename Iterator, non_iterator_enable_t<Iterator> = 0>
 ripple_device_only auto shift_iter_in_dim(
-    Iterator&& it, size_t amount, Dim&& dim 
+  Iterator& it, size_t amount, Dim&& dim 
 ) -> Consumer {
   return Consumer();
 }
@@ -77,7 +77,7 @@ ripple_device_only auto consume(Args&&... args) -> void {}
 /// \tparam Iterator The type of the iterator.
 template <typename Iterator, typename... Args>
 ripple_device_only auto shift_in_range_global(
-  Iterator&& it, Args&&... args 
+  Iterator& it, Args&&... args 
 ) -> bool {
   bool in_range = true;
   constexpr auto dims = iterator_traits_t<Iterator>::dimensions;
@@ -108,7 +108,7 @@ ripple_device_only auto shift_in_range_global(
 /// \tparam SharedIterator The type of the shared memory iterator.
 template <typename Iterator, typename SharedIterator, typename... Args>
 ripple_device_only auto shift_in_range(
-  Iterator&& it, SharedIterator&& sit, Args&&... args
+  Iterator& it, SharedIterator& sit, Args&&... args
 ) -> bool {
   bool in_range = true;
   constexpr auto num_args = sizeof...(Args);
@@ -137,7 +137,7 @@ ripple_device_only auto shift_in_range(
 /// \param  IteratorA The type of the first iterator.
 /// \tparam IteratorB The type of the second iterator.
 template <typename IteratorA, typename IteratorB>
-ripple_device_only auto set_iter_data(const IteratorA& it_a, IteratorB&& it_b) 
+ripple_device_only auto set_iter_data(const IteratorA& it_a, IteratorB& it_b) 
 -> void {
   using it_a_t = std::decay_t<decltype(*it_a)>;
   using it_b_t = std::decay_t<decltype(*it_b)>;
@@ -156,7 +156,7 @@ ripple_device_only auto set_iter_data(const IteratorA& it_a, IteratorB&& it_b)
 /// \param  IteratorA The type of the first iterator.
 /// \tparam IteratorB The type of the second iterator.
 template <typename IteratorA, typename IteratorB>
-ripple_device_only auto set_iter_boundary(IteratorA&& it_a, IteratorB&& it_b)
+ripple_device_only auto set_iter_boundary(IteratorA& it_a, IteratorB& it_b)
 -> void {
   if (it_b.padding() > 0) {
     constexpr auto dims = iterator_traits_t<IteratorB>::dimensions;

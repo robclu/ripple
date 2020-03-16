@@ -51,23 +51,21 @@ ripple_global auto invoke_non_shared_pipeline(
   Iterator it, Pipeline<Ops...> pipeline, Args... args
 ) -> void {
 #if defined(__CUDACC__)
-  if (!util::shift_in_range_global(it, args...)) {
-    return;
-  }
-
   unrolled_for<Dims>([&] (auto _dim) {
     constexpr auto dim = size_t{_dim};
     const     auto idx = global_idx(dim);
     ::ripple::detail::global_elements(dim) = it.size(dim);
   });
 
+  if (!util::shift_in_range_global(it, args...)) {
+    return;
+  }
+
   // Run each stage of the pipeline ...
   using pipeline_t = Pipeline<Ops...>;
   unrolled_for<pipeline_t::num_stages>([&] (auto i) {
     constexpr auto stage = size_t{i};
-    pipeline.template get_stage<stage>().operator()(
-      it, std::forward<Args>(args)...
-    );
+    pipeline.template get_stage<stage>().operator()(it, args...);
 
     if constexpr (pipeline_t::num_stages > 0) {
       sync_block();

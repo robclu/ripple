@@ -372,6 +372,15 @@ class Grid {
     return non_grid;
   }
 
+  /// Simply returns a const reference to the argument \p non_grid, since 
+  /// NonGrid is not a grid and doesn't have blocks to extract.
+  /// \param   non_grid The argument to return a reference to.
+  /// \tparamm NonGrid  The type of the argument.
+  template <typename NonGrid>
+  auto extract_device_block(const NonGrid& non_grid) const -> const NonGrid& {
+    return non_grid;
+  }
+
   //==--- [resize] ---------------------------------------------------------==//
 
   /// Defines the size of the default blocks for 1D. The default is to split
