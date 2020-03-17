@@ -146,7 +146,7 @@ ripple_host_device auto dynamic_device_params(size_t padding = 0)
 -> DynamicExecParams<Shared> {
   constexpr auto size_x = (Dims == 1 ? 512 : Dims == 2 ? 32 : 8);
   constexpr auto size_y = (Dims == 1 ? 1   : Dims == 2 ? 16 : 8);
-  constexpr auto size_z = (Dims == 1 ? 1   : Dims == 2 ? 1  : 4);
+  constexpr auto size_z = (Dims == 1 ? 1   : Dims == 2 ? 1  : 8);
 
   return DynamicExecParams<Shared>(padding, size_x, size_y, size_z);
 }

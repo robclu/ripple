@@ -114,7 +114,6 @@ struct GhostIndex {
   }
 
  public:
-  
   /// Initialises the indices from the \p it iterator for the global domain,
   /// returning true if one of the indices for a dimension is valid, and hence
   /// that the index structure is valid (i.e that it defines a valid index for

@@ -110,9 +110,8 @@ template <typename Iterator, typename SharedIterator, typename... Args>
 ripple_device_only auto shift_in_range(
   Iterator& it, SharedIterator& sit, Args&&... args
 ) -> bool {
-  bool in_range = true;
-  constexpr auto num_args = sizeof...(Args);
-  constexpr auto dims     = iterator_traits_t<Iterator>::dimensions;
+  bool in_range       = true;
+  constexpr auto dims = iterator_traits_t<Iterator>::dimensions;
   unrolled_for<dims>([&] (auto dim) {
     const auto idx = global_idx(dim);
     if (in_range && idx < it.size(dim)) {

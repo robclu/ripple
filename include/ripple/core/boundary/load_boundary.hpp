@@ -39,7 +39,7 @@ ripple_host_device auto load_global_boundary(
   Block&& block, Loader&& loader, Args&&... args
 ) -> void {
   invoke_pipeline_non_shared(block, make_pipeline(
-    [] (auto it, auto&& loader, auto&&... args) {
+    [] ripple_host_device (auto it, auto&& loader, auto&&... args) {
       constexpr auto dims = it.dimensions();
       using dim_spec_t    = std::conditional_t<
         dims == 1, dimx_t, std::conditional_t<dims == 2, dimy_t, dimz_t>

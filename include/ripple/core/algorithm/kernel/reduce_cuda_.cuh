@@ -70,7 +70,7 @@ ripple_device_only auto reduce_block_for_dim(
     elements       >>= 1;
     if (thread_idx(dim) < elements) {
       right = it.offset(dim, elements + rem);
-      pred (left, right, args...);
+      pred(left, right, args...);
     }
     elements += rem;
     sync_block();

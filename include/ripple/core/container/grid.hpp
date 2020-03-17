@@ -20,6 +20,7 @@
 #include "grid_traits.hpp"
 #include "block.hpp"
 #include <ripple/core/arch/topology.hpp>
+#include <ripple/core/algorithm/reduce.hpp>
 #include <ripple/core/boundary/load_boundary.hpp>
 #include <ripple/core/functional/invoke.hpp>
 #include <ripple/core/multidim/dynamic_multidim_space.hpp>
@@ -335,6 +336,30 @@ class Grid {
       block->data_state    = block_state_t::updated_device;
       block->padding_state = block_state_t::updated_device;
     }
+  }
+
+  //==--- [reduce] ---------------------------------------------------------==//
+  
+  /// Performs a reduction of the grid data, applying the predicate to each
+  /// pair of elements in the grid.
+  /// \param  pred  The predicate for the reduction.
+  /// \param  args  Arguments for the predicate.
+  /// \tparam Pred  The type of the predicate.
+  /// \tparam Args  The type of the arguments for the invocation.
+  template <typename Pred, typename... Args>
+  auto reduce(Pred&& pred, Args&&... args) -> T {
+    if (single_gpu()) {
+      auto block = _blocks.begin();
+      block->ensure_device_data_available();
+      T result = ::ripple::reduce(
+        block->device_data      ,
+        std::forward<Pred>(pred), 
+        std::forward<Args>(args)...
+      );
+      block->data_state = block_state_t::updated_device;
+      return result;
+    }
+    return T();
   }
 
  private:

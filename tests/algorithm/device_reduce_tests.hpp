@@ -19,14 +19,6 @@
 #include <ripple/core/algorithm/reduce.hpp>
 #include <gtest/gtest.h>
 
-// Functor to define a sum operation for reduction.
-struct DeviceSumReducer {
-  template <typename T>
-  ripple_host_device auto operator()(T& into, T& from) -> void {
-    *into += *from;
-  }
-};
-
 TEST(algorithm_device_reduce, can_sum_reduce_1d) {
   using data_t = float;
   constexpr auto size_x = size_t{101};
@@ -36,7 +28,7 @@ TEST(algorithm_device_reduce, can_sum_reduce_1d) {
     *it = data_t{1};
   });
 
-  auto result = ripple::reduce(block, DeviceSumReducer());
+  auto result = ripple::reduce(block, ripple::SumReducer());
   EXPECT_EQ(static_cast<size_t>(result), size_x);
 }
 
@@ -50,7 +42,7 @@ TEST(algorithm_device_reduce, can_sum_reduce_with_padding_1d) {
     *it = data_t{1};
   });
 
-  auto result = ripple::reduce(block, DeviceSumReducer());
+  auto result = ripple::reduce(block, ripple::SumReducer());
   EXPECT_EQ(static_cast<size_t>(result), size_x);
 }
 
@@ -64,7 +56,7 @@ TEST(algorithm_device_reduce, can_sum_reduce_2d) {
     *it = data_t{1};
   });
 
-  auto result = ripple::reduce(block, DeviceSumReducer());
+  auto result = ripple::reduce(block, ripple::SumReducer());
   EXPECT_EQ(static_cast<size_t>(result), size_x * size_y);
 }
 
@@ -79,7 +71,7 @@ TEST(algorithm_device_reduce, can_sum_reduce_with_padding_2d) {
     *it = data_t{1};
   });
 
-  auto result = ripple::reduce(block, DeviceSumReducer());
+  auto result = ripple::reduce(block, ripple::SumReducer());
   EXPECT_EQ(static_cast<size_t>(result), size_x * size_y);
 }
 
@@ -94,7 +86,7 @@ TEST(algorithm_device_reduce, can_sum_reduce_3d) {
     *it = data_t{1};
   });
 
-  auto result = ripple::reduce(block, DeviceSumReducer());
+  auto result = ripple::reduce(block, ripple::SumReducer());
   EXPECT_EQ(static_cast<size_t>(result), size_x * size_y * size_z);
 }
 
@@ -110,7 +102,7 @@ TEST(algorithm_device_reduce, can_sum_reduce_with_padding_3d) {
     *it = data_t{1};
   });
 
-  auto result = ripple::reduce(block, DeviceSumReducer());
+  auto result = ripple::reduce(block, ripple::SumReducer());
   EXPECT_EQ(static_cast<size_t>(result), size_x * size_y * size_z);
 }
 
