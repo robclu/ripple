@@ -359,7 +359,21 @@ class Grid {
       block->data_state = block_state_t::updated_device;
       return result;
     }
-    return T();
+    return T(0);
+  }
+
+  //==--- [swap] -----------------------------------------------------------==//
+  
+  /// Swaps the \p l grid with the \p r grid.
+  /// \param l The left grid to swap.
+  /// \param r The right grid to swap.
+  friend auto swap(Grid& l, Grid& r) -> void {
+    using std::swap;
+    swap(l._space     , r._space);
+    swap(l._block_size, r._block_size);
+    swap(l._blocks    , r._blocks);
+    swap(l._topo      , r._topo);
+    swap(l._gpu_mask  , r._gpu_mask);
   }
 
  private:

@@ -62,7 +62,7 @@ ripple_add_executable(
   algorithm_tests ${ripple_SOURCE_DIR}/tests/algorithm.cpp
 )
 ripple_target_link_libraries(
-  algorithm_tests ${GTEST_BOTH_LIBRARIES}
+  algorithm_tests ${GTEST_BOTH_LIBRARIES} ${CUDA_LIBRARIES}
 )
 
 #==--------------------------------------------------------------------------==#
@@ -189,6 +189,15 @@ ripple_add_executable(
 )
 ripple_target_link_libraries(
   eos_tests ${GTEST_BOTH_LIBRARIES}
+)
+
+#------------------------------------------------------------------------------#
+
+ripple_add_executable(
+  flux_tests ${ripple_SOURCE_DIR}/tests/flux.cpp
+)
+ripple_target_link_libraries(
+  flux_tests ${GTEST_BOTH_LIBRARIES} ${CUDA_LIBRARIES}
 )
 
 #------------------------------------------------------------------------------#

@@ -508,4 +508,42 @@ TEST(container_grid, can_reduce_3d_with_padding) {
   EXPECT_EQ(v, size_x * size_y * size_z * data_val);
 }
 
+//==--- [swap] -------------------------------------------------------------==//
+
+TEST(container_grid, can_swap_grids) {
+  constexpr auto size_x = size_t{100};
+  constexpr auto size_y = size_t{100};
+  constexpr auto size_z = size_t{100};
+  auto topo = ripple::Topology();
+  ripple::grid_3d_t<real_t> g1(topo, size_x, size_y, size_z);
+  ripple::grid_3d_t<real_t> g2(topo, size_x, size_y, size_z);
+    
+  g1.apply_pipeline(ripple::make_pipeline(
+    [] ripple_host_device (auto it) {
+      *it = static_cast<real_t>(global_idx(ripple::dim_x))
+          + static_cast<real_t>(global_idx(ripple::dim_y))
+          + static_cast<real_t>(global_idx(ripple::dim_z));
+    }
+  ));
+
+  g2.apply_pipeline(ripple::make_pipeline(
+    [] ripple_host_device (auto it) {
+      *it = static_cast<real_t>(global_idx(ripple::dim_x)) + 0.3f;
+    }
+  ));
+
+  using std::swap;
+  swap(g1, g2);
+
+  for (auto k : ripple::range(g1.size(ripple::dim_z))) {
+    for (auto j : ripple::range(g1.size(ripple::dim_y))) {
+      for (auto i : ripple::range(g1.size(ripple::dim_x))) {
+        const auto v = static_cast<real_t>(i + j + k);
+        EXPECT_EQ(*g1(i, j, k), static_cast<real_t>(i) + 0.3f);
+        EXPECT_EQ(*g2(i, j, k), v);
+      }
+    }
+  }
+}
+
 #endif // RIPPLE_TESTS_CONTAINER_DEVICE_GRID_TESTS_HPP
