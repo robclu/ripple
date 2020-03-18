@@ -36,7 +36,7 @@ class VtkWriter : public Writer<VtkWriter> {
 
   /// Defines the flags for opening the file to write. It needs to be writable
   /// and appendable/
-  static constexpr auto flags              = std::ios::out | std::ios::app;
+  static constexpr auto flags              = std::ios::out | std::ios::trunc;
   /// Defines the version of the vtk format being used.
   static constexpr auto version_string     = "# vtk DataFile Version 3.0\n";
   /// Defines the output type string for the data file.
