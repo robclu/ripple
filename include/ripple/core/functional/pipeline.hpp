@@ -95,7 +95,7 @@ template <typename... Stages>
 ripple_host_device auto make_pipeline(Stages&&... stages) 
 -> Pipeline<make_invocable_t<Stages>...> {
   return Pipeline<make_invocable_t<Stages>...>{
-    make_invocable_t<Stages>{stages}...
+    make_invocable_t<Stages>{std::forward<Stages>(stages)}...
   };
 }
 

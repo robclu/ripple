@@ -23,12 +23,10 @@ namespace ripple {
 //==--- [forward declarations] ---------------------------------------------==//
 
 /// The Invocable type defines an object which stores a functor which can be
-/// invoked, as well as some of the arguments with which to invoke it with.
+/// invoked. It's purpose is to be able to define function objects in a pipeline
+/// which can then be invoked and synchronized. It can then be invoked using the
+/// call operator as any callable.
 ///
-/// This also allows some of the arguments not to be stored, but to be passed
-/// when the invocable object is called. This is usefull for cases where the
-/// invocable might be used with a static interface, where the implementation of
-/// the interface is different each time the invocable us invoked:
 ///
 /// ~~~{.cpp}
 /// // Create the invocable with a const dt_val:
@@ -36,23 +34,19 @@ namespace ripple {
 ///   static_assert(is_iter_v<decltype(iter)>, "Not an iterator!");
 ///
 ///   *it += dt * (*it);
-/// }, dt_val);
-///
-/// inv(iterator_to_use);
-/// inv(different_iterator);
+/// });
 /// ~~~
 ///
-/// This class always owns the functor and the arguments to the functor, it does
-/// not reference either.
-///
+/// This class always owns the functor.
 /// \tparam Functor The type of the functor to invoke.
-/// \tparam Args    The type of the arguments for the functor.
-template <typename Functor, typename... Args> class Invocable;
+template <typename Functor> class Invocable;
 
 /// The Pipeline class stores a chain of operations which can be invoked. The
-/// pipeline allows the ordering between the operations to be defined.
+/// purpose of the pipeline is to define a sequence of operations on a specific
+/// set of data, where the data is synchronized across the block or the grid.
 ///
-/// Pipelines should be created through the ```make_pipeline``` interface.
+/// Pipelines should be created through the ```make_pipeline``` interface,
+/// rather than through the pipeline class itself.
 ///
 /// \tparam Ts The types of the invocable objects.
 template <typename... Ts> class Pipeline;
@@ -72,8 +66,8 @@ struct IsInvocable {
 /// Specialization for an invocable type.
 /// \tparam F    The functor for the invocable.
 /// \tparam Args The args for the invocable.
-template <typename F, typename... Args>
-struct IsInvocable<Invocable<F, Args...>> {
+template <typename F>
+struct IsInvocable<Invocable<F>> {
   /// Defines that the type is invocable.
   static constexpr auto value = true;
 };
@@ -100,22 +94,26 @@ struct IsPipeline<Pipeline<Ops...>> {
 
 /// Returns true if T is an invocable type.
 /// \tparam T  The type to determine if is invocable.
-/// \tparam DT The decayed type.
-template <typename T, typename DT = std::decay_t<T>>
-static constexpr auto is_invocable_v = detail::IsInvocable<DT>::value;
+template <typename T>
+static constexpr auto is_invocable_v = 
+  detail::IsInvocable<std::decay_t<T>>::value;
 
 /// Returns true if T is a pipeline type.
 /// \tparam T  The type to determine if is a pipeline.
-/// \tparam DT The decayed type.
-template <typename T, typename DT = std::decay_t<T>>
-static constexpr auto is_pipeline_v = detail::IsPipeline<DT>::value;
+template <typename T>
+static constexpr auto is_pipeline_v 
+  = detail::IsPipeline<std::decay_t<T>>::value;
 
 //==--- [traits] -----------------------------------------------------------==//
 
-/// Returns the type T as Invocable<T> if T is not already invocable.
+/// Returns the type T as Invocable<std::decay_t<T>> if T is not already 
+/// invocable. It returns a decayed version of T because the Invocable type
+/// always owns the callable.
 /// \tparam T The type to check and potentially make invocable.
 template <typename T>
-using make_invocable_t = std::conditional_t<is_invocable_v<T>, T, Invocable<T>>;
+using make_invocable_t = std::conditional_t<
+  is_invocable_v<std::decay_t<T>>, T, Invocable<std::decay_t<T>>
+>;
 
 } // namespace ripple
 
