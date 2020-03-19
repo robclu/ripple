@@ -53,6 +53,12 @@ struct IdealGas : public Eos<IdealGas<T>> {
   /// \param other The other equation of state.
   ripple_host_device constexpr IdealGas(const IdealGas& other)
   : _adi_index{other._adi_index} {}
+
+  /// Constructs the equation of state from the \p other equation of state,
+  /// moving the \p other ideal gas into this one.
+  /// \param other The other equation of state.
+  ripple_host_device constexpr IdealGas(IdealGas&& other)
+  : _adi_index{std::move(other._adi_index)} {}
   
   //==--- [operator overloads] ---------------------------------------------==//
   
@@ -62,6 +68,15 @@ struct IdealGas : public Eos<IdealGas<T>> {
   ripple_host_device constexpr auto operator=(const IdealGas& other) 
   -> self_t& {
     _adi_index = other.adi();
+    return *this;
+  }
+
+  /// Overload of move assignment overload to create the equation of state from
+  /// the \p other equation of state.
+  /// \param other The other equation of state to move.
+  ripple_host_device constexpr auto operator=(IdealGas&& other) 
+  -> self_t& {
+    _adi_index = std::move(other._adi_index);
     return *this;
   }
 
