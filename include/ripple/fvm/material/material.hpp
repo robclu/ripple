@@ -34,13 +34,7 @@ namespace ripple::fv {
 /// \tparam Eos      The type of the equation of state for the material.
 template <typename State, typename Levelset, typename Eos>
 class Material {
-  //==--- [constants] ------------------------------------------------------==//
-
-  /// Defines the number of dimensions for the material.
-  static constexpr auto dims = state_traits_t<State>::dimensions;
-
-  //==--- [aliases] --------------------------------------------------------==//
-  
+ public:
   /// Defines the type of the equation of state.
   using eos_t           = Eos;
   /// Defines the type of the state for the material.
@@ -49,6 +43,17 @@ class Material {
   using levelset_t      = Levelset;
   /// Defines the value type for the material.
   using value_t         = typename eos_traits_t<eos_t>::value_t;
+
+ private:
+  //==--- [constants] ------------------------------------------------------==//
+
+  /// Defines the number of dimensions for the material.
+  static constexpr auto dims = state_traits_t<State>::dimensions;
+  /// Defines zero indices for dims dimensions;
+  static constexpr size_t zero_indices[dims] = {0};
+
+  //==--- [aliases] --------------------------------------------------------==//
+  
   /// Defines the type of the container used to store the data.
   using state_grid_t    = ripple::Grid<state_t, dims>;
   /// Defines the type of the levelset used to store the data.
@@ -85,6 +90,15 @@ class Material {
 
   //==--- [interface] ------------------------------------------------------==//
   
+  /// Sets the padding for the material data to be \p width elements.
+  /// \param width The number of elements for the padding for the material.
+  auto set_padding(size_t width) -> void {
+    _states.set_padding(width);
+
+    // The levelset only ever requires a single padding cell.
+    _levelset.set_padding(1);
+  }
+  
   /// Resizes the dimension of the material to \p size for the \p dim dimension.
   /// This does not allocate the data for the resized material, which needs to
   /// be done by calling ``reallocate()``.
@@ -112,37 +126,93 @@ class Material {
     return _states.size(std::forward<Dim>(dim));
   }
 
-  /// Initializes the material using the \p initializer to initialize the
-  /// levelset data, the \p inside_init for the state data inside the levelset,
-  /// and the \p outside_init for the state data outside the levelset.
-  template <typename LevelsetInit, typename InsideInit, typename OutsideInit>
+  /// Initializes the material using the \p levelset_init_func to initialize
+  /// the levelset for the material, and the \p state_init_func to initialize
+  /// the state data for the material, passing the eos for the material and 
+  /// the \p state_initializers to the \p state_init_func function.
+  /// 
+  /// The \p levelset_init_func must have a signature of:
+  ///
+  /// ~~~{.cpp}
+  /// // As a lambda:
+  /// ripple_host_device auto (auto levelset) -> void
+  ///
+  /// // As a functor:
+  /// template <typename T>
+  /// ripple_host_device auto (T levelset) const -> void
+  /// ~~~
+  ///
+  /// Where the type ``T`` or ``auto`` is a BlockIterator<Levelset, Dims>.
+  ///
+  /// The \p state_init_func must have a signature of:
+  ///
+  /// ~~~{.cpp}
+  /// // As a lambda:
+  /// ripple_host_device auto (auto state, auto eos, auto... inits) -> void
+  ///
+  /// // As a functor:
+  /// template <typename T, typename EosImpl, typename... Inits>
+  /// ripple_host_device auto 
+  /// (T state, EosImpl&& eos, Inits&&... inits) const -> void
+  /// ~~~
+  ///
+  /// Where the type ``T`` or ``auto`` is a BlockIterator<State, Dims>, and
+  /// State is one of the implementations of the State<> interface, EosImpl
+  /// implements the Eos<> interface, and Inits are StateInitializers.
+  ///
+  /// \param eos The equation of state for the material.
+  /// \param  levelset_init_func The functor to initialize the levelset with.
+  /// \param  state_init_func    The functor to initialize the state data with.
+  /// \param  state_initializers The initializers for the state data.
+  /// \tparam EosImpl            The implementation of the Eos interface.
+  /// \tparam LevelsetInit       The type of the levelset initializer.
+  /// \tparam StateInit          The type of the state initializer.
+  /// \tparam StateInits         The type of the state initializers.
+  template <typename LevelsetInit, typename StateInit, typename... StateInits>
   auto initialize(
-    LevelsetInit&& initializer, 
-    InsideInit&&   inside_init,
-    OutsideInit&&  outside_init
+    LevelsetInit&&  levelset_init_func,
+    StateInit&&     state_init_func   ,
+    StateInits&&... state_initializers
   ) -> void {
-    _levelset.apply_pipeline(make_pipeline(initializer));
-
-    _states.apply_pipeline(
-      make_pipeline(
-        make_invocable(
-          [] ripple_host_device (
-            auto state, auto levelset, auto inside, auto outside, auto eos
-          ) {
-            if (levelset->inside()) {
-              inside.set_state_data(*state, eos);
-              return;
-            }
-            outside.set_state_data(*state, eos);
-          }, 
-          inside_init, outside_init, _eos
-        )
-      ),
-      _levelset
+    _levelset.apply_pipeline(make_pipeline(levelset_init_func));
+    _states.apply_pipeline_non_shared(
+      make_pipeline(state_init_func),
+      _eos                          , 
+      std::forward<StateInits>(state_initializers)...
     );
   }
 
   //==--- [access] ---------------------------------------------------------==//
+  
+  /// Returns a reference to the equation of state.
+  auto eos() -> eos_t& {
+    return _eos;
+  }
+
+  /// Returns a const reference to the equation of state.
+  auto eos() const -> const eos_t& {
+    return _eos;
+  }
+
+  /// Returns a reference to the state data.
+  auto states() -> state_grid_t& {
+    return _states;
+  }
+
+  /// Returns a reference to the levelset grid data.
+  auto levelset() -> levelset_grid_t& {
+    return _levelset;
+  }
+  
+  /// Returns an iterator over the state data for the material.
+  auto state_iterator() -> typename state_grid_t::host_iter_t {
+    return get_state_iterator(std::make_index_sequence<dims>());
+  }
+
+  /// Returns an iterator over the levelset data for the material.
+  auto levelset_iterator() -> typename levelset_grid_t::host_iter_t {
+    return get_levelset_iterator(std::make_index_sequence<dims>());
+  }
   
   /// Returns a material iterator to the element at the \p indices, which is
   /// valid __only__ on the host.
@@ -162,6 +232,18 @@ class Material {
   state_grid_t    _states;    //!< State data for the material.
   levelset_grid_t _levelset;  //!< Levelset data for the material
   eos_t           _eos;       //!< The equation of state for the material.
+
+  template <typename T, T... indices>
+  auto get_state_iterator(std::integer_sequence<T, indices...>)
+  -> typename state_grid_t::host_iter_t {
+    return _states(zero_indices[indices]...);
+  }
+
+  template <typename T, T... indices>
+  auto get_levelset_iterator(std::integer_sequence<T, indices...>)
+  -> typename levelset_grid_t::host_iter_t {
+    return _levelset(zero_indices[indices]...);
+  }
 };
 
 } // namespace ripple::fv
