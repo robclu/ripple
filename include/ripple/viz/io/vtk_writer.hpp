@@ -357,6 +357,7 @@ class VtkWriter : public Writer<VtkWriter> {
           for (auto v : printable_elem.values()) {
             _ofstream << v << " ";
           }
+          _ofstream << "\n";
         }
       }
     }  
