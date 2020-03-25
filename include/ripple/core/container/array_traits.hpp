@@ -179,7 +179,8 @@ template <
   typename Value = typename ArrayTraits<Impl>::value_t
 >
 using array_value_enable_t = std::enable_if_t<
-  std::is_same_v<Type, Value> || std::is_convertible_v<Type, Value>, int
+  (std::is_same_v<Type, Value> || std::is_convertible_v<Type, Value>)
+  && !is_array_v<Type>, int
 >;
 
 /// Defines a valis type if the type T is an array.

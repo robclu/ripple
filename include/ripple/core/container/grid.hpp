@@ -468,7 +468,7 @@ class Grid {
       static_cast<float>(_space.internal_size(dims_v)) / 
       static_cast<float>(_block_size.internal_size(dims_v))
     );
-    for (auto i : range(blocks)) {
+    for ([[maybe_unused]] auto i : range(blocks)) {
       auto& b = _blocks.emplace_back();
       b.set_padding(_space.padding());
     }

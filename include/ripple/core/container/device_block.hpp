@@ -118,7 +118,7 @@ class DeviceBlock {
   /// Constructor to create the block from another block.
   /// \param other The other block to create this block from.
   DeviceBlock(const self_t& other)
-  : _stream{other._stream}, _space{other._space} {
+  : _space{other._space}, _stream{other._stream} {
     cudaStreamCreate(&_stream);
     allocate();
     copy_from_device(other);

@@ -34,15 +34,13 @@ struct Array {
  public:
   /// Returns the value at position \p i in the array.
   /// \param i The index of the element to return.
-  ripple_host_device constexpr auto operator[](size_t i) 
-  -> typename array_traits_t<impl_t>::value_t& {
+  ripple_host_device constexpr auto operator[](size_t i) {
     return impl()->operator[](i);  
   }
 
   /// Returns the value at position \p i in the array.
   /// \param i The index of the element to return.
-  ripple_host_device constexpr auto operator[](size_t i) const 
-  -> const typename array_traits_t<impl_t>::value_t& {
+  ripple_host_device constexpr auto operator[](size_t i) const {
     return impl()->operator[](i);  
   }
     
