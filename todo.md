@@ -16,6 +16,29 @@ but which are then broken into weekly, daily, and hourly tasks.
 
 ## Week 23-03-2020 - 29-03-2020
 
+- Update BlockIterator interface
+  - Add forward difference for a given dimension as `it.forward_diff(dim)` and
+    `it.forward_diff<dim>()`.
+  - Add backward difference for a given dimension as `it.backward_diff(dim)` and
+    `it.backward_diff<dim>()`.
+  - Add central difference for a given dimension as `it.central_diff(dim)` and
+    `it.central_diff<dim>()`.
+  - Add the norm for the data as `it.norm(dh = 1)` to return the normal for the
+    iterator from the cell being iterated from. The norm can be computed as
+    $ \frac{\nabla \phi}{|\nabla \phi|}. 
+  - Add the norm for signed distance data as `it.normsd()` to return the normal
+    for the iterator when the data is known to be signed distance, which is an
+    optimized computation. Same as above, but $|\nabla \phi| = 1$, so it doesn't
+    need to be computed. 
+
+- Add linear interp function in math module, as `linterp(iter, weights)`
+  - Iter is an N dimensional iterator, weights are N dimensional weights for the
+    interpolation.
+  - Interpolation is performed linearly on N-1, dimensions, until N = 1, then
+    back up. 1D = lerp, 2D = bilerp, 3D = trilerp.
+  - Add tests for linterp to test correctness. Tests should cover weights which
+    interp the iterator and offsets from the iterator.
+
 - Complete Riemann Ghost Fluid mixed material implementation
     - Walk over each of the materials in the system
     - For each of the cells which are _inside_ the levelset, and _also_ 

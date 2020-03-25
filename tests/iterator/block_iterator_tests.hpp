@@ -56,7 +56,7 @@ struct BlockIterTest : ripple::StridableLayout<BlockIterTest<T, Layout>> {
   }
 
   //==--- [interface] ------------------------------------------------------==//
-
+  
   auto flag() -> int& {
     return _storage.template get<1>();
   }
@@ -491,6 +491,38 @@ TEST(iterator_block_iterator, can_shift_iterator_primitive) {
     iter.shift(ripple::dim_y, -1 * b.size(ripple::dim_y));
     iter.shift(ripple::dim_z, 1);
   }
+}
+
+//==--- [differencing] -----------------------------------------------------==//
+
+TEST(iterator_block_tests, can_compute_differences_correctly_non_udt) {
+  using type_t = double;
+  ripple::host_block_3d_t<type_t> b(3, 3, 3);
+  
+  // Set the data:
+  *b(1, 1, 1) = 2;
+  *b(0, 1, 1) = 1; *b(2, 1, 1) = 3;  // x dim
+  *b(1, 0, 1) = 1; *b(1, 2, 1) = 3;  // y dim
+  *b(1, 1, 0) = 1; *b(1, 1, 2) = 3;  // z dim
+
+  // Get the iterator to the center of the block, then compute all the
+  // differences:
+  auto it = b(1, 1, 1);
+
+  // x dimension:
+  EXPECT_EQ(it.backward_diff(ripple::dim_x), type_t{1});
+  EXPECT_EQ(it.forward_diff(ripple::dim_x) , type_t{1});
+  EXPECT_EQ(it.central_diff(ripple::dim_x) , type_t{2});
+
+  // y dimension:
+  EXPECT_EQ(it.backward_diff(ripple::dim_y), type_t{1});
+  EXPECT_EQ(it.forward_diff(ripple::dim_y) , type_t{1});
+  EXPECT_EQ(it.central_diff(ripple::dim_y) , type_t{2});
+
+  // z dimension:
+  EXPECT_EQ(it.backward_diff(ripple::dim_z), type_t{1});
+  EXPECT_EQ(it.forward_diff(ripple::dim_z) , type_t{1});
+  EXPECT_EQ(it.central_diff(ripple::dim_z) , type_t{2});
 }
 
 #endif // RIPPLE_TESTS_ITERATOR_BLOCK_ITERATOR_HPP

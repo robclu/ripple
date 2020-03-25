@@ -213,6 +213,88 @@ class BlockIterator {
     return _space.dimensions();
   }
 
+  //==--- [gradients] ------------------------------------------------------==//
+  
+  /// Returns the backward difference between this iterator and the iterator \p
+  /// amount places from from this iterator in dimension \p dim.
+  ///
+  /// \begin{equation}
+  ///   \Delta \phi = \phi_{d}(i) - \phi_{d}(i - \textrm{amount})
+  /// \end{equation}
+  ///
+  /// The default is that \p amount is 1, i.e:
+  ///
+  /// ~~~cpp
+  /// // The following is the same:
+  /// auto diff = it.backward_diff(ripple::dim_x);
+  /// auto diff = it.backward_diff(ripple::dim_x, 1);
+  /// ~~~
+  ///
+  /// \param  dim    The dimension to offset in.
+  /// \param  amount The amount to offset the iterator by.
+  /// \tparam Dim    The type of the dimension.
+  template <typename Dim>
+  ripple_host_device constexpr auto backward_diff(
+    Dim dim, unsigned int amount = 1
+  ) const -> copy_t {
+    return deref_impl(is_stridable_overload_v) 
+      - *offset(std::forward<Dim>(dim), -static_cast<int>(amount));
+  }
+
+  /// Returns the forward difference between this iterator and the iterator \p
+  /// amount places from from this iterator in dimension \p dim.
+  ///
+  /// \begin{equation}
+  ///   \Delta \phi = \phi_{d}(i + \textrm{amount}) - \phi_{d}(i)
+  /// \end{equation}
+  ///
+  /// The default is that \p amount is 1, i.e:
+  ///
+  /// ~~~cpp
+  /// // The following is the same:
+  /// auto diff = it.forward_diff(ripple::dim_x);
+  /// auto diff = it.forward_diff(ripple::dim_x, 1);
+  /// ~~~
+  ///
+  /// \param  dim    The dimension to offset in.
+  /// \param  amount The amount to offset the iterator by.
+  /// \tparam Dim    The type of the dimension.
+  template <typename Dim>
+  ripple_host_device constexpr auto forward_diff(
+    Dim&& dim, unsigned int amount = 1
+  ) const -> copy_t {
+    return *offset(std::forward<Dim>(dim), amount) - 
+      deref_impl(is_stridable_overload_v);
+  }
+
+  /// Returns the central difference for the cell pointed to by this iterator,
+  /// using the iterator \p amount _forward_ and \p amount _backward_ of this
+  /// iterator in the \p dim dimension. 
+  /// \begin{equation}
+  ///   \Delta \phi = 
+  ///     \phi_{d}(i + \textrm{amount}) - \phi_{d}(i - \textrm{amount})
+  /// \end{equation}
+  ///
+  /// The default is that \p amount is 1, i.e:
+  ///
+  /// ~~~cpp
+  /// // The following is the same:
+  /// auto diff = it.central_diff(ripple::dim_x);
+  /// auto diff = it.central_diff(ripple::dim_x, 1);
+  /// ~~~
+  ///
+  /// \param  dim    The dimension to offset in.
+  /// \param  amount The amount to offset the iterator by.
+  /// \tparam Dim    The type of the dimension.
+  template <typename Dim>
+  ripple_host_device constexpr auto central_diff(
+    Dim&& dim, unsigned int amount = 1
+  ) const -> copy_t {
+    return *offset(std::forward<Dim>(dim), amount)
+      - *offset(std::forward<Dim>(dim), -static_cast<int>(amount));
+  }
+
+
   //==--- [size] -----------------------------------------------------------==//
 
   /// Returns the total size of the iteration space.
