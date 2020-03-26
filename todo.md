@@ -16,6 +16,16 @@ but which are then broken into weekly, daily, and hourly tasks.
 
 ## Week 23-03-2020 - 29-03-2020
 
+- Fix implementation of OwnedStorage to behave like DefaultStorage
+  - There is currently a problem with types which implement the StridableLayout
+    interface but which specify ripple::contiguous_owned_t as the layout type.
+  - The problem is that the LayoutTraits class does not choose the correct
+    storage mechanism (i.e OwnedStorage), so the data is not allocated
+    correctly.
+  - Add an allocator to the OwnedStorage type, and change the traits in the
+    LayoutTraits class to provide the correct types for classes with
+    OwnedStorage.
+
 - Update BlockIterator interface
   - Add forward difference for a given dimension as `it.forward_diff(dim)` and
     `it.forward_diff<dim>()`.
