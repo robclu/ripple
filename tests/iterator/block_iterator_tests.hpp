@@ -607,4 +607,108 @@ TEST(iterator_block_tests, can_compute_differences_correctly_strided_view) {
   });
 }
 
+//==--- [gradient] ---------------------------------------------------------==//
+
+TEST(iterator_block_tests, can_compute_gradients_correctly_non_udt) {
+  using type_t = double;
+  ripple::host_block_3d_t<type_t> b(3, 3, 3);
+  
+  // Set the data:
+  *b(1, 1, 1) = 2;
+  *b(0, 1, 1) = 1; *b(2, 1, 1) = 3;  // x dim
+  *b(1, 0, 1) = 1; *b(1, 2, 1) = 3;  // y dim
+  *b(1, 1, 0) = 1; *b(1, 1, 2) = 3;  // z dim
+
+  // Get the iterator to the center of the block, then compute all the
+  // differences:
+  auto it = b(1, 1, 1);
+
+  // x dimension:
+  auto dh   = type_t{1};
+  auto grad = it.grad(dh);
+  EXPECT_EQ(grad[ripple::dim_x], type_t{1});
+  EXPECT_EQ(grad[ripple::dim_y], type_t{1});
+  EXPECT_EQ(grad[ripple::dim_z], type_t{1});
+}
+
+// This tests that the iterator gradietn works correctly when the type
+// is an array type, and when the data is strided non-owned.
+TEST(iterator_block_tests, can_compute_gradients_correctly_contig_owned) {
+  using namespace ripple;
+  using type_t  = Vector<float, 3, contiguous_owned_t>;
+  using owned_t = Vector<float, 3, contiguous_owned_t>;
+  host_block_3d_t<type_t> b(3, 3, 3);
+  
+  // Set the data:
+  *b(1, 1, 1) = owned_t(2, 2, 2);
+  *b(0, 1, 1) = owned_t(1, 1, 1); *b(2, 1, 1) = owned_t(5, 5, 5); // dim x
+  *b(1, 0, 1) = owned_t(1, 1, 1); *b(1, 2, 1) = owned_t(5, 5, 5); // dim y
+  *b(1, 1, 0) = owned_t(1, 1, 1); *b(1, 1, 2) = owned_t(5, 5, 5); // dim z
+
+  const auto dh = double{1};
+  auto grad = b(1, 1, 1).grad(dh);
+
+  // Gradient is a vector of vectors, in each dimension:
+  unrolled_for<3>([&] (auto d) {
+    constexpr auto dim = size_t{d};
+    EXPECT_EQ(grad[dim][0], 2); 
+    EXPECT_EQ(grad[dim][1], 2);
+    EXPECT_EQ(grad[dim][2], 2);
+  });
+}
+
+// This tests that the iterator gradietn works correctly when the type
+// is an array type, and when the data is strided non-owned.
+TEST(iterator_block_tests, can_compute_gradients_correctly_contig_view) {
+  using namespace ripple;
+  using data_t  = float;
+  using type_t  = Vector<data_t, 3, contiguous_view_t>;
+  using owned_t = Vector<data_t, 3, contiguous_owned_t>;
+  host_block_3d_t<type_t> b(3, 3, 3);
+  
+  // Set the data:
+  *b(1, 1, 1) = owned_t(2, 2, 2);
+  *b(0, 1, 1) = owned_t(1, 1, 1); *b(2, 1, 1) = owned_t(3, 3, 3); // dim x
+  *b(1, 0, 1) = owned_t(1, 1, 1); *b(1, 2, 1) = owned_t(3, 3, 3); // dim y
+  *b(1, 1, 0) = owned_t(1, 1, 1); *b(1, 1, 2) = owned_t(3, 3, 3); // dim z
+
+  const auto dh = double{1};
+  auto grad = b(1, 1, 1).grad(dh);
+
+  // Gradient is a vector of vectors, in each dimension:
+  unrolled_for<3>([&] (auto d) {
+    constexpr auto dim = size_t{d};
+    EXPECT_EQ(grad[dim][0], 1); 
+    EXPECT_EQ(grad[dim][1], 1);
+    EXPECT_EQ(grad[dim][2], 1);
+  });
+}
+
+// This tests that the iterator gradietn works correctly when the type
+// is an array type, and when the data is strided non-owned.
+TEST(iterator_block_tests, can_compute_gradients_correctly_strided_view) {
+  using namespace ripple;
+  using data_t  = int;
+  using type_t  = Vector<data_t, 3, strided_view_t>;
+  using owned_t = Vector<data_t, 3, contiguous_owned_t>;
+  host_block_3d_t<type_t> b(3, 3, 3);
+  
+  // Set the data:
+  *b(1, 1, 1) = owned_t(2, 2, 2);
+  *b(0, 1, 1) = owned_t(1, 1, 1); *b(2, 1, 1) = owned_t(3, 3, 3); // dim x
+  *b(1, 0, 1) = owned_t(1, 1, 1); *b(1, 2, 1) = owned_t(3, 3, 3); // dim y
+  *b(1, 1, 0) = owned_t(1, 1, 1); *b(1, 1, 2) = owned_t(3, 3, 3); // dim z
+
+  const auto dh = data_t{1};
+  auto grad = b(1, 1, 1).grad(dh);
+
+  // Gradient is a vector of vectors, in each dimension:
+  unrolled_for<3>([&] (auto d) {
+    constexpr auto dim = size_t{d};
+    EXPECT_EQ(grad[dim][0], 1); 
+    EXPECT_EQ(grad[dim][1], 1);
+    EXPECT_EQ(grad[dim][2], 1);
+  });
+}
+
 #endif // RIPPLE_TESTS_ITERATOR_BLOCK_ITERATOR_HPP

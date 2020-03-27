@@ -16,6 +16,7 @@
 #ifndef RIPPLE_CONTAINER_BLOCK_ITERATOR_HPP
 #define RIPPLE_CONTAINER_BLOCK_ITERATOR_HPP
 
+#include "iterator_traits.hpp"
 #include <ripple/core/container/array_traits.hpp>
 #include <ripple/core/storage/storage_traits.hpp>
 
@@ -57,6 +58,9 @@ class BlockIterator {
   using offsetter_t     = typename layout_traits_t::allocator_t;
   /// Defines the type of the space for the iterator.
   using space_t         = Space;
+  /// Defines the type of a vector of value_t with matching dimensions.
+  using vec_t           = 
+    Vector<copy_t, iterator_traits_t<self_t>::dimensions, contiguous_owned_t>;
 
   //==--- [constants] ------------------------------------------------------==//
 
@@ -271,6 +275,7 @@ class BlockIterator {
   /// Returns the central difference for the cell pointed to by this iterator,
   /// using the iterator \p amount _forward_ and \p amount _backward_ of this
   /// iterator in the \p dim dimension. 
+  ///
   /// \begin{equation}
   ///   \Delta \phi = 
   ///     \phi_{d}(i + \textrm{amount}) - \phi_{d}(i - \textrm{amount})
@@ -293,6 +298,55 @@ class BlockIterator {
   ) const -> copy_t {
     return *offset(std::forward<Dim>(dim), amount)
       - *offset(std::forward<Dim>(dim), -static_cast<int>(amount));
+  }
+
+  /// Computes the gradient of the data iterated over, as:
+  ///
+  /// \begin{equation}
+  ///   \nabla \phi = (\frac{d}{dx}, .., \frac{d}{dz}) \phi
+  /// \end{equation}
+  ///
+  /// we compute this for a given dimension as:
+  ///
+  /// \begin{eqution}
+  ///   \frac{d \phi}{dx} = \frac{\phi(x + dh) - \phi(x - dh)}{2dh}
+  /// \end{equation}
+  ///
+  /// Returning a vector of N dimensions, with the value in each dimension set
+  /// as the gradient in the respective dimension. The gradient uses the central
+  /// difference, thus the iterator must be valid on both sides.
+  /// \param  dh       The resolution of the grid the iterator iterates over.
+  /// \tparam DataType The type of the resolution operator.
+  template <typename DataType>
+  ripple_host_device constexpr auto grad(DataType dh = 1) const 
+  -> vec_t {
+    auto           result = vec_t();
+    constexpr auto dims   = iterator_traits_t<self_t>::dimensions;
+    unrolled_for<dims>([&] (auto d) {
+      result[d] = grad_dim(d, dh);
+    });
+    return result;
+  }
+
+  /// Computes the gradient of the data iterated over, in a specific dimension.
+  ///
+  /// \begin{eqution}
+  ///   \frac{d \phi}{dx} = \frac{\phi(x + dh) - \phi(x - dh)}{2dh}
+  /// \end{equation}
+  ///
+  /// Returning the type iterated over by the iterator.
+  /// \param dh The resolution of the grid the iterator iterates over.
+  template <typename DataType, typename Dim>
+  ripple_host_device constexpr auto grad_dim(Dim&& dim, DataType dh = 1) const 
+  -> copy_t {
+    // NOTE: Have to do something differenct depending on the data type,
+    // because the optimization for 0.5 / dh doesn't work if dh is integral
+    // since it goes to zero.
+    if constexpr (std::is_integral_v<DataType>) {
+      return this->central_diff(dim) / (2 * dh);
+    } else {
+      return(DataType{0.5} / dh) * this->central_diff(dim);
+    }
   }
 
   //==--- [size] -----------------------------------------------------------==//

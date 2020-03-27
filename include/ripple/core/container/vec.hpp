@@ -139,7 +139,12 @@ struct VecImpl :
   /// vector with potentially different storage layout to this vector.
   /// \param  other The other vector to move.
   ripple_host_device auto operator=(VecImpl&& other) -> self_t& {
-    _storage = std::move(other._storage);
+    //_storage = std::move(other._storage);
+//    _storage = other._storage;
+    unrolled_for<elements>([&] (auto _i) {
+      constexpr auto i = size_t{_i};
+      _storage.template get<0, i>() = other[i];
+    });
     return *this;
   } 
   
@@ -156,6 +161,19 @@ struct VecImpl :
     });
     return *this;
   }
+
+  /// Overload of copy assignment overload to copy the elements from another
+  /// array into this vector.
+  /// \param  arr  The array to copy.
+  /// \tparam Impl The type of the array implementation.
+  template <typename Impl>
+  ripple_host_device auto operator=(const Array<Impl>& arr) -> self_t& {
+    unrolled_for<elements>([&] (auto _i) {
+      constexpr auto i = size_t{_i};
+      _storage.template get<0, i>() = arr[i];
+    });
+    return *this;
+  } 
 
   /// Overload of move assignment overload to copy the elements from another
   /// vector with potentially different storage layout to this vector.

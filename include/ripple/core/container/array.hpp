@@ -164,7 +164,7 @@ struct Array {
     using res_impl_t      = array_impl_t<impl_t, ImplA>;
     auto           result = res_impl_t();
     constexpr auto size   = array_traits_t<res_impl_t>::size;
-    unrolled_for_bounded<size>([&] (auto _i) {
+    unrolled_for_bounded<size>([&] (auto i) {
       result[i] = impl()->operator[](i) - a[i];
     });
     return result;
@@ -253,6 +253,7 @@ struct Array {
     using value_t       = typename array_traits_t<impl_t>::value_t;
     constexpr auto size = array_traits_t<res_impl_t>::size;
     auto result         = res_impl_t();
+
     unrolled_for_bounded<size>([&] (auto i) {
       result[i] = impl()->operator[](i) * static_cast<value_t>(val);
     });

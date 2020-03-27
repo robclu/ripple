@@ -12,6 +12,9 @@ This section contains all completed tasks, in reverse chronological order.
 
 ### 27-03-2020
 
+- Update BlockIterator interface
+  - Add `it.grad()` to compute the gradient of the iterator.
+
 - Fix implementation of OwnedStorage to behave like DefaultStorage
   - There is currently a problem with types which implement the StridableLayout
     interface but which specify ripple::contiguous_owned_t as the layout type.
