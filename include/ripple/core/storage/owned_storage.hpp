@@ -91,7 +91,7 @@ class OwnedStorage : public StorageAccessor<OwnedStorage<Ts...>> {
   }
 
   /// Returns the offset, in bytes, to the index I in the type list, accounding
-  /// for any required padding dues to __badly specifier__ data layout.
+  /// for any required padding dues to __badly specified__ data layout.
   /// \tparam I The index of the type to get the offset to.
   template <std::size_t I>
   static constexpr auto offset_to() {

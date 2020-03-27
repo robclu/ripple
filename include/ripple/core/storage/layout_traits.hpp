@@ -23,11 +23,15 @@
 
 namespace ripple {
 
-/// Defines layout traits for the the T. This is the default implementation for
-/// the case that the type T does not implement the StridableLayout interface.
-/// \tparam T                 The type to get the layout traits for.
-/// \tparam IsStridableLayout If the type is an StridableLayout type.
-template <typename T, bool IsStridableLayout>
+/// Defines layout traits for the the T. This implementation is for when the
+/// type T owns it's data.
+///
+/// \note This should be used as layout_traits_t<T>, since that performs the
+///       of the specialization condition.
+///
+/// \tparam T                         The type to get the layout traits for.
+/// \tparam StridableAndNonOwningData Condition for specialization.
+template <typename T, bool StridableAndNonOwningData>
 struct LayoutTraits {
   //==--- [constants] ------------------------------------------------------==//
 
@@ -59,7 +63,12 @@ struct LayoutTraits {
 };
 
 /// Defines layout traits for the the T when the type implements the
-/// StridableLayout interface.
+/// StridableLayout interface, and when the layout kind for the type is a view
+/// type, so does not own its data.
+///
+/// \note This should be used as layout_traits_t<T>, since that performs the
+///       of the specialization condition./
+///
 /// \tparam T The type to get the layout traits for.
 template <typename T>
 struct LayoutTraits<T, true> {

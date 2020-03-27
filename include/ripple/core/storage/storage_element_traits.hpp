@@ -65,8 +65,6 @@ struct StorageElementTraits<StorageElement<T, Values>> {
   static constexpr auto align_size   = alignof(value_t);
 };
 
-
-
 //==--- [is storage element] -----------------------------------------------==//
 
 namespace detail {

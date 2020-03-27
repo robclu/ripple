@@ -8,13 +8,9 @@ well.
 
 This section contains all completed tasks, in reverse chronological order.
 
-# Queue
-
-This sections contains the queue of tasks which need to be completely. They are
-initially at the level of 'longer', which means to take a while to implement,
-but which are then broken into weekly, daily, and hourly tasks.
-
 ## Week 23-03-2020 - 29-03-2020
+
+### 27-03-2020
 
 - Fix implementation of OwnedStorage to behave like DefaultStorage
   - There is currently a problem with types which implement the StridableLayout
@@ -25,6 +21,10 @@ but which are then broken into weekly, daily, and hourly tasks.
   - Add an allocator to the OwnedStorage type, and change the traits in the
     LayoutTraits class to provide the correct types for classes with
     OwnedStorage.
+  - _NOTE:_ Fixed this by making Stridable types which are owned use layout
+    traits for non stridable types, since that's essentially what they are.
+
+### 26-03-2020
 
 - Update BlockIterator interface
   - Add forward difference for a given dimension as `it.forward_diff(dim)` and
@@ -33,6 +33,16 @@ but which are then broken into weekly, daily, and hourly tasks.
     `it.backward_diff<dim>()`.
   - Add central difference for a given dimension as `it.central_diff(dim)` and
     `it.central_diff<dim>()`.
+
+# Queue
+
+This sections contains the queue of tasks which need to be completely. They are
+initially at the level of 'longer', which means to take a while to implement,
+but which are then broken into weekly, daily, and hourly tasks.
+
+## Week 23-03-2020 - 29-03-2020
+
+- Update BlockIterator interface
   - Add the norm for the data as `it.norm(dh = 1)` to return the normal for the
     iterator from the cell being iterated from. The norm can be computed as
     $ \frac{\nabla \phi}{|\nabla \phi|}. 

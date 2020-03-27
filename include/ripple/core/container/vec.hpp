@@ -36,7 +36,9 @@ namespace ripple {
 /// \tparam Size   The size of the vetor.
 /// \tparam Layout The type of the storage layout for the vector.
 template <typename T, typename Size, typename Layout>
-struct VecImpl : public Array<VecImpl<T, Size, Layout>>  {
+struct VecImpl : 
+  public StridableLayout<VecImpl<T, Size, Layout>>,
+  public Array<VecImpl<T, Size, Layout>>  {
  private:
   //==--- [constants] ------------------------------------------------------==//
 
@@ -53,6 +55,14 @@ struct VecImpl : public Array<VecImpl<T, Size, Layout>>  {
   using value_t      = std::decay_t<T>;
   /// Defines the type of this vector.
   using self_t       = VecImpl<T, Size, Layout>;
+
+  /// Declares vectors with other storage layouts as friends for construction.
+  template <typename OtherType, typename OtherSize, typename OtherLayout>
+  friend struct VecImpl;
+
+  /// LayoutTraits is a friend so that it can see the descriptor.
+  template <typename Layable, bool IsStridable>
+  friend struct LayoutTraits;
 
  public:
   //==--- [construction] ---------------------------------------------------==//
@@ -79,6 +89,18 @@ struct VecImpl : public Array<VecImpl<T, Size, Layout>>  {
   /// Coyp constructor to set the vector from another vector with a potentially
   /// different storage layout.
   /// \tparam OtherLayout The layout of the other storage.
+  ripple_host_device constexpr VecImpl(const VecImpl& other)
+  : _storage{other._storage} {}
+
+  /// Move constructor to set the vector from another vector with a potentially
+  /// different storage layout.
+  /// \tparam OtherLayout The layout of the other storage.
+  ripple_host_device constexpr VecImpl(VecImpl&& other)
+  : _storage{std::move(other._storage)} {}
+
+  /// Coyp constructor to set the vector from another vector with a potentially
+  /// different storage layout.
+  /// \tparam OtherLayout The layout of the other storage.
   template <typename OtherLayout>
   ripple_host_device constexpr VecImpl(
     const VecImpl<T, Size, OtherLayout>& other
@@ -89,7 +111,7 @@ struct VecImpl : public Array<VecImpl<T, Size, Layout>>  {
   /// \tparam OtherLayout The layout of the other storage.
   template <typename OtherLayout>
   ripple_host_device constexpr VecImpl(VecImpl<T, Size, OtherLayout>&& other)
-  : _storage{std::move(other._storage)} {}
+  : _storage{other._storage} {}
 
   /// Constructor to create the vector from another array of the same type and
   /// size.
@@ -107,12 +129,31 @@ struct VecImpl : public Array<VecImpl<T, Size, Layout>>  {
   
   /// Overload of copy assignment overload to copy the elements from another
   /// vector with potentially different storage layout to this vector.
+  /// \param  other The other vector to copy from.
+  ripple_host_device auto operator=(const VecImpl& other) -> self_t& {
+    _storage = other._storage;
+    return *this;
+  }
+
+  /// Overload of move assignment overload to copy the elements from another
+  /// vector with potentially different storage layout to this vector.
+  /// \param  other The other vector to move.
+  ripple_host_device auto operator=(VecImpl&& other) -> self_t& {
+    _storage = std::move(other._storage);
+    return *this;
+  } 
+  
+  /// Overload of copy assignment overload to copy the elements from another
+  /// vector with potentially different storage layout to this vector.
   /// \param  other       The other vector to copy from.
   /// \tparam OtherLayout The layout of the other vector.
   template <typename OtherLayout>
   ripple_host_device auto operator=(const VecImpl<T, Size, OtherLayout>& other)
   -> self_t& {
-    _storage = other._storage;
+    unrolled_for<elements>([&] (auto _i) {
+      constexpr auto i = size_t{_i};
+      _storage.template get<0, i>() = other[i];
+    });
     return *this;
   }
 

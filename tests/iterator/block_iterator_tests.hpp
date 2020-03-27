@@ -118,6 +118,7 @@ TEST(iterator_block_iterator, can_make_copies_non_stridable_types) {
         auto v = b(i, j, k);
         for (auto element : ripple::range(v->size())) {
           (*v)[element] = static_cast<float>(element) * j;
+          EXPECT_EQ((*v)[element] , static_cast<float>(element) * j);
         }
       }
     }
@@ -126,7 +127,7 @@ TEST(iterator_block_iterator, can_make_copies_non_stridable_types) {
   for (auto k : ripple::range(b.size(ripple::dim_z))) {
     for (auto j : ripple::range(b.size(ripple::dim_y))) {
       for (auto i : ripple::range(b.size(ripple::dim_x))) {
-        const auto v = b(i, j, k).unwrap();
+        const auto v = *b(i, j, k);
         for (auto element : ripple::range(v.size())) {
           EXPECT_EQ(v[element] , static_cast<float>(element) * j);
         }
@@ -523,6 +524,87 @@ TEST(iterator_block_tests, can_compute_differences_correctly_non_udt) {
   EXPECT_EQ(it.backward_diff(ripple::dim_z), type_t{1});
   EXPECT_EQ(it.forward_diff(ripple::dim_z) , type_t{1});
   EXPECT_EQ(it.central_diff(ripple::dim_z) , type_t{2});
+}
+
+// This tests that the iterator differencing works correctly when the type
+// is an array type, and when the data is strided  non-owned.
+TEST(iterator_block_tests, can_compute_differences_correctly_contig_owned) {
+  using namespace ripple;
+  using type_t  = Vector<int, 3, contiguous_owned_t>;
+  using owned_t = Vector<int, 3, contiguous_owned_t>;
+  host_block_3d_t<type_t> b(3, 3, 3);
+  
+  // Set the data:
+  *b(1, 1, 1) = owned_t(2, 2, 2);
+  *b(0, 1, 1) = owned_t(1, 1, 1); *b(2, 1, 1) = owned_t(3, 3, 3); // dim x
+  *b(1, 0, 1) = owned_t(1, 1, 1); *b(1, 2, 1) = owned_t(3, 3, 3); // dim y
+  *b(1, 1, 0) = owned_t(1, 1, 1); *b(1, 1, 2) = owned_t(3, 3, 3); // dim z
+
+  unrolled_for<3>([&] (auto d) {
+    auto diff = b(1, 1, 1).backward_diff(d);
+    EXPECT_EQ(diff[0], 1); EXPECT_EQ(diff[1], 1); EXPECT_EQ(diff[2], 1);
+
+    diff = b(1, 1, 1).forward_diff(d);
+    EXPECT_EQ(diff[0], 1); EXPECT_EQ(diff[1], 1); EXPECT_EQ(diff[2], 1);
+
+    diff = b(1, 1, 1).central_diff(d);
+    EXPECT_EQ(diff[0], 2); EXPECT_EQ(diff[1], 2); EXPECT_EQ(diff[2], 2);
+
+  });
+}
+
+// This tests that the iterator differencing works correctly when the type
+// is an array type, and when the data is contiguously non-owned.
+TEST(iterator_block_tests, can_compute_differences_correctly_contig_view) {
+  using namespace ripple;
+  using type_t  = Vector<int, 3, contiguous_view_t>;
+  using owned_t = Vector<int, 3, contiguous_owned_t>;
+  host_block_3d_t<type_t> b(3, 3, 3);
+  
+  // Set the data:
+  *b(1, 1, 1) = owned_t(2, 2, 2);
+  *b(0, 1, 1) = owned_t(1, 1, 1); *b(2, 1, 1) = owned_t(3, 3, 3); // dim x
+  *b(1, 0, 1) = owned_t(1, 1, 1); *b(1, 2, 1) = owned_t(3, 3, 3); // dim y
+  *b(1, 1, 0) = owned_t(1, 1, 1); *b(1, 1, 2) = owned_t(3, 3, 3); // dim z
+
+  unrolled_for<3>([&] (auto d) {
+    auto diff = b(1, 1, 1).backward_diff(d);
+    EXPECT_EQ(diff[0], 1); EXPECT_EQ(diff[1], 1); EXPECT_EQ(diff[2], 1);
+
+    diff = b(1, 1, 1).forward_diff(d);
+    EXPECT_EQ(diff[0], 1); EXPECT_EQ(diff[1], 1); EXPECT_EQ(diff[2], 1);
+
+    diff = b(1, 1, 1).central_diff(d);
+    EXPECT_EQ(diff[0], 2); EXPECT_EQ(diff[1], 2); EXPECT_EQ(diff[2], 2);
+
+  });
+}
+
+// This tests that the iterator differencing works correctly when the type
+// is an array type, and when the data is strided  non-owned.
+TEST(iterator_block_tests, can_compute_differences_correctly_strided_view) {
+  using namespace ripple;
+  using type_t  = Vector<int, 3, strided_view_t>;
+  using owned_t = Vector<int, 3, contiguous_owned_t>;
+  host_block_3d_t<type_t> b(3, 3, 3);
+  
+  // Set the data:
+  *b(1, 1, 1) = owned_t(2, 2, 2);
+  *b(0, 1, 1) = owned_t(1, 1, 1); *b(2, 1, 1) = owned_t(3, 3, 3); // dim x
+  *b(1, 0, 1) = owned_t(1, 1, 1); *b(1, 2, 1) = owned_t(3, 3, 3); // dim y
+  *b(1, 1, 0) = owned_t(1, 1, 1); *b(1, 1, 2) = owned_t(3, 3, 3); // dim z
+
+  unrolled_for<3>([&] (auto d) {
+    auto diff = b(1, 1, 1).backward_diff(d);
+    EXPECT_EQ(diff[0], 1); EXPECT_EQ(diff[1], 1); EXPECT_EQ(diff[2], 1);
+
+    diff = b(1, 1, 1).forward_diff(d);
+    EXPECT_EQ(diff[0], 1); EXPECT_EQ(diff[1], 1); EXPECT_EQ(diff[2], 1);
+
+    diff = b(1, 1, 1).central_diff(d);
+    EXPECT_EQ(diff[0], 2); EXPECT_EQ(diff[1], 2); EXPECT_EQ(diff[2], 2);
+
+  });
 }
 
 #endif // RIPPLE_TESTS_ITERATOR_BLOCK_ITERATOR_HPP

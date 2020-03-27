@@ -167,13 +167,22 @@ template <typename T>
 static constexpr auto storage_layout_kind_v =
   detail::StorageLayoutKind<T>::value;
 
+/// Returns true if the layout kind of T is the same as Kind.
+/// \tparam T    The types whose storage layout to get.
+/// \tparam Kind The kind to check for.
+template <typename T, typename Kind>
+static constexpr auto storage_layout_kind_is_v =
+  storage_layout_kind_v<std::decay_t<T>> == Kind::value;
+
 //==-- [aliases] -----------------------------------------------------------==//
 
 /// Alias for storage layout traits.
 /// \tparam T The type to get the traits for.
 template <typename T>
-using layout_traits_t = 
-  LayoutTraits<std::decay_t<T>, is_stridable_layout_v<std::decay_t<T>>>;
+using layout_traits_t = LayoutTraits< std::decay_t<T>, 
+  is_stridable_layout_v<std::decay_t<T>> &&
+  !storage_layout_kind_is_v<T, contiguous_owned_t>
+>;
 
 /// Returns the type T as a contiguous owned type, if it is not already. If the
 /// type T is not stridable, this will just create an alias to T.

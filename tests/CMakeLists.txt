@@ -143,7 +143,7 @@ ripple_add_executable(
   iterator_tests ${ripple_SOURCE_DIR}/tests/iterator.cpp
 )
 ripple_target_link_libraries(
-  iterator_tests ${GTEST_BOTH_LIBRARIES}
+  iterator_tests ${GTEST_BOTH_LIBRARIES} ${CUDA_LIBRARIES}
 )
 
 #==--------------------------------------------------------------------------==#
@@ -207,6 +207,15 @@ ripple_add_executable(
 )
 ripple_target_link_libraries(
   material_device_tests ${GTEST_BOTH_LIBRARIES} ${CUDA_LIBRARIES}
+)
+
+#------------------------------------------------------------------------------#
+
+ripple_add_executable(
+  scheme_tests ${ripple_SOURCE_DIR}/tests/scheme.cu
+)
+ripple_target_link_libraries(
+  scheme_tests ${GTEST_BOTH_LIBRARIES} ${CUDA_LIBRARIES}
 )
 
 #------------------------------------------------------------------------------#

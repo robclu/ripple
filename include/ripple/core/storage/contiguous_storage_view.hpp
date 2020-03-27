@@ -137,7 +137,6 @@ class ContiguousStorageView :
     /// of the types defined by Ts. This overload of the function can be used to
     /// allocate static memory when the number of elements in the space is known
     /// at compile time.
-    ///
     /// \tparam Elements The number of elements to allocate.
     template <std::size_t Elements>
     ripple_host_device static constexpr auto allocation_size() -> std::size_t {
@@ -297,7 +296,7 @@ class ContiguousStorageView :
       constexpr auto        values   = 
         element_components_v<nth_element_t<type_idx, Ts...>>;
 
-      copy_from_to<type_idx, values>(from, *this);
+      copy_from_to<type_idx, values>(static_cast<const Impl&>(from), *this);
     });
   }
 
@@ -309,14 +308,15 @@ class ContiguousStorageView :
   /// \param  from The accessor to copy the data from.
   /// \tparam Impl The implementation of the StorageAccessor.
   template <typename Impl>
-  ripple_host_device auto operator=(const StorageAccessor<Impl>& from)
+  //ripple_host_device auto operator=(const StorageAccessor<Impl>& from)
+  ripple_host_device auto operator=(const Impl& from)
   -> storage_t& {
     unrolled_for<num_types>([&] (auto i) {
       constexpr std::size_t type_idx = i;
       constexpr auto        values   = 
         element_components_v<nth_element_t<type_idx, Ts...>>;
-
-      copy_from_to<type_idx, values>(from, *this);
+  
+      copy_from_to<type_idx, values>(static_cast<const Impl&>(from), *this);
     });
     return *this;
   }

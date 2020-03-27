@@ -16,6 +16,7 @@
 #ifndef RIPPLE_CONTAINER_BLOCK_ITERATOR_HPP
 #define RIPPLE_CONTAINER_BLOCK_ITERATOR_HPP
 
+#include <ripple/core/container/array_traits.hpp>
 #include <ripple/core/storage/storage_traits.hpp>
 
 namespace ripple {
@@ -235,10 +236,10 @@ class BlockIterator {
   /// \tparam Dim    The type of the dimension.
   template <typename Dim>
   ripple_host_device constexpr auto backward_diff(
-    Dim dim, unsigned int amount = 1
+    Dim&& dim, unsigned int amount = 1
   ) const -> copy_t {
-    return deref_impl(is_stridable_overload_v) 
-      - *offset(std::forward<Dim>(dim), -static_cast<int>(amount));
+    return deref_impl(is_stridable_overload_v) -
+      *offset(std::forward<Dim>(dim), -static_cast<int>(amount));
   }
 
   /// Returns the forward difference between this iterator and the iterator \p
@@ -263,7 +264,7 @@ class BlockIterator {
   ripple_host_device constexpr auto forward_diff(
     Dim&& dim, unsigned int amount = 1
   ) const -> copy_t {
-    return *offset(std::forward<Dim>(dim), amount) - 
+    return *offset(std::forward<Dim>(dim), amount) -
       deref_impl(is_stridable_overload_v);
   }
 
@@ -293,7 +294,6 @@ class BlockIterator {
     return *offset(std::forward<Dim>(dim), amount)
       - *offset(std::forward<Dim>(dim), -static_cast<int>(amount));
   }
-
 
   //==--- [size] -----------------------------------------------------------==//
 
