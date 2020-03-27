@@ -12,6 +12,9 @@ This section contains all completed tasks, in reverse chronological order.
 
 ### 27-03-2020
 
+- Implement `math::sqrt()` in `math` module which wraps `std::sqrt` for normal
+  types, and which performs elementwise sqrt for array types.
+
 - Update BlockIterator interface
   - Add `it.grad()` to compute the gradient of the iterator.
 
@@ -48,7 +51,7 @@ but which are then broken into weekly, daily, and hourly tasks.
 - Update BlockIterator interface
   - Add the norm for the data as `it.norm(dh = 1)` to return the normal for the
     iterator from the cell being iterated from. The norm can be computed as
-    $ \frac{\nabla \phi}{|\nabla \phi|}. 
+    $ \frac{\nabla \phi}{|\nabla \phi|}$. 
   - Add the norm for signed distance data as `it.normsd()` to return the normal
     for the iterator when the data is known to be signed distance, which is an
     optimized computation. Same as above, but $|\nabla \phi| = 1$, so it doesn't

@@ -16,8 +16,11 @@
 #ifndef RIPPLE_TESTS_MATH_TESTS_HPP
 #define RIPPLE_TESTS_MATH_TESTS_HPP
 
+#include <ripple/core/container/vec.hpp>
 #include <ripple/core/math/math.hpp>
 #include <gtest/gtest.h>
+
+constexpr double tol = 1e-6;
 
 TEST(math_tests, sign_signed_int) {
   const int a = 10;
@@ -51,6 +54,22 @@ TEST(math_tests, sign_double) {
   EXPECT_EQ(ripple::math::sign(a), 1.0);
   EXPECT_EQ(ripple::math::sign(b), -1.0);
   EXPECT_EQ(ripple::math::sign(c), 0.0);
+}
+
+TEST(math_test, sqrt_non_vec_type) {
+  EXPECT_NEAR(ripple::math::sqrt(4), std::sqrt(4), tol);
+}
+
+TEST(math_tests, sqrt_vec_type_owned) {
+  using namespace ripple;
+  using type_t = Vector<float, 3, contiguous_owned_t>;
+
+  type_t x(2, 3, 4);
+  auto t = math::sqrt(x);
+
+  EXPECT_NEAR(t[0], std::sqrt(2), tol);
+  EXPECT_NEAR(t[1], std::sqrt(3), tol);
+  EXPECT_NEAR(t[2], std::sqrt(4), tol);
 }
 
 #endif // RIPPLE_TESTS_MATH_TESTS_HPP

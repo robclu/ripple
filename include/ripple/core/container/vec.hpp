@@ -23,6 +23,7 @@
 #include <ripple/core/storage/storage_descriptor.hpp>
 #include <ripple/core/storage/storage_element_traits.hpp>
 #include <ripple/core/storage/storage_traits.hpp>
+#include <ripple/core/storage/stridable_layout.hpp>
 #include <ripple/core/utility/portability.hpp>
 
 namespace ripple {
@@ -139,12 +140,7 @@ struct VecImpl :
   /// vector with potentially different storage layout to this vector.
   /// \param  other The other vector to move.
   ripple_host_device auto operator=(VecImpl&& other) -> self_t& {
-    //_storage = std::move(other._storage);
-//    _storage = other._storage;
-    unrolled_for<elements>([&] (auto _i) {
-      constexpr auto i = size_t{_i};
-      _storage.template get<0, i>() = other[i];
-    });
+    _storage = std::move(other._storage);
     return *this;
   } 
   

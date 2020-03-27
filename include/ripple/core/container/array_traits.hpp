@@ -183,10 +183,15 @@ using array_value_enable_t = std::enable_if_t<
   && !is_array_v<Type>, int
 >;
 
-/// Defines a valis type if the type T is an array.
-/// \tparam T    The type to base the enable on.
+/// Defines a valid type if the type T is an array.
+/// \tparam T The type to base the enable on.
 template <typename T>
 using array_enable_t = std::enable_if_t<is_array_v<T>, int>;
+
+/// Defines a valid type if the type T is _not_ an array.
+/// \tparam T The type to base the enable on.
+template <typename T>
+using non_array_enable_t = std::enable_if_t<!is_array_v<T>, int>;
 
 } // namespace ripple
 

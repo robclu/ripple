@@ -16,6 +16,7 @@
 #ifndef RIPPLE_MATH_MATH_HPP
 #define RIPPLE_MATH_MATH_HPP
 
+#include <ripple/core/container/array.hpp>
 #include <ripple/core/utility/portability.hpp>
 #include <math.h>
 
@@ -37,7 +38,26 @@ ripple_host_device constexpr auto operator "" _hash(
   const char* input, unsigned long
 )  -> unsigned int {
   return hash(input);
-} 
+}
+
+/// Computes the square root of the \p v value.
+/// \param  v The value to compute the square root of.
+/// \tparam T The type of the data.
+template <typename T, non_array_enable_t<T> = 0>
+ripple_host_device constexpr auto sqrt(const T& v) -> T {
+  return std::sqrt(v);
+}
+
+/// Overload of sqrt function for array implementations.
+template <typename Impl, array_enable_t<Impl> = 0>
+ripple_host_device constexpr auto sqrt(const Array<Impl>& arr) -> Impl {
+  auto r = Impl();
+  unrolled_for<array_traits_t<Impl>::size>([&] (auto _i) {
+    constexpr auto i = size_t{_i};
+    r[i] = sqrt(arr[i]);
+  });
+  return r;
+}
 
 namespace detail {
 
