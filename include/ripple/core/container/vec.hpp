@@ -70,7 +70,15 @@ struct VecImpl :
 
   /// Default constructor for the vector.
   ripple_host_device constexpr VecImpl() {};
-  
+
+  /// Constructor for the vector to set all elements to the value \p val.
+  /// \param val The value to set all elements to.
+  ripple_host_device constexpr VecImpl(T val) {
+    unrolled_for<elements>([&] (auto i) {
+      _storage.template get<0, i>() = val;
+    });
+  } 
+
   /// Constructor to create the array from a list of values. This overload is
   /// only enabled when the number of elements in the variadic parameter pack
   /// matches the size of the array.

@@ -12,6 +12,15 @@ This section contains all completed tasks, in reverse chronological order.
 
 ### 27-03-2020
 
+- Update BlockIterator interface
+  - Add the norm for the data as `it.norm(dh = 1)` to return the normal for the
+    iterator from the cell being iterated from. The norm can be computed as
+    $ \frac{\nabla \phi}{|\nabla \phi|}$. 
+  - Add the norm for signed distance data as `it.normsd()` to return the normal
+    for the iterator when the data is known to be signed distance, which is an
+    optimized computation. Same as above, but $|\nabla \phi| = 1$, so it doesn't
+    need to be computed. 
+
 - Implement `math::sqrt()` in `math` module which wraps `std::sqrt` for normal
   types, and which performs elementwise sqrt for array types.
 
@@ -47,15 +56,6 @@ initially at the level of 'longer', which means to take a while to implement,
 but which are then broken into weekly, daily, and hourly tasks.
 
 ## Week 23-03-2020 - 29-03-2020
-
-- Update BlockIterator interface
-  - Add the norm for the data as `it.norm(dh = 1)` to return the normal for the
-    iterator from the cell being iterated from. The norm can be computed as
-    $ \frac{\nabla \phi}{|\nabla \phi|}$. 
-  - Add the norm for signed distance data as `it.normsd()` to return the normal
-    for the iterator when the data is known to be signed distance, which is an
-    optimized computation. Same as above, but $|\nabla \phi| = 1$, so it doesn't
-    need to be computed. 
 
 - Add linear interp function in math module, as `linterp(iter, weights)`
   - Iter is an N dimensional iterator, weights are N dimensional weights for the

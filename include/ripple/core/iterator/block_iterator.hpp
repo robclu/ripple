@@ -18,6 +18,7 @@
 
 #include "iterator_traits.hpp"
 #include <ripple/core/container/array_traits.hpp>
+#include <ripple/core/math/math.hpp>
 #include <ripple/core/storage/storage_traits.hpp>
 
 namespace ripple {
@@ -335,8 +336,11 @@ class BlockIterator {
   /// \end{equation}
   ///
   /// Returning the type iterated over by the iterator.
-  /// \param dh The resolution of the grid the iterator iterates over.
-  template <typename DataType, typename Dim>
+  /// \param  dim      The dimension to get the gradient in.
+  /// \param  dh       The resolution of the grid the iterator iterates over.
+  /// \tparam Dim      The type of the dimension specifier.
+  /// \tparam DataType The type of the discretization resolution.
+  template <typename Dim, typename DataType>
   ripple_host_device constexpr auto grad_dim(Dim&& dim, DataType dh = 1) const 
   -> copy_t {
     // NOTE: Have to do something differenct depending on the data type,
@@ -345,8 +349,74 @@ class BlockIterator {
     if constexpr (std::is_integral_v<DataType>) {
       return this->central_diff(dim) / (2 * dh);
     } else {
-      return(DataType{0.5} / dh) * this->central_diff(dim);
+      return (DataType{0.5} / dh) * this->central_diff(dim);
     }
+  }
+
+  //==--- [normal] ---------------------------------------------------------==//
+  
+  /// Computes the norm of the data, which is defined as:
+  ///
+  /// \begin{equation}
+  ///   - \frac{\nabla \phi}{|\nabla \phi|}
+  /// \end{equation}
+  ///
+  /// If the data is a vector, this computes the elementwise normal of the
+  /// vector.
+  ///
+  /// \param  dh       The resolution of the grid the iterator iterates over.
+  /// \tparam DataType The type of the discretization resolution.
+  template <typename DataType>
+  ripple_host_device constexpr auto norm(DataType dh = 1) const
+  -> vec_t {
+    // NOTE: Here we do not use the grad() function to save some loops.
+    auto result = vec_t();
+    copy_t mag(0);
+
+    // NOTE: this may need to change to -0.5, as in some of the literature.
+    constexpr auto dims = iterator_traits_t<self_t>::dimensions;
+    unrolled_for<dims>([&] (auto d) {
+      // Add the negative sign in now, to avoid an op later ...
+      if constexpr (std::is_integral_v<DataType>) {
+        result[d] = this->central_diff(d) / (-2 * dh);
+      } else {
+        result[d] = (DataType{-0.5} / dh) * this->central_diff(d);
+      }
+      mag += result[d] * result[d];
+    });
+    result /= math::sqrt(mag);
+    return result;
+  }
+
+  /// Computes the norm of the data, which is defined as:
+  ///
+  /// \begin{equation}
+  ///   -\frac{\nabla \phi}{|\nabla \phi|}
+  /// \end{equation}
+  ///
+  /// for the case that it is known that $phi$ is a signed distance function and
+  /// hence that $|\nabla \phi| = 1$.
+  ///
+  /// In this case, the computation of the magnitude, and the subsequent
+  /// division by it can be avoided which is a significant performance increase.
+  ///
+  /// \param  dh       The resolution of the grid the iterator iterates over.
+  /// \tparam DataType The type of descretization resolution.
+  template <typename DataType>
+  ripple_host_device constexpr auto norm_sd(DataType dh = 1) const 
+  -> vec_t {
+    // NOTE: Don't use grad() to save operations for vector types.
+    auto  result        = vec_t();
+    constexpr auto dims = iterator_traits_t<self_t>::dimensions;
+    unrolled_for<dims>([&] (auto d) {
+      // Add the negative sign in now, to avoid an op later ...
+      if constexpr (std::is_integral_v<DataType>) {
+        result[d] = this->central_diff(d) / (-2 * dh);
+      } else {
+        result[d] = (DataType{-0.5} / dh) * this->central_diff(d);
+      }
+    });
+    return result;
   }
 
   //==--- [size] -----------------------------------------------------------==//

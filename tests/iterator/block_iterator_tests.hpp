@@ -711,4 +711,124 @@ TEST(iterator_block_tests, can_compute_gradients_correctly_strided_view) {
   });
 }
 
+//==--- [normal] -----------------------------------------------------------==//
+
+TEST(iterator_block_tests, can_compute_normal_correctly_non_udt) {
+  using type_t = double;
+  ripple::host_block_3d_t<type_t> b(3, 3, 3);
+  
+  // Set the data:
+  *b(1, 1, 1) = 4;
+  *b(0, 1, 1) = 1; *b(2, 1, 1) = 7;  // x dim
+  *b(1, 0, 1) = 1; *b(1, 2, 1) = 3;  // y dim
+  *b(1, 1, 0) = 1; *b(1, 1, 2) = 5;  // z dim
+
+  // Get the iterator to the center of the block, then compute all the
+  // differences:
+  auto it = b(1, 1, 1);
+
+  // x dimension:
+  auto dh        = type_t{1};
+  auto norm      = it.norm(dh);
+  const auto mag = ripple::math::sqrt(type_t{9 + 1 + 4});
+  EXPECT_EQ(norm[ripple::dim_x], -type_t{3} / mag);
+  EXPECT_EQ(norm[ripple::dim_y], -type_t{1} / mag);
+  EXPECT_EQ(norm[ripple::dim_z], -type_t{2} / mag);
+
+  // Change data to be signed distance with dh = 2.
+  *b(0, 1, 1) = 6; *b(2, 1, 1) = 2;  // x dim
+  *b(1, 0, 1) = 6; *b(1, 2, 1) = 2;  // y dim
+  *b(1, 1, 0) = 6; *b(1, 1, 2) = 2;  // z dim
+
+  auto dh2 = type_t{2};
+  norm = it.norm_sd(dh2);
+  EXPECT_EQ(norm[ripple::dim_x], type_t{1});
+  EXPECT_EQ(norm[ripple::dim_y], type_t{1});
+  EXPECT_EQ(norm[ripple::dim_z], type_t{1});
+}
+
+// This tests that the iterator normal works correctly when the type
+// is an array type, and when the data is contiguous and owned.
+TEST(iterator_block_tests, can_compute_normal_correctly_contig_owned) {
+  using namespace ripple;
+  using data_t  = float;
+  using type_t  = Vector<data_t, 3, contiguous_owned_t>;
+  using owned_t = Vector<data_t, 3, contiguous_owned_t>;
+  host_block_3d_t<type_t> b(3, 3, 3);
+  
+  // Set the data:
+  *b(1, 1, 1) = owned_t(4, 4, 4);
+  *b(0, 1, 1) = owned_t(1, 1, 1); *b(2, 1, 1) = owned_t(7, 7, 7); // dim x
+  *b(1, 0, 1) = owned_t(1, 1, 1); *b(1, 2, 1) = owned_t(3, 3, 3); // dim y
+  *b(1, 1, 0) = owned_t(1, 1, 1); *b(1, 1, 2) = owned_t(5, 5, 5); // dim z
+
+  const auto dh   = data_t{1};
+  auto       norm = b(1, 1, 1).norm(dh);
+  const auto mag  = ripple::math::sqrt(data_t{9 + 1 + 4});
+
+  // norm is a vector of vectors.
+  unrolled_for<3>([&] (auto e) {
+    constexpr auto elem = size_t{e};
+    EXPECT_EQ(norm[ripple::dim_x][elem], -data_t{3} / mag); 
+    EXPECT_EQ(norm[ripple::dim_y][elem], -data_t{1} / mag);
+    EXPECT_EQ(norm[ripple::dim_z][elem], -data_t{2} / mag);
+  });
+}
+
+// This tests that the iterator normal works correctly when the type
+// is an array type, and when the data is contiguous and non-owned.
+TEST(iterator_block_tests, can_compute_normal_correctly_contig_view) {
+  using namespace ripple;
+  using data_t  = float;
+  using type_t  = Vector<data_t, 3, contiguous_view_t>;
+  using owned_t = Vector<data_t, 3, contiguous_owned_t>;
+  host_block_3d_t<type_t> b(3, 3, 3);
+  
+  // Set the data:
+  *b(1, 1, 1) = owned_t(4, 4, 4);
+  *b(0, 1, 1) = owned_t(1, 1, 1); *b(2, 1, 1) = owned_t(7, 7, 7); // dim x
+  *b(1, 0, 1) = owned_t(1, 1, 1); *b(1, 2, 1) = owned_t(3, 3, 3); // dim y
+  *b(1, 1, 0) = owned_t(1, 1, 1); *b(1, 1, 2) = owned_t(5, 5, 5); // dim z
+
+  const auto dh   = data_t{1};
+  auto       norm = b(1, 1, 1).norm(dh);
+  const auto mag  = ripple::math::sqrt(data_t{9 + 1 + 4});
+
+  // norm is a vector of vectors.
+  unrolled_for<3>([&] (auto e) {
+    constexpr auto elem = size_t{e};
+    EXPECT_EQ(norm[ripple::dim_x][elem], -data_t{3} / mag); 
+    EXPECT_EQ(norm[ripple::dim_y][elem], -data_t{1} / mag);
+    EXPECT_EQ(norm[ripple::dim_z][elem], -data_t{2} / mag);
+  });
+}
+
+// This tests that the iterator normal works correctly when the type
+// is an array type, and when the data is strided and non-owned.
+TEST(iterator_block_tests, can_compute_normal_correctly_strided_view) {
+  using namespace ripple;
+  using data_t  = float;
+  using type_t  = Vector<data_t, 3, strided_view_t>;
+  using owned_t = Vector<data_t, 3, contiguous_owned_t>;
+  host_block_3d_t<type_t> b(3, 3, 3);
+  
+  // Set the data:
+  *b(1, 1, 1) = owned_t(4, 4, 4);
+  *b(0, 1, 1) = owned_t(1, 1, 1); *b(2, 1, 1) = owned_t(7, 7, 7); // dim x
+  *b(1, 0, 1) = owned_t(1, 1, 1); *b(1, 2, 1) = owned_t(3, 3, 3); // dim y
+  *b(1, 1, 0) = owned_t(1, 1, 1); *b(1, 1, 2) = owned_t(5, 5, 5); // dim z
+
+  const auto dh   = data_t{1};
+  auto       norm = b(1, 1, 1).norm(dh);
+  const auto mag  = ripple::math::sqrt(data_t{9 + 1 + 4});
+
+  // norm is a vector of vectors.
+  unrolled_for<3>([&] (auto e) {
+    constexpr auto elem = size_t{e};
+    EXPECT_EQ(norm[ripple::dim_x][elem], -data_t{3} / mag); 
+    EXPECT_EQ(norm[ripple::dim_y][elem], -data_t{1} / mag);
+    EXPECT_EQ(norm[ripple::dim_z][elem], -data_t{2} / mag);
+  });
+}
+
 #endif // RIPPLE_TESTS_ITERATOR_BLOCK_ITERATOR_HPP
