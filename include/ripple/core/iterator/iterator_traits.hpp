@@ -58,8 +58,6 @@ template <typename Iterator> struct IteratorTraits {
 /// \tparam Space The space for the iterator.
 template <typename T, typename Space>
 struct IteratorTraits<BlockIterator<T, Space>> {
-  //==--- [aliases] --------------------------------------------------------==//
-  
  private:
    /// Defines the layout traits for the iterator.
   using layout_traits_t = layout_traits_t<T>;
@@ -67,6 +65,11 @@ struct IteratorTraits<BlockIterator<T, Space>> {
  public:
   /// Defines the value type of the iterator.
   using value_t = typename layout_traits_t::value_t;
+  /// Defines the copy type for the iterator, which is the type which ensures
+  /// that the iterator data is copied.
+  using copy_t  = typename layout_traits_t::iter_copy_t;
+  /// Defines the reference type for the iterator.
+  using ref_t   = typename layout_traits_t::iter_ref_t;
 
   //==--- [traits] ---------------------------------------------------------==//
   

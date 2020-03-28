@@ -13,9 +13,10 @@
 //
 //==------------------------------------------------------------------------==//
 
-#ifndef RIPPLE_TESTS_MATH_TESTS_HPP
-#define RIPPLE_TESTS_MATH_TESTS_HPP
+#ifndef RIPPLE_TESTS_MATH_MATH_TESTS_HPP
+#define RIPPLE_TESTS_MATH_MATH_TESTS_HPP
 
+#include "lerp_tests.hpp"
 #include <ripple/core/container/vec.hpp>
 #include <ripple/core/math/math.hpp>
 #include <gtest/gtest.h>
@@ -56,7 +57,7 @@ TEST(math_tests, sign_double) {
   EXPECT_EQ(ripple::math::sign(c), 0.0);
 }
 
-TEST(math_test, sqrt_non_vec_type) {
+TEST(math_tests, sqrt_non_vec_type) {
   EXPECT_NEAR(ripple::math::sqrt(4), std::sqrt(4), tol);
 }
 

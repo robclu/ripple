@@ -152,7 +152,7 @@ ripple_add_executable(
   math_tests ${ripple_SOURCE_DIR}/tests/math.cpp
 )
 ripple_target_link_libraries(
-  math_tests ${GTEST_BOTH_LIBRARIES}
+  math_tests ${GTEST_BOTH_LIBRARIES} ${CUDA_LIBRARIES}
 )
 
 #==--------------------------------------------------------------------------==#

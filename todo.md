@@ -57,13 +57,15 @@ but which are then broken into weekly, daily, and hourly tasks.
 
 ## Week 23-03-2020 - 29-03-2020
 
-- Add linear interp function in math module, as `linterp(iter, weights)`
+- Add linear interp function in math module, as `lerp(iter, weights)`
   - Iter is an N dimensional iterator, weights are N dimensional weights for the
     interpolation.
   - Interpolation is performed linearly on N-1, dimensions, until N = 1, then
     back up. 1D = lerp, 2D = bilerp, 3D = trilerp.
   - Add tests for linterp to test correctness. Tests should cover weights which
     interp the iterator and offsets from the iterator.
+  - Tests should also cover cases which may cause loss of significance, such as
+    for $w=0$ and $w=1$.
 
 - Complete Riemann Ghost Fluid mixed material implementation
     - Walk over each of the materials in the system
