@@ -1,4 +1,4 @@
-//==--- ripple/core/tests/math/math_tests.hpp ------------------- -*- C++ -*- ---==//
+//==--- ripple/tests/math/math_tests.hpp ------------------- -*- C++ -*- ---==//
 //            
 //                                Ripple
 // 
@@ -20,8 +20,6 @@
 #include <ripple/core/container/vec.hpp>
 #include <ripple/core/math/math.hpp>
 #include <gtest/gtest.h>
-
-constexpr double tol = 1e-6;
 
 TEST(math_tests, sign_signed_int) {
   const int a = 10;

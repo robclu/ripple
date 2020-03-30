@@ -1,4 +1,4 @@
-//==--- ripple/core/tests/math/lerp_tests.hpp -------------- -*- C++ -*- ---==//
+//==--- ripple/tests/math/lerp_tests.hpp ------------------- -*- C++ -*- ---==//
 //            
 //                                Ripple
 // 
@@ -20,6 +20,10 @@
 #include <ripple/core/container/host_block.hpp>
 #include <ripple/core/math/lerp.hpp>
 #include <gtest/gtest.h>
+
+static constexpr double tol = 1e-6;
+
+//==--- [1d tests] ---------------------------------------------------------==//
 
 TEST(math_tests, can_lerp_1d_non_udt) {
   using data_t   = double;
@@ -136,5 +140,170 @@ TEST(math_tests, can_lerp_1d_stridable_view) {
   EXPECT_EQ(r1[0], 3); EXPECT_EQ(r1[1], 9); EXPECT_EQ(r1[2], 12);
 }
 
-#endif // RIPPLE_TESTS_MATH_LERP_TESTS_HPP
+//==--- [2d tests] ---------------------------------------------------------==//
 
+TEST(math_tests, can_lerp_2d_non_udt) {
+  using data_t   = double;
+  using weight_t = ripple::vec_2d_t<data_t>;
+  ripple::host_block_2d_t<data_t> b(3, 3);
+
+  *b(0, 0) = 1; *b(1, 0) = 2; *b(2, 0) = 3;
+  *b(0, 1) = 4; *b(1, 1) = 5; *b(2, 1) = 6;
+  *b(0, 2) = 7; *b(1, 2) = 8; *b(2, 2) = 9;
+
+  auto c = b(1, 1);
+
+  // Test basic cases:
+  auto r = ripple::math::lerp(c, weight_t{0.5, 0.5});
+  EXPECT_EQ(r, 7);
+  r = ripple::math::lerp(c, weight_t{0.0, -1.0});
+  EXPECT_EQ(r, 2.0);
+  r = ripple::math::lerp(c, weight_t{-0.2, -0.8});
+  EXPECT_NEAR(r, 2.4, tol);
+  r = ripple::math::lerp(c, weight_t{-0.2, 0.8});
+  EXPECT_NEAR(r, 7.2, tol);
+  r = ripple::math::lerp(c, weight_t{0.2, -0.8});
+  EXPECT_NEAR(r, 2.8, tol);
+}
+
+// Test for 2d lerp with a user defined stidable type which owns its data.
+TEST(math_tests, can_lerp_2d_stridable_contig_owned) {
+  using namespace ripple;
+  using data_t   = float;
+  using type_t   = Vector<data_t, 2, contiguous_owned_t>;
+  using owned_t  = Vector<data_t, 2, contiguous_owned_t>;
+  using weight_t = ripple::vec_2d_t<data_t>;
+  host_block_2d_t<type_t> b(3, 3);
+
+  *b(0, 0) = owned_t{1, 1}; *b(1, 0) = owned_t{2, 2}; *b(2, 0) = owned_t{3, 3};
+  *b(0, 1) = owned_t{4, 4}; *b(1, 1) = owned_t{5, 5}; *b(2, 1) = owned_t{6, 6};
+  *b(0, 2) = owned_t{7, 7}; *b(1, 2) = owned_t{8, 8}; *b(2, 2) = owned_t{9, 9};
+
+  // Right and down:
+  auto r = ripple::math::lerp(b(1, 1), weight_t{0.5, 0.5});
+  EXPECT_EQ(r[0], data_t{7}); EXPECT_EQ(r[1], data_t{7}); 
+
+  // Right and up:
+  r = ripple::math::lerp(b(1, 1), weight_t{0.2, -0.8});
+  EXPECT_NEAR(r[0], data_t{2.8}, tol); EXPECT_NEAR(r[1], data_t{2.8}, tol);
+
+  // Left and down:
+  r = ripple::math::lerp(b(1, 1), weight_t{-0.2, 0.8});
+  EXPECT_NEAR(r[0], data_t{7.2}, tol); EXPECT_NEAR(r[1], data_t{7.2}, tol);
+
+  // Left and up:
+  r = ripple::math::lerp(b(1, 1), weight_t{-0.2, -0.8});
+  EXPECT_NEAR(r[0], data_t{2.4}, tol); EXPECT_NEAR(r[1], data_t{2.4}, tol);
+
+  // Test for zero, zero:
+  r = ripple::math::lerp(b(1, 1), weight_t{0, 0});
+  EXPECT_EQ(r[0], data_t{5}); EXPECT_EQ(r[1], data_t{5});
+
+  // Test for zero, 1:
+  r = ripple::math::lerp(b(1, 1), weight_t{0, 1});
+  EXPECT_EQ(r[0], data_t{8}); EXPECT_EQ(r[1], data_t{8});
+
+  // Test for 1, 0:
+  r = ripple::math::lerp(b(1, 1), weight_t{1, 0});
+  EXPECT_EQ(r[0], data_t{6}); EXPECT_EQ(r[1], data_t{6});
+
+  // Test for 1, 1:
+  r = ripple::math::lerp(b(1, 1), weight_t{1, 1});
+  EXPECT_EQ(r[0], data_t{9}); EXPECT_EQ(r[1], data_t{9});
+}
+
+// Test for 2d lerp with a user defined stidable type which doesn't own its
+// data.
+TEST(math_tests, can_lerp_2d_stridable_contig_view) {
+  using namespace ripple;
+  using data_t   = float;
+  using type_t   = Vector<data_t, 2, contiguous_view_t>;
+  using owned_t  = Vector<data_t, 2, contiguous_owned_t>;
+  using weight_t = ripple::vec_2d_t<data_t>;
+  host_block_2d_t<type_t> b(3, 3);
+
+  *b(0, 0) = owned_t{1, 1}; *b(1, 0) = owned_t{2, 2}; *b(2, 0) = owned_t{3, 3};
+  *b(0, 1) = owned_t{4, 4}; *b(1, 1) = owned_t{5, 5}; *b(2, 1) = owned_t{6, 6};
+  *b(0, 2) = owned_t{7, 7}; *b(1, 2) = owned_t{8, 8}; *b(2, 2) = owned_t{9, 9};
+
+  // Right and down:
+  auto r = ripple::math::lerp(b(1, 1), weight_t{0.5, 0.5});
+  EXPECT_EQ(r[0], data_t{7}); EXPECT_EQ(r[1], data_t{7}); 
+
+  // Right and up:
+  r = ripple::math::lerp(b(1, 1), weight_t{0.2, -0.8});
+  EXPECT_NEAR(r[0], data_t{2.8}, tol); EXPECT_NEAR(r[1], data_t{2.8}, tol);
+
+  // Left and down:
+  r = ripple::math::lerp(b(1, 1), weight_t{-0.2, 0.8});
+  EXPECT_NEAR(r[0], data_t{7.2}, tol); EXPECT_NEAR(r[1], data_t{7.2}, tol);
+
+  // Left and up:
+  r = ripple::math::lerp(b(1, 1), weight_t{-0.2, -0.8});
+  EXPECT_NEAR(r[0], data_t{2.4}, tol); EXPECT_NEAR(r[1], data_t{2.4}, tol);
+
+  // Test for zero, zero:
+  r = ripple::math::lerp(b(1, 1), weight_t{0, 0});
+  EXPECT_EQ(r[0], data_t{5}); EXPECT_EQ(r[1], data_t{5});
+
+  // Test for zero, 1:
+  r = ripple::math::lerp(b(1, 1), weight_t{0, 1});
+  EXPECT_EQ(r[0], data_t{8}); EXPECT_EQ(r[1], data_t{8});
+
+  // Test for 1, 0:
+  r = ripple::math::lerp(b(1, 1), weight_t{1, 0});
+  EXPECT_EQ(r[0], data_t{6}); EXPECT_EQ(r[1], data_t{6});
+
+  // Test for 1, 1:
+  r = ripple::math::lerp(b(1, 1), weight_t{1, 1});
+  EXPECT_EQ(r[0], data_t{9}); EXPECT_EQ(r[1], data_t{9});
+}
+
+// Test for 2d lerp with a user defined stidable type which doesn't own its
+// data.
+TEST(math_tests, can_lerp_2d_stridable_strided_view) {
+  using namespace ripple;
+  using data_t   = float;
+  using type_t   = Vector<data_t, 2, strided_view_t>;
+  using owned_t  = Vector<data_t, 2, contiguous_owned_t>;
+  using weight_t = ripple::vec_2d_t<data_t>;
+  host_block_2d_t<type_t> b(3, 3);
+
+  *b(0, 0) = owned_t{1, 1}; *b(1, 0) = owned_t{2, 2}; *b(2, 0) = owned_t{3, 3};
+  *b(0, 1) = owned_t{4, 4}; *b(1, 1) = owned_t{5, 5}; *b(2, 1) = owned_t{6, 6};
+  *b(0, 2) = owned_t{7, 7}; *b(1, 2) = owned_t{8, 8}; *b(2, 2) = owned_t{9, 9};
+
+  // Right and down:
+  auto r = ripple::math::lerp(b(1, 1), weight_t{0.5, 0.5});
+  EXPECT_EQ(r[0], data_t{7}); EXPECT_EQ(r[1], data_t{7}); 
+
+  // Right and up:
+  r = ripple::math::lerp(b(1, 1), weight_t{0.2, -0.8});
+  EXPECT_NEAR(r[0], data_t{2.8}, tol); EXPECT_NEAR(r[1], data_t{2.8}, tol);
+
+  // Left and down:
+  r = ripple::math::lerp(b(1, 1), weight_t{-0.2, 0.8});
+  EXPECT_NEAR(r[0], data_t{7.2}, tol); EXPECT_NEAR(r[1], data_t{7.2}, tol);
+
+  // Left and up:
+  r = ripple::math::lerp(b(1, 1), weight_t{-0.2, -0.8});
+  EXPECT_NEAR(r[0], data_t{2.4}, tol); EXPECT_NEAR(r[1], data_t{2.4}, tol);
+
+  // Test for zero, zero:
+  r = ripple::math::lerp(b(1, 1), weight_t{0, 0});
+  EXPECT_EQ(r[0], data_t{5}); EXPECT_EQ(r[1], data_t{5});
+
+  // Test for zero, 1:
+  r = ripple::math::lerp(b(1, 1), weight_t{0, 1});
+  EXPECT_EQ(r[0], data_t{8}); EXPECT_EQ(r[1], data_t{8});
+
+  // Test for 1, 0:
+  r = ripple::math::lerp(b(1, 1), weight_t{1, 0});
+  EXPECT_EQ(r[0], data_t{6}); EXPECT_EQ(r[1], data_t{6});
+
+  // Test for 1, 1:
+  r = ripple::math::lerp(b(1, 1), weight_t{1, 1});
+  EXPECT_EQ(r[0], data_t{9}); EXPECT_EQ(r[1], data_t{9});
+}
+
+#endif // RIPPLE_TESTS_MATH_LERP_TESTS_HPP

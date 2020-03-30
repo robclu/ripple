@@ -193,6 +193,15 @@ using array_enable_t = std::enable_if_t<is_array_v<T>, int>;
 template <typename T>
 using non_array_enable_t = std::enable_if_t<!is_array_v<T>, int>;
 
+/// Defines a valid type if the type T is an array and the size of the array is
+/// Size.
+/// \tparam T     The type to check if is an array.
+/// \tparam Size  The size the array must have.
+template <typename T, size_t Size>
+using array_size_enable_t = std::enable_if_t<
+  is_array_v<T> && (array_traits_t<T>::size == Size), int
+>;
+
 } // namespace ripple
 
 #endif // RIPPLE_CONTAINER_ARRAY_TRAITS_HPP
