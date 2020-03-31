@@ -31,9 +31,9 @@ namespace ripple::math {
 /// example, for the iterator pointing to cell X, where the data is as follows:
 ///
 /// <pre class="diagram">
-///   +-----+-----+-----+-----+
+///   *-----*-----*-----*-----*
 ///   |  W  |  X  |  Y  |  Z  |
-///   +-----+-----+-----+-----+
+///   *-----*-----*-----*-----*
 /// </pre>
 ///
 /// as 
@@ -91,15 +91,15 @@ ripple_host_device auto lerp(Iterator&& it, const Weights& weights)
 /// example, using the following data:
 ///
 /// <pre class="diagram">
-///   +-----+-----+-----+-----+
+///   *-----*-----*-----*-----*
 ///   |  Y  |     |     |     |
-///   +-----+-----+-----+-----+
+///   *-----*-----*-----*-----*
 ///   |     |  A  |  B  |     |
-///   +-----+-----+-----+-----+
+///   *-----*-----*-----*-----*
 ///   |     |  C  |  D  |     |
-///   +-----+-----+-----+-----+
+///   *-----*-----*-----*-----+*
 ///   |  X  |     |     |     |
-///   +-----+-----+-----+-----+
+///   *-----*-----*-----*-----+*
 /// </pre>
 ///
 /// using weights of ${1.4, -1.7}$ from X will give:
@@ -117,8 +117,6 @@ ripple_host_device auto lerp(Iterator&& it, const Weights& weights)
 ///   far   = C     * (1.0 - 0.4) + D   * 0.4
 ///   r     = close * (1.0 - 0.7) + far * 0.7
 /// \end{equation}
-///
-/// This overload is enabled when the iterator is two dimensional.
 ///
 /// This will fail at compile time if the iterator is not an iterator, or the
 /// weights do not implement the Array interface.
@@ -162,7 +160,6 @@ ripple_host_device auto lerp(Iterator&& it, const Weights& weights)
   const auto fx = value_t{1} - wx;
   const auto fy = value_t{1} - wy;
 
-  // Offset to the close cell:
   auto a = it.offset(dim_x, offx).offset(dim_y, offy);
 
   return (*a)                     * (fx * fy)
@@ -170,6 +167,100 @@ ripple_host_device auto lerp(Iterator&& it, const Weights& weights)
     + (*a.offset(dim_y, sign_y))  * (wy * fx)
     + (*a.offset(dim_x, sign_x)
          .offset(dim_y, sign_y))  * (wx * wy);
+}
+
+//==--- [3d lerp] ----------------------------------------------------------==//
+
+/// Interpolates the data around the \p it iterator using the weights
+/// defined by the \p weights. Any weight for a dimension which is greater than
+/// 1 is interpreted to mean shift the iterator over in the given dimension. For
+/// example, using the following data:
+///
+/// <pre class="diagram">
+///     4       5
+///     *-------*
+///  0 /|    1 /|
+///   *-------* |
+///   | |7    | |6
+///   | *-----|-*
+///   |/      |/
+///   *-------*
+///  3        2
+/// </pre>
+///
+/// Given all positive weights, this will perform tri-linear interpolation, 
+/// first by doing a 2D linear interpolation in the $0->1->2->3$ plane to get
+/// a result x, and another 2D linear interpolation in the $4->5->6->7$ plane,
+/// to get a result y, and then a final 1D linear interpolation between x and
+/// y will be done to get the result. 
+///
+/// This overload is enabled when the iterator is two dimensional.
+///
+/// This will fail at compile time if the iterator is not an iterator, or the
+/// weights do not implement the Array interface.
+///
+/// This overload is only enabled if the size of the weight array is 3.
+///
+/// This uses an implementation which does not have any loss of significance,
+/// see the 1D implementation.
+///
+/// \param  it       The iterator to use to interpolate data for.
+/// \param  weights  The weights for the nodes in the interpolation.
+/// \tparam Iterator The type of the iterator.
+/// \tparam Weights  The type of the weights.
+template <
+  typename Iterator, typename Weights, array_size_enable_t<Weights, 3> = 0
+>
+ripple_host_device auto lerp(Iterator&& it, const Weights& weights)
+-> typename iterator_traits_t<Iterator>::copy_t {
+  static_assert(
+    is_array_v<Weights>, "Linear interpolation requires a weight array."
+  );
+  constexpr auto elems = array_traits_t<Weights>::size;
+  static_assert(
+    elems == 3, "Iterator dimensionality must match size of weight array."
+  );  
+  using value_t = std::decay_t<decltype(weights[0])>;
+
+  // Compute offset params:
+  const auto sign_x   = math::sign(weights[dim_x]);
+  const auto absx     = std::abs(weights[dim_x]);
+  const auto fl_absx  = std::floor(absx);
+  const auto offx     = sign_x * fl_absx;
+  const auto sign_y   = math::sign(weights[dim_y]);
+  const auto absy     = std::abs(weights[dim_y]);
+  const auto fl_absy  = std::floor(absy);
+  const auto offy     = sign_y * fl_absy;
+  const auto sign_z   = math::sign(weights[dim_z]);
+  const auto absz     = std::abs(weights[dim_z]);
+  const auto fl_absz  = std::floor(absz);
+  const auto offz     = sign_z * fl_absz;
+
+  // Compute the factors:
+  const auto wx = absx - fl_absx;
+  const auto wy = absy - fl_absy;
+  const auto wz = absz - fl_absz;
+  const auto fx = value_t{1} - wx;
+  const auto fy = value_t{1} - wy;
+  const auto fz = value_t{1} - wz;
+
+  // Offset to the close (c) and far (f) cell in z plane:
+  auto c = it.offset(dim_x, offx).offset(dim_y, offy).offset(dim_z, offz);
+  auto f = c.offset(dim_z, sign_z);
+
+  return 
+    // x-y plane closest in z direction:
+      (*c)                       * (fx * fy * fz)
+    + (*c.offset(dim_x, sign_x)) * (wx * fy * fz)
+    + (*c.offset(dim_y, sign_y)) * (wy * fx * fz)
+    + (*c.offset(dim_x, sign_x)
+         .offset(dim_y, sign_y)) * (wx * wy * fz)
+    // x-y plane furthest in z direction:
+    + (*f)                       * (fx * fy * wz)
+    + (*f.offset(dim_x, sign_x)) * (wx * fy * wz)
+    + (*f.offset(dim_y, sign_y)) * (wy * fx * wz)
+    + (*f.offset(dim_x, sign_x)
+         .offset(dim_y, sign_y)) * (wx * wy * wz);
 }
 
 } // namespace ripple::math
