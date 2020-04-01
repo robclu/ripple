@@ -1,4 +1,4 @@
-//==--- ripple/core/tests/algorithm_tests.hpp ------------------- -*- C++ -*- ---==//
+//==--- ripple/tests/algorithm_tests.hpp ------------------- -*- C++ -*- ---==//
 //            
 //                                Ripple
 // 
@@ -13,5 +13,6 @@
 //
 //==------------------------------------------------------------------------==//
 
+#include "for_each_tests.hpp"
 #include "reduce_tests.hpp"
 #include "unrolled_for_tests.hpp"

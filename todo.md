@@ -29,6 +29,7 @@ but which are then broken into weekly, daily, and hourly tasks.
 - Complete Fast Iterative Method for extrapolation to a bandwidth
     - The interface should be `extrapolate(mat_it, T dh, size_t bandwidth)`.
 - Complete levelset velocity update implementation
+- Update Doxygen documentation to use Markdeep
 
 ## Longer term
 
@@ -41,6 +42,13 @@ but which are then broken into weekly, daily, and hourly tasks.
 This section contains all completed tasks, in reverse chronological order.
 
 ## Week 30-03-2020 - 06-04-2020
+
+### 01-04-2020
+
+- Add a for each function for a parameter pack, with the signature 
+  `for_each(functor, args...) -> ForEachState` which takes a functor to apply to
+  each of the arguments and returns if the loop should continue or not.
+- Add for each for a Tuple, as `for_each(tuple, functor, args...)`.
 
 ### 31-03-2020
 
