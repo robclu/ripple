@@ -10,6 +10,20 @@ This sections contains the queue of tasks which need to be completely. They are
 initially at the level of 'longer', which means to take a while to implement,
 but which are then broken into weekly, daily, and hourly tasks.
 
+- Complete Hllc implementation of the Flux interface
+  - Steps involve:
+    - Determine left and right sound speeds, $al, ar$
+    - Compute $p_{pvrs}$ from the states
+    - Compute the star speed as max(0, $p_{pvrs})
+    - Compute left wavespeed, check if in left region
+      - If true then return $F_l$
+    - Compute right wavespeed, check if in right region
+      - If true then return $F_r$
+    - Compute wavespeed in star region
+    - Check if in left star region
+      - If true then return $F_l$ + left_wavespeed * (star_state - left_state)
+      - Else return $F_r$ + right_wavespeed * (star_state - right_state)
+
 - Complete Riemann Ghost Fluid mixed material implementation
     - Walk over each of the materials in the system
     - For each of the cells which are _inside_ the levelset, and _also_ 
@@ -26,8 +40,10 @@ but which are then broken into weekly, daily, and hourly tasks.
     - Solve for the 1D start state of states with the normal velocities.
     - Rotate the star state _back_ into the original frame.
     - Compute the left/right star state, and set the original state to it.
+
 - Complete Fast Iterative Method for extrapolation to a bandwidth
-    - The interface should be `extrapolate(mat_it, T dh, size_t bandwidth)`.
+    - The interface should be `extrapolate(mat_it, T dh, size_t bandwidth)`
+- Complete levelset fixup method
 - Complete levelset velocity update implementation
 - Update Doxygen documentation to use Markdeep
 
