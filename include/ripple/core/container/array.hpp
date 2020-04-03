@@ -229,7 +229,7 @@ struct Array {
   /// \param  a     The array to multiply with.
   /// \tparam ImplA The implementation type of the multiplication array.
   template <typename ImplA>
-  ripple_host_device constexpr auto operator*(const Array<ImplA>& a)
+  ripple_host_device constexpr auto operator*(const Array<ImplA>& a) const
   -> array_impl_t<impl_t, ImplA> {
     using res_impl_t      = array_impl_t<impl_t, ImplA>;
     auto           result = res_impl_t();
@@ -247,7 +247,7 @@ struct Array {
   /// \param  val  The value to multiply with each element of the array.
   /// \tparam T    The type of the value.
   template <typename T, array_value_enable_t<T, impl_t> = 0>
-  ripple_host_device constexpr auto operator*(T val)
+  ripple_host_device constexpr auto operator*(T val) const
   -> array_impl_t<impl_t, impl_t> { 
     using res_impl_t    = array_impl_t<impl_t, impl_t>;
     using value_t       = typename array_traits_t<impl_t>::value_t;
@@ -300,7 +300,7 @@ struct Array {
   /// \param  a     The array to divide by.
   /// \tparam ImplA The implementation type of the division array.
   template <typename ImplA>
-  ripple_host_device constexpr auto operator/(const Array<ImplA>& a)
+  ripple_host_device constexpr auto operator/(const Array<ImplA>& a) const
   -> array_impl_t<impl_t, ImplA> {
     using res_impl_t      = array_impl_t<impl_t, ImplA>;
     auto           result = res_impl_t();
@@ -318,7 +318,7 @@ struct Array {
   /// \param  val  The value to multiply with each element of the array.
   /// \tparam T    The type of the value.
   template <typename T, array_value_enable_t<T, impl_t> = 0>
-  ripple_host_device constexpr auto operator/(T val)
+  ripple_host_device constexpr auto operator/(T val) const
   -> array_impl_t<impl_t, impl_t> { 
     using res_impl_t    = array_impl_t<impl_t, impl_t>;
     using value_t       = typename array_traits_t<impl_t>::value_t;
