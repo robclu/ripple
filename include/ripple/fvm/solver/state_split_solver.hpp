@@ -104,7 +104,7 @@ class StateSplitSolver : public Solver<StateSplitSolver<FluxImpl, SchemeImpl>> {
     // For dim y, one pass has been done, so grids are swapped.
     // For dim z, two passes have been done, so grids are as the start.
     unrolled_for<Dims - 1>([&] (auto d) {
-      constexpr auto dim = d == 0 ? dim_y : dim_z;
+      constexpr auto dim = Dimension<d == 0 ? 1 : 2>();
       g_a = dim == dim_y ? &out : &in;
       g_b = dim == dim_y ? &in  : &out;
 
