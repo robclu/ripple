@@ -198,6 +198,13 @@ template <typename T>
 using as_contiguous_view_t = 
   typename detail::StorageAs<contiguous_view_t, std::decay_t<T>>::type;
 
+/// Returns the type T as a strided view type, if it is not already. If the
+/// type T is not stridable, this will just create an alias to T.
+/// \tparam T The type to get as a contiguous owned type.
+template <typename T>
+using as_strided_view_t = 
+  typename detail::StorageAs<strided_view_t, std::decay_t<T>>::type;
+
 //==--- [enables] ----------------------------------------------------------==//
 
 /// Define a valid type if the type T is a StorageElement, otherwise does not
