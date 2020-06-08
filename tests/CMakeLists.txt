@@ -140,6 +140,15 @@ ripple_target_link_libraries(
 #==--------------------------------------------------------------------------==#
 
 ripple_add_executable(
+  graph_tests ${ripple_SOURCE_DIR}/tests/graph.cpp
+)
+ripple_target_link_libraries(
+  graph_tests ${GTEST_BOTH_LIBRARIES}
+)
+
+#==--------------------------------------------------------------------------==#
+
+ripple_add_executable(
   iterator_tests ${ripple_SOURCE_DIR}/tests/iterator.cpp
 )
 ripple_target_link_libraries(
