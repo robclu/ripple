@@ -1,7 +1,8 @@
-//==--- ripple/core/arch/cache.hpp ------------------------------ -*- C++ -*- ---==//
-//            
+//==--- ripple/core/arch/cache.hpp ------------------------------ -*- C++ -*-
+//---==//
+//
 //                                Ripple
-// 
+//
 //                      Copyright (c) 2019 Rob Clucas.
 //
 //  This file is distributed under the MIT License. See LICENSE for details.
@@ -20,14 +21,25 @@
 
 namespace ripple {
 
+/// Defines the number of bytes to allocate to avoid false sharing. This is 128b
+/// rather than 64b because in the Intel Optimization guide, chapter 2.1.5.4,
+/// the prefetcher likes to keep pairs of cache lines in the L2 cache, unless
+/// the size is defined as a compiler flag.
+static constexpr std::size_t avoid_false_sharing_size =
+#if defined(RIPPLE_AVOID_FALSE_SHARING_SIZE)
+  RIPPLE_AVOID_FALSE_SHARING_SIZE;
+#else
+  128;
+#endif
+
 /// Stores information for a cache.
 struct Cache {
   /// Defines the type of the cache, as per the Intel spec.
   enum Type : uint32_t {
-    Null        = 0x0,      //!< Null or invalid cache.
-    Data        = 0x1,      //!< Data cache.
-    Instruction = 0x2,      //!< Instruction cache
-    Unified     = 0x3       //!< Unified cache.
+    Null        = 0x0, //!< Null or invalid cache.
+    Data        = 0x1, //!< Data cache.
+    Instruction = 0x2, //!< Instruction cache
+    Unified     = 0x3  //!< Unified cache.
   };
 
   /// Returns the size of the cache in kB.
