@@ -1,8 +1,8 @@
-//==--- ripple/core/arch/gpu_info.hpp --------------------------- -*- C++ -*- ---==//
-//            
+//==--- ripple/core/arch/gpu_info.hpp ---------------------- -*- C++ -*- ---==//
+//
 //                                Ripple
-// 
-//                      Copyright (c) 2019 Rob Clucas.
+//
+//                      Copyright (c) 2019 Rob Clucas
 //
 //  This file is distributed under the MIT License. See LICENSE for details.
 //
@@ -27,7 +27,8 @@ namespace ripple {
 /// The GpuInfo struct stores information about the gpu.
 struct GpuInfo {
   //==--- [aliases] --------------------------------------------------------==//
-  
+
+  // clang-format off
   /// Defines the type used for the device index.
   using index_t            = uint32_t;
   /// Defines the type of container used to store peer access indices.
@@ -36,22 +37,24 @@ struct GpuInfo {
   using stream_t           = cudaStream_t;
   /// Defines the type of container for streams for the device.
   using stream_container_t = std::array<stream_t, 8>;
-
+  // clang-format on
   //==--- [constants] ------------------------------------------------------==//
-  
+
   /// Defines an invalid value for processor information.
   static constexpr index_t invalid = 0xFFFFFFFF;
 
+  // clang-format off
   /// Defines the amount of padding to avoid false sharing.
-  static constexpr size_t padding_size = false_sharing_size - ((
+  static constexpr size_t padding_size = avoid_false_sharing_size - ((
     sizeof(peer_container_t) + 
     sizeof(index_t)          + 
     2 * sizeof(uint64_t)     +
     sizeof(stream_container_t)
-  ) % false_sharing_size);
+  ) % avoid_false_sharing_size);
+  // clang-format on
 
   //==--- [constructor] ----------------------------------------------------==//
-  
+
   /// Constructor to initialise the info with a specific index.
   GpuInfo(index_t idx) : index(idx) {
     cudaSetDevice(index);
@@ -63,21 +66,21 @@ struct GpuInfo {
   /// Destructor which cleans up the streams.
   ~GpuInfo() {
     // Currently causing a segfault, so we can't clean up the streams ...
-    //cudaSetDevice(index);
-    //for (auto& stream : streams) {
+    // cudaSetDevice(index);
+    // for (auto& stream : streams) {
     //  cudaStreamDestroy(stream);
     //}
   }
 
   //==--- [interface] ------------------------------------------------------==//
-  
+
   /// Creates the information for all gpus in the system.
   static auto create_for_all_devices() -> std::vector<GpuInfo> {
-    index_t num_devices  = device_count();
-    auto    devices      = std::vector<GpuInfo>();
+    index_t num_devices = device_count();
+    auto    devices     = std::vector<GpuInfo>();
 
     cudaDeviceProp device_props;
-    int can_access_peer;
+    int            can_access_peer;
     for (auto dev : range(num_devices)) {
       // Constructor sets the device to the current device.
       auto& info = devices.emplace_back(dev);
@@ -97,7 +100,7 @@ struct GpuInfo {
     }
     return devices;
   }
-  
+
   /// Returns the total number of gpus detected in the system.
   static auto device_count() -> uint32_t {
     int count;
@@ -132,12 +135,12 @@ struct GpuInfo {
     return mem_alloc < mem_size ? mem_size - mem_alloc : 0;
   }
 
-  stream_container_t streams;              //!< Streams for the device.
-  peer_container_t   peers;                //!< Default to no peers.
-  index_t            index     = invalid;  //!< Index of the gpu in the system.
-  uint64_t           mem_size  = 0;        //!< Amount of memory for the device.
-  uint64_t           mem_alloc = 0;        //!< Amount of memory alocated.     
-  uint8_t            pad[padding_size];    //!< Padding for false sharing.
+  stream_container_t streams;             //!< Streams for the device.
+  peer_container_t   peers;               //!< Default to no peers.
+  index_t            index     = invalid; //!< Index of the gpu in the system.
+  uint64_t           mem_size  = 0;       //!< Amount of memory for the device.
+  uint64_t           mem_alloc = 0;       //!< Amount of memory alocated.
+  uint8_t            pad[padding_size];   //!< Padding for false sharing.
 };
 
 } // namespace ripple

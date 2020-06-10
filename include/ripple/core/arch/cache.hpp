@@ -1,5 +1,4 @@
-//==--- ripple/core/arch/cache.hpp ------------------------------ -*- C++ -*-
-//---==//
+//==--- ripple/core/arch/cache.hpp ------------------------- -*- C++ -*- ---==//
 //
 //                                Ripple
 //
@@ -10,7 +9,7 @@
 //==------------------------------------------------------------------------==//
 //
 /// \file  cache.hpp
-/// \brief This file defiens a struct for a cache.
+/// \brief This file defines a struct for a cache.
 //
 //==------------------------------------------------------------------------==//
 
@@ -29,11 +28,16 @@ static constexpr std::size_t avoid_false_sharing_size =
 #if defined(RIPPLE_AVOID_FALSE_SHARING_SIZE)
   RIPPLE_AVOID_FALSE_SHARING_SIZE;
 #else
+  // Not yet implemented, so just use 2 * most cache line sizes.
+  // std::hardware_destructive_interference_size;
   128;
 #endif
 
 /// Stores information for a cache.
 struct Cache {
+  /// Constant to convert bytes to kb.
+  static constexpr uint32_t bytes_in_kb = 1024;
+
   /// Defines the type of the cache, as per the Intel spec.
   enum Type : uint32_t {
     Null        = 0x0, //!< Null or invalid cache.
@@ -44,7 +48,7 @@ struct Cache {
 
   /// Returns the size of the cache in kB.
   auto size() const -> uint32_t {
-    return assosciativity * partitions * linesize * sets / 1024;
+    return assosciativity * partitions * linesize * sets / bytes_in_kb;
   }
 
   Type     type           = Type::Null; //!> Type of the cache
