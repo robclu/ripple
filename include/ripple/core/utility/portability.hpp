@@ -1,4 +1,5 @@
-//==--- ripple/core/utility/portability.hpp --------------------- -*- C++ -*- ---==//
+//==--- ripple/core/utility/portability.hpp --------------------- -*- C++ -*-
+//---==//
 //
 //                                Ripple
 //
@@ -23,6 +24,7 @@
 #include <exception>
 #include <cooperative_groups.h>
 
+// clang-format off
 /// Definitions for host, device, and host device functions
 /// if CUDA is supported.
 #if defined(__CUDACC__) || defined(__clang__)
@@ -41,7 +43,7 @@
 
   /// Macro for thread synchronization for the device.
   #define ripple_syncthreads() __syncthreads()
-#elif
+#else
   /// Defines if GPU functionality is available.
   #define ripple_gpu_available  false
   /// Defines if CUDA functionality is available
@@ -58,15 +60,16 @@
   /// Macro for thread synchronization for the host.
   #define ripple_syncthreads() 
 #endif
+// clang-format on
 
 //==--- [compiler] ---------------------------------------------------------==//
 
 /// Defines if clang is being used.
-#define ripple_clang  __clang__
+#define ripple_clang __clang__
 /// Defines if gcc is being used.
-#define riplple_gcc   __GNUC__ && !(__clang__) && !(__CUDACC__)
+#define riplple_gcc __GNUC__ && !(__clang__) && !(__CUDACC__)
 /// Defines if nvcc is being used.
-#define ripple_nvcc   __CUDACC__ && !(__clang__)
+#define ripple_nvcc __CUDACC__ && !(__clang__)
 
 #ifndef MAX_UNROLL_DEPTH
   /// Defines the max depth for compile time unrolling.
@@ -77,25 +80,29 @@
 #endif
 
 namespace ripple {
-namespace cuda   {
-namespace debug  {
+namespace cuda {
+namespace debug {
 
 /// Checks if a cuda error code was a success, and if not, prints the error
 /// message.
 /// \param[in] err_code The cuda error code.
 /// \param[in] file     The file where the error was detected.
 /// \param[in] line     The line in the file where the error was detected.
-inline auto check_cuda_error(cudaError_t err_code, const char* file, int line)
--> void {
+inline auto
+check_cuda_error(cudaError_t err_code, const char* file, int line) -> void {
   if (err_code != cudaSuccess) {
-    printf("\nCuda Error : %s\nFile       : %s\nLine       :  %i\n\n",
-      cudaGetErrorString(err_code), file, line
-    );
+    printf(
+      "\nCuda Error : %s\nFile       : %s\nLine       :  %i\n\n",
+      cudaGetErrorString(err_code),
+      file,
+      line);
     std::terminate();
   }
 }
 
-}}} // namespace ripple::cuda::debug
+} // namespace debug
+} // namespace cuda
+} // namespace ripple
 
 #if defined(NDEBUG)
   /// Defines a macro for checking a cuda error in release mode. This does not
