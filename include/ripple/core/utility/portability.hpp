@@ -79,9 +79,7 @@
   #define ripple_max_unroll_depth MAX_UNROLL_DEPTH
 #endif
 
-namespace ripple {
-namespace cuda {
-namespace debug {
+namespace ripple::cuda::debug {
 
 /// Checks if a cuda error code was a success, and if not, prints the error
 /// message.
@@ -100,9 +98,7 @@ check_cuda_error(cudaError_t err_code, const char* file, int line) -> void {
   }
 }
 
-} // namespace debug
-} // namespace cuda
-} // namespace ripple
+} // namespace ripple::cuda::debug
 
 #if defined(NDEBUG)
   /// Defines a macro for checking a cuda error in release mode. This does not
