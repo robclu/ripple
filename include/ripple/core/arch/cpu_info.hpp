@@ -1,7 +1,8 @@
-//==--- ripple/core/arch/cpu_info.hpp --------------------------- -*- C++ -*- ---==//
-//            
+//==--- ripple/core/arch/cpu_info.hpp --------------------------- -*- C++ -*-
+//---==//
+//
 //                                Ripple
-// 
+//
 //                      Copyright (c) 2019 Rob Clucas.
 //
 //  This file is distributed under the MIT License. See LICENSE for details.
@@ -36,7 +37,7 @@ struct CpuInfo {
  private:
   //==--- [aliases] --------------------------------------------------------==//
   /// Defines the type of container for caches.
-  using cache_container_t     = std::vector<Cache>;
+  using cache_container_t = std::vector<Cache>;
   /// Defines the type of container for processor information.
   using proc_info_container_t = std::vector<ProcInfo>;
 
@@ -46,7 +47,8 @@ struct CpuInfo {
   /// Constructor, initialises that max supported values for cpuid.
   CpuInfo() {
     // Determine the max supported function:
-    _regs.eax = CpuidFunction::MaxFunction;;
+    _regs.eax = CpuidFunction::MaxFunction;
+    ;
     cpuid();
     _max_func = _regs.eax;
 
@@ -90,20 +92,20 @@ struct CpuInfo {
 
  private:
   //==--- [enums] ----------------------------------------------------------==//
-  
+
   /// Defines topology levels.
   enum TopoLevel {
-    Invalid = 0x0,  //!< Invalid level.
-    Thread  = 0x1,  //!< Thread level topology,
-    Core    = 0x2   //!< Core level topology.
+    Invalid = 0x0, //!< Invalid level.
+    Thread  = 0x1, //!< Thread level topology,
+    Core    = 0x2  //!< Core level topology.
   };
 
   /// Defines functions for CPUID.
   enum CpuidFunction : uint32_t {
-    MaxFunction       = 0x00000000,   //!< Max supported function.
-    MaxExtFunction    = 0x80000000,   //!< Max supported exented function.
-    CoreAndCacheInfo  = 0x00000004,   //!< Cache and core information.
-    ProcessorTopology = 0x0000000B    //!< Topology information
+    MaxFunction       = 0x00000000, //!< Max supported function.
+    MaxExtFunction    = 0x80000000, //!< Max supported exented function.
+    CoreAndCacheInfo  = 0x00000004, //!< Cache and core information.
+    ProcessorTopology = 0x0000000B  //!< Topology information
   };
 
   //==--- [structs] --------------------------------------------------------==//
@@ -112,14 +114,14 @@ struct CpuInfo {
   struct Regs {
     /// Defines the type of a register.
     using reg_t = uint32_t;
-    reg_t eax = 0;    //!< EAX register.
-    reg_t ebx = 0;    //!< EBX register.
-    reg_t ecx = 0;    //!< ECX register.
-    reg_t edx = 0;    //!< EDX register.
+    reg_t eax   = 0; //!< EAX register.
+    reg_t ebx   = 0; //!< EBX register.
+    reg_t ecx   = 0; //!< ECX register.
+    reg_t edx   = 0; //!< EDX register.
   };
 
   //==--- [constants] ------------------------------------------------------==//
-  
+
   /// Defines the max number of subleaves for cache info.
   static constexpr uint32_t max_cache_subleaves = 16;
 
@@ -133,11 +135,11 @@ struct CpuInfo {
   uint32_t _cores_per_package = 0; //!< Number of cores in each package.
   uint32_t _threads_per_core  = 0; //!< Number of logical threads per core.
 
-  cache_container_t     _caches;     //!< Container of cpu caches.
-  proc_info_container_t _proc_info;  //!< Container of processor information.
+  cache_container_t     _caches;    //!< Container of cpu caches.
+  proc_info_container_t _proc_info; //!< Container of processor information.
 
   //==--- [methods] --------------------------------------------------------==//
-  
+
   /// Creates cache information for the cpu, filling the cache container, and
   /// ordering it from L1 cache upwards.
   auto create_cache_info() -> void {
@@ -161,14 +163,14 @@ struct CpuInfo {
         break;
       }
 
-      cache.level          = bits(_regs.eax, 5 , 7 );
-      cache.linesize       = bits(_regs.ebx, 0 , 11) + 1;
+      cache.level          = bits(_regs.eax, 5, 7);
+      cache.linesize       = bits(_regs.ebx, 0, 11) + 1;
       cache.partitions     = bits(_regs.ebx, 12, 21) + 1;
       cache.assosciativity = bits(_regs.ebx, 22, 31) + 1;
       cache.shared_by      = bits(_regs.eax, 14, 25) + 1;
-      cache.sets           = bits(_regs.ecx, 0 , 31) + 1;
+      cache.sets           = bits(_regs.ecx, 0, 31) + 1;
 
-      /// Determine the mask for the cache, which can be used to 
+      /// Determine the mask for the cache, which can be used to
       /// determine which processors share the cache.
       uint32_t temp = cache.shared_by - 1, mask_width = 0;
       for (; temp; mask_width++) {
@@ -180,11 +182,12 @@ struct CpuInfo {
 
     // Sort caches from lowest level to highest level,
     // and by type for same level.
-    std::sort(_caches.begin(), _caches.end(), 
-      [] (const Cache& a, const Cache& b) -> bool {
+    std::sort(
+      _caches.begin(),
+      _caches.end(),
+      [](const Cache& a, const Cache& b) -> bool {
         return a.level == b.level ? a.type <= b.type : a.level < b.level;
-      }
-    );
+      });
   }
 
   /// Creates proccessor information, filling each of the processor info structs
@@ -209,7 +212,9 @@ struct CpuInfo {
         _threads_per_core = info.thread;
       }
     }
-    _num_packages += 1; _cores_per_package += 1; _threads_per_core += 1;
+    _num_packages += 1;
+    _cores_per_package += 1;
+    _threads_per_core += 1;
   }
 
   /// Create processor information for the processor with index \p proc_index.
@@ -218,12 +223,11 @@ struct CpuInfo {
     if (proc_index > _max_cores) {
       return;
     }
-    bind_context(proc_index);
+    set_affinity(proc_index);
     auto& info = _proc_info.emplace_back();
 
-    uint32_t apic = 0, apic_width  = 0, level_type = 0,
-             mask = 0, select_mask = 0, topo_level = 0,
-             prev_mask_width = 0;
+    uint32_t apic = 0, apic_width = 0, level_type = 0, mask = 0,
+             select_mask = 0, topo_level = 0, prev_mask_width = 0;
 
     bool next_level_invalid = false;
     while (!next_level_invalid) {
@@ -232,20 +236,20 @@ struct CpuInfo {
       cpuid();
       next_level_invalid = _regs.eax == 0 && _regs.ebx == 0;
 
-      apic_width      = bits(_regs.eax, 0, 4);
-      level_type      = bits(_regs.ecx, 8, 15);
-      apic            = bits(_regs.edx, 0, 31);
-      mask            = bitmask(apic_width);
+      apic_width = bits(_regs.eax, 0, 4);
+      level_type = bits(_regs.ecx, 8, 15);
+      apic       = bits(_regs.edx, 0, 31);
+      mask       = bitmask(apic_width);
       if (level_type == TopoLevel::Thread) {
-        select_mask = mask;
-        info.thread = apic & select_mask;
+        select_mask     = mask;
+        info.thread     = apic & select_mask;
         prev_mask_width = apic_width;
         continue;
-      } 
+      }
       if (level_type == TopoLevel::Core) {
         select_mask = mask ^ select_mask;
         info.core   = (apic & select_mask) >> prev_mask_width;
-        
+
         // For the package:
         select_mask  = (-1) << apic_width;
         info.package = (apic & select_mask) >> apic_width;
@@ -267,17 +271,11 @@ struct CpuInfo {
   /// input arguments, filling all the registers with the results.
   inline auto cpuid() -> void {
     asm("cpuid"
-      : "=a" (_regs.eax),
-        "=b" (_regs.ebx),
-        "=c" (_regs.ecx),
-        "=d" (_regs.edx)
-      : "0" (_regs.eax),
-        "2" (_regs.ecx)
-    );
+        : "=a"(_regs.eax), "=b"(_regs.ebx), "=c"(_regs.ecx), "=d"(_regs.edx)
+        : "0"(_regs.eax), "2"(_regs.ecx));
   }
 };
 
 } // namespace ripple
 
 #endif // RIPPLE_ARCH_CPU_INFO_HPP
-

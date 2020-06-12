@@ -1,7 +1,8 @@
-//==--- ripple/core/arch/proc_info.hpp -------------------------- -*- C++ -*- ---==//
-//            
+//==--- ripple/core/arch/proc_info.hpp -------------------------- -*- C++ -*-
+//---==//
+//
 //                                Ripple
-// 
+//
 //                      Copyright (c) 2019 Rob Clucas.
 //
 //  This file is distributed under the MIT License. See LICENSE for details.
@@ -16,6 +17,8 @@
 #ifndef RIPPLE_ARCH_PROC_INFO_HPP
 #define RIPPLE_ARCH_PROC_INFO_HPP
 
+#include <cstdint>
+
 namespace ripple {
 
 /// The ProcInfo struct stores information about the processor based on where
@@ -29,13 +32,11 @@ struct ProcInfo {
     return package == invalid || core == invalid || thread == invalid;
   }
 
-  uint32_t package = invalid;   //!< Package to which the processor belongs.
-  uint32_t core    = invalid;   //!< Index of the core in the package.
-  uint32_t thread  = invalid;   //!< The logical thread index on the core.
+  uint32_t package = invalid; //!< Package to which the processor belongs.
+  uint32_t core    = invalid; //!< Index of the core in the package.
+  uint32_t thread  = invalid; //!< The logical thread index on the core.
 };
 
 } // namespace ripple
 
 #endif // RIPPLE_ARCH_PROC_INFO_HPP
-
-

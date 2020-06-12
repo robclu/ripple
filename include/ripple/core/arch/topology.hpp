@@ -1,7 +1,8 @@
-//==--- ripple/core/arch/topology.hpp --------------------------- -*- C++ -*- ---==//
-//            
+//==--- ripple/core/arch/topology.hpp --------------------------- -*- C++ -*-
+//---==//
+//
 //                                Ripple
-// 
+//
 //                      Copyright (c) 2019 Rob Clucas.
 //
 //  This file is distributed under the MIT License. See LICENSE for details.
@@ -35,6 +36,11 @@ struct Topology {
     return gpus.size();
   }
 
+  /// Returns the number of cpu cores for the system.
+  auto num_cores() -> size_t {
+    return cpu_info.available_cores();
+  }
+
   /// Returns the total number of bytes of memory available from all gpus.
   auto combined_gpu_memory() const -> uint64_t {
     uint64_t total_mem = 0;
@@ -42,16 +48,22 @@ struct Topology {
       total_mem += gpu.mem_size;
     }
     return total_mem;
-  } 
+  }
 
   /// Returns the total number of gb of available memory from all gpus.
   auto combined_gpu_memory_gb() const -> float {
     return static_cast<float>(combined_gpu_memory()) / float{1073741824};
   }
 
-  std::vector<GpuInfo> gpus;      //!< Gpus for the system.
-  CpuInfo              cpu_info;  //!< Cpu info for the system.
+  std::vector<GpuInfo> gpus;     //!< Gpus for the system.
+  CpuInfo              cpu_info; //!< Cpu info for the system.
 };
+
+/// Returns a reference to the topology.
+static auto topology() -> Topology& {
+  static Topology topo;
+  return topo;
+}
 
 } // namespace ripple
 
