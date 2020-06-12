@@ -30,9 +30,11 @@ namespace detail {
 ///
 /// \tparam Amount  The amount of unrolling to do.
 template <std::size_t Amount>
-struct Unroll : Unroll<Amount - 1> {
+struct Unroll : Unroll<(Amount <= 1 ? 0 : Amount - 1)> {
   /// Defines the value for the previous level.
-  static constexpr std::size_t previous_level_v = Amount - 1;
+  static constexpr std::size_t previous_level_v = 
+    (Amount <= 1 ? 0 : Amount - 1);
+
   /// Defines the type of the case class which invokes at the previous level.
   using previous_level_t = Unroll<previous_level_v>;
 

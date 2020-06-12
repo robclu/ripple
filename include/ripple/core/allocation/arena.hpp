@@ -135,7 +135,7 @@ struct HeapArena {
 //==--- [aliases] ----------------------------------------------------------==//
 
 /// Defines the default size for a stack arena.
-static constexpr size_t default_stack_arena_size = 65536;
+static constexpr size_t default_stack_arena_size = 1024;
 
 /// Defines the type for a default stack arena.
 using DefaultStackArena = StackArena<default_stack_arena_size>;
