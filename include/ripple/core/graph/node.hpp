@@ -18,8 +18,16 @@
 
 #include <ripple/core/container/tuple.hpp>
 #include <ripple/core/functional/invocable.hpp>
+#include <atomic>
+#include <cassert>
+#include <vector>
 
 namespace ripple {
+
+//==--- [forward declarations] ---------------------------------------------==//
+
+/// Forward declaration of the graph class.
+class Graph;
 
 //==--- [node executor] ----------------------------------------------------==//
 
@@ -152,11 +160,10 @@ struct NodeExecutorImpl final : public NodeExecutor {
   }
 };
 
-//==--- [node] -------------------------------------------------------------==//
+//==--- [node impl] --------------------------------------------------------==//
 
-/// Default number of successors for a node.
-static constexpr size_t default_successors = 4;
-
+/// Implementation type of a node in a graph.
+///
 /// A Node is an operation in a graph, which performs some work.
 ///
 /// It should be given an alignment which is a multiple of the cache line size
@@ -200,16 +207,21 @@ static constexpr size_t default_successors = 4;
 ///
 /// \tparam Alignment The aligment for the node.
 /// \tparam Successor The number of successors.
-template <size_t Alignment, size_t Successors = default_successors>
-struct alignas(Alignment) Node {
- public:
+template <size_t Alignment>
+class alignas(Alignment) Node {
+  /// Allow the graph class access to the node for building the graph.
+  friend Graph;
+
   // clang-format off
+  /// We use a vector for the successors, because it's only 24 bytes, and
+  /// doesn't limit the number of successors of a node. It only really matters
+  /// that when all the successors are required, that the pointers are all
+  /// contiguous so that they can be iterated over quickly.
+  using successors_t = std::vector<Node*>;
   /// Defines the type of the unfinished counter.
   using counter_t    = std::atomic<uint16_t>;
-  /// Defines the type of the successor array.
-  using successors_t = std::array<Node*, Successors>;
 
- private:
+  // clang-format off
   /// Memory required for the parent and the successors.
   static constexpr size_t node_mem_size = sizeof(Node*) + sizeof(successors_t);
   /// Memory required for all node data.
@@ -231,19 +243,11 @@ struct alignas(Alignment) Node {
 
   //==--- [constants] ------------------------------------------------------==//
 
- public:
   /// Defines the size of the buffer for the storage.
   static constexpr size_t size =
     spare_mem + (spare_mem >= min_spare_mem ? size_t{0} : Alignment);
 
-  //==--- [members] --------------------------------------------------------==//
-
-  NodeExecutor* executor      = nullptr; //!< The executor to run the task.
-  Node*         parent        = nullptr; //!< Id of the task's parent.
-  successors_t  successors    = {};      //!< Array of successors.
-  counter_t     dependants    = 0;       //!< Counter for dependant
-  char          storage[size] = {};      //!< Additional storage.
-
+ public:
   //==--- Con/destruction --------------------------------------------------==//
 
   // clang-format off
@@ -256,30 +260,34 @@ struct alignas(Alignment) Node {
   /// Copy constructor which clones the executor and copies the rest of the node
   /// state.
   /// This will check against the executor being a nullptr in debug mode.
+  ///
+  /// \note This could be expensive if the node has a lot of successors.
+  ///
   /// \param other The other task to copy from.
   Node(const Node& other) noexcept {
     debug_assert_node_valid(other);
-    executor = other.executor->clone(&storage);
-    parent   = other.parent;
-    dependants.store(
-      other.dependants.load(std::memory_order_relaxed),
+    _executor = other._executor->clone(&_storage);
+    _parent   = other._parent;
+    _dependents.store(
+      other._dependents.load(std::memory_order_relaxed),
       std::memory_order_relaxed);
 
-    for (int i = 0; i < other.successors.size(); ++i) {
-      successors[i] = other.successors[i];
+    for (size_t i = 0; i < other._successors.size(); ++i) {
+      _successors[i] = other._successors[i];
     }
   }
 
   /// Move constructor which just calls the copy constructor, and invalidates
   /// the \p other node.
   /// \param other The other task to move from.
-  Node(Node&& other) noexcept : Node(other) {
-    other.executor = nullptr;
-    other.parent   = nullptr;
-    other.dependants.store(0, std::memory_order_relaxed);
-    for (auto& node : other.successors) {
-      node = nullptr;
-    }
+  Node(Node&& other) noexcept
+  : _executor(other._executor),
+    _parent(other._parent),
+    _successors(std::move(other._successors)),
+    _dependents(other._dependents.load(std::memory_order_relaxed)) {
+    other._executor = nullptr;
+    other._parent   = nullptr;
+    other._dependents.store(0, std::memory_order_relaxed);
   }
 
   /// Constructs the executor by storing the \p callable and the callable's
@@ -312,14 +320,14 @@ struct alignas(Alignment) Node {
     }
 
     debug_assert_valid_node(other);
-    executor = other.executor->clone(&storage);
-    parent   = other.parent;
-    dependants.store(
-      other.dependants.load(std::memory_order_relaxed),
+    _executor = other._executor->clone(&_storage);
+    _parent   = other._parent;
+    _dependents.store(
+      other._dependents.load(std::memory_order_relaxed),
       std::memory_order_relaxed);
 
-    for (int i = 0; i < other.successors.size(); ++i) {
-      successors[i] = other.successors[i];
+    for (int i = 0; i < other._successors.size(); ++i) {
+      _successors[i] = other._successors[i];
     }
     return *this;
   }
@@ -334,14 +342,16 @@ struct alignas(Alignment) Node {
     }
 
     debug_assert_node_valid(other);
-    *this          = other;
-    other.executor = nullptr;
-    other.parent   = nullptr;
-    other.dependants.store(0, std::memory_order_relaxed);
+    _executor   = other._executor;
+    _parent     = other._parent;
+    _successors = std::move(other._successors);
+    _dependents.store(
+      other._dependents.load(std::memory_order_relaxed),
+      std::memory_order_relaxed);
 
-    for (auto& node : other.successors) {
-      node = nullptr;
-    }
+    other._executor = nullptr;
+    other._parent   = nullptr;
+    other._dependents.store(0, std::memory_order_relaxed);
     return *this;
   }
 
@@ -359,16 +369,53 @@ struct alignas(Alignment) Node {
       size >= sizeof(executor_t),
       "Node storage is too small to allocate callable and it's args!");
 
-    new (&storage)
+    new (&_storage)
       executor_t(std::forward<F>(callable), std::forward<Args>(args)...);
-    executor = reinterpret_cast<executor_t*>(&storage);
+    _executor = reinterpret_cast<executor_t*>(&_storage);
+  }
+
+  /// Tries to run the node, returning true if the node's dependencies are met
+  /// and the node runs, otherwise it returns false.
+  auto try_run() noexcept -> bool {
+    if (_dependents.load(std::memory_order_relaxed) != size_t{0}) {
+      return false;
+    }
+
+    _executor->execute();
+
+    for (auto* successor : _successors) {
+      successor->_dependents.fetch_sub(1, std::memory_order_relaxed);
+    }
+    return true;
+  }
+
+  /// Add the \p node as a successor for this node.
+  auto add_successor(Node& node) noexcept -> void {
+    _successors.push_back(&node);
+  }
+
+  /// Increments the number of dependents for the node.
+  auto increment_num_dependents() noexcept -> void {
+    _dependents.fetch_add(1, std::memory_order_relaxed);
   }
 
  private:
+  //==--- [members] --------------------------------------------------------==//
+
+  NodeExecutor* _executor      = nullptr; //!< The executor to run the task.
+  Node*         _parent        = nullptr; //!< Id of the task's parent.
+  successors_t  _successors    = {};      //!< Array of successors.
+  counter_t     _dependents    = 0;       //!< Counter for dependant
+  char          _storage[size] = {};      //!< Additional storage.
+
+  //==--- [methods] --------------------------------------------------------==//
+
   /// Checks if the \p node is valid. In release mode this is disabled. In
   /// debug mode this will terminate if the executor in \p node is a nullptr.
   /// \param node  The node to check the validity of.
-  auto debug_assert_node_valid(const Node& node) const noexcept -> void{};
+  auto debug_assert_node_valid(const Node& node) const noexcept -> void {
+    assert(node.executor != nullptr && "Node executor can't be a nullptr!");
+  }
 };
 
 } // namespace ripple
