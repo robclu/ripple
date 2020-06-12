@@ -1,7 +1,8 @@
-//==--- ripple/core/tests/container/container_tests.hpp --------- -*- C++ -*- ---==//
-//            
+//==--- ripple/core/tests/container/container_tests.hpp --------- -*- C++ -*-
+//---==//
+//
 //                                Ripple
-// 
+//
 //                      Copyright (c) 2019 Rob Clucas.
 //
 //  This file is distributed under the MIT License. See LICENSE for details.
@@ -19,6 +20,7 @@
 #include "block_memory_properties_tests.hpp"
 #include "block_tests.hpp"
 #include "grid_tests.hpp"
+#include "static_stealable_dequeue_tests.hpp"
 #include "tuple_tests.hpp"
 #include "vec_tests.hpp"
 
