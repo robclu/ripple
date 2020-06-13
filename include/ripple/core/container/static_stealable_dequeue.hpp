@@ -99,10 +99,35 @@ class alignas(avoid_false_sharing_size) StaticStealableDequeue {
   /// Defines an optional typeto use when returning value types.
   using optional_t  = std::optional<object_t>;
   /// Defines the type of container used to store the queue's objects.
-  using container_t = std::array<object_t, MaxObjects>;
+  using container_t = std::vector<object_t>;
   // clang-format on
 
+ private:
+  /// Defines a valid type if the object is a pointer.
+  template <typename... Args>
+  using pointer_enable_t =
+    std::enable_if_t<(std::is_pointer_v<Args> * ... * true), int>;
+
+  /// Defines a valid type if the object is not a pointer.
+  template <typename... Args>
+  using non_pointer_enable_t =
+    std::enable_if_t<(!std::is_pointer_v<Args> * ... * true), int>;
+
+ public:
   //==--- [construction] ---------------------------------------------------==//
+
+  /// Default constructor for the queue.
+  StaticStealableDequeue() = default;
+
+  /// Move constructor to move the \p other queue into this one.
+  /// \param other The other queue to move into this one.
+  StaticStealableDequeue(StaticStealableDequeue&& other) noexcept
+  : _objects{std::move(other._objects)},
+    _top{other._top.load()},
+    _bottom{other._bottom.load()} {}
+
+  /// Copy constructor -- deleted.
+  StaticStealableDequeue(const StaticStealableDequeue&) = delete;
 
   //==--- [methods] --------------------------------------------------------==//
 
@@ -112,10 +137,30 @@ class alignas(avoid_false_sharing_size) StaticStealableDequeue {
   /// full.
   /// \param  args  The arguments used to construct the object.
   /// \tparam Args  The type of the arguments for object construction.
-  template <typename... Args>
+  template <typename T, pointer_enable_t<T> = 0>
+  auto push(T ptr) noexcept -> void {
+    const auto bottom = _bottom.load(std::memory_order_relaxed);
+    const auto index  = wrapped_index(bottom);
+
+    _objects[index] = ptr;
+
+    // Ensure that the compiler does not reorder this instruction and the
+    // setting of the object above, otherwise the object seems added (since the
+    // bottom index has moved) but isn't (since it would not have been added).
+    _bottom.store(bottom + 1, std::memory_order_release);
+  }
+
+  /// Pushes an object onto the front of the queue, when the object is an
+  /// rvalue reference type. This does not check if the queue is full, and hence
+  /// it __will overwrite__ the least recently added element if the queue is
+  /// full.
+  /// \param  args  The arguments used to construct the object.
+  /// \tparam Args  The type of the arguments for object construction.
+  template <typename... Args, non_pointer_enable_t<Args...> = 0>
   auto push(Args&&... args) noexcept -> void {
     const auto bottom = _bottom.load(std::memory_order_relaxed);
     const auto index  = wrapped_index(bottom);
+
     new (&_objects[index]) object_t(std::forward<Args>(args)...);
 
     // Ensure that the compiler does not reorder this instruction and the
@@ -264,9 +309,9 @@ class alignas(avoid_false_sharing_size) StaticStealableDequeue {
   //       so if bottom = 0 to start, then (0 - 1) = size_t_max, and the pop
   //       function tries to access an out of range element.
 
-  container_t _objects;    //!< Container of tasks.
-  atomic_t    _top    = 1; //!< The index of the top element.
-  atomic_t    _bottom = 1; //!< The index of the bottom element.
+  container_t _objects{MaxObjects}; //!< Container of tasks.
+  atomic_t    _top    = 1;          //!< The index of the top element.
+  atomic_t    _bottom = 1;          //!< The index of the bottom element.
 
   //==--- [methods] --------------------------------------------------------==//
 
@@ -274,7 +319,7 @@ class alignas(avoid_false_sharing_size) StaticStealableDequeue {
   auto wrapped_index(size_type index) const noexcept -> size_type {
     return index % MaxObjects;
   }
-};
+}; // namespace ripple
 
 } // namespace ripple
 
