@@ -81,7 +81,8 @@ class Graph {
   /// graph into this one.
   /// \param other The other graph to move into this one.
   Graph(Graph&& other) noexcept {
-    _nodes = std::move(other._nodes);
+    _nodes    = std::move(other._nodes);
+    _join_ids = std::move(other._join_ids);
   }
 
   /// Copy constructor -- deleted because graphs can't be copied. Copying is
@@ -96,7 +97,8 @@ class Graph {
   /// \param other The other graph to move into this one.
   auto operator=(Graph&& other) noexcept -> Graph& {
     if (this != &other) {
-      _nodes = std::move(other._nodes);
+      _nodes    = std::move(other._nodes);
+      _join_ids = std::move(other._join_ids);
     }
     return *this;
   }
