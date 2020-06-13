@@ -1,7 +1,8 @@
-//==--- ripple/core/core/utility/type_traits.hpp ---------------- -*- C++ -*- ---==//
-//            
+//==--- ripple/core/core/utility/type_traits.hpp ---------------- -*- C++ -*-
+//---==//
+//
 //                                Ripple
-// 
+//
 //                      Copyright (c) 2019 Rob Clucas.
 //
 //  This file is distributed under the MIT License. See LICENSE for details.
@@ -28,28 +29,26 @@ namespace ripple {
 /// Returns true if all the types are arithmetic.
 /// \tparam Ts The types to check.
 template <typename... Ts>
-static constexpr auto all_arithmetic_v = 
+static constexpr auto all_arithmetic_v =
   std::conjunction_v<std::is_arithmetic<std::decay_t<Ts>>...>;
 
 /// Returns true if any of the types are arithmetic.
 /// \tparam Ts The types to check.
 template <typename... Ts>
-static constexpr auto any_arithmetic_v = 
+static constexpr auto any_arithmetic_v =
   std::disjunction_v<std::is_arithmetic<std::decay_t<Ts>>...>;
 
 /// Returns true if all the types are the same.
 /// \tparam T  The first type in the pack.
 /// \tparam Ts The rest of the types to check.
 template <typename T, typename... Ts>
-static constexpr auto all_same_v = 
-  std::conjunction_v<std::is_same<T, Ts>...>;
+static constexpr auto all_same_v = std::conjunction_v<std::is_same<T, Ts>...>;
 
 /// Returns true if any of the types are the same as type T.
 /// \tparam T  The first type in the pack to match against.
 /// \tparam Ts The rest of the types to check.
 template <typename T, typename... Ts>
-static constexpr auto any_same_v = 
-  std::disjunction_v<std::is_same<T, Ts>...>;
+static constexpr auto any_same_v = std::disjunction_v<std::is_same<T, Ts>...>;
 
 /// Returns true if the types T and U are the same, ignoring template parameters
 /// if the types have template parameters. For example, for a type
@@ -57,7 +56,7 @@ static constexpr auto any_same_v =
 /// ~~~
 /// template <typename T> struct X {};
 /// ~~~
-/// 
+///
 /// with `T = X<int>, U = X<float>` this will return true.
 ///
 /// This will work correctly for non-type parameters as well, and the number of
@@ -83,15 +82,15 @@ template <typename T, typename... Ts>
 static constexpr auto index_of_v = detail::IndexOf<0, T, Ts...>::value;
 
 /// Returns the index of the type T in the pack Ts. If T is not in the pack,
-/// this will return sizeof...(Ts) + 1. 
+/// this will return sizeof...(Ts) + 1.
 ///
 /// This ignores the template types of both T and any of the Ts, and will match
 /// on the outer type. For example, for some type
-/// 
+///
 /// ~~~
 /// template <typename T> struct X {};
 /// ~~~
-/// 
+///
 /// with `T = X<int>, Ts = <int, float, X<float>>`, this will return 2.
 ///
 /// This will work correctly for non-type parameters, and the number of
@@ -110,14 +109,19 @@ static constexpr auto index_of_ignore_templates_v =
 
 //==--- [traits] -----------------------------------------------------------==//
 
+/// Defines a valid type if all the Ts are the same as type T.
+/// \tparam T The type to base the enable on.
+/// \tparam Ts The types to compare.
+template <typename T, typename... Ts>
+using all_same_enable_t = std::enable_if_t<all_same_v<T, Ts...>, int>;
+
 /// Defines a valid type when the number of elements in the variadic pack
 /// matches the size defined by Size, and all the types are arithmetic.
 /// \tparam Size   The size that the pack must be.
 /// \tparam Values The values in the pack.
 template <std::size_t Size, typename... Values>
-using all_arithmetic_size_enable_t = std::enable_if_t<
-  Size == sizeof...(Values) && all_arithmetic_v<Values...>, int
->;
+using all_arithmetic_size_enable_t = std::
+  enable_if_t<Size == sizeof...(Values) && all_arithmetic_v<Values...>, int>;
 
 /// Defines a valid type when the type T is not the same as the type U, when
 /// they are both decayed.
@@ -125,31 +129,28 @@ using all_arithmetic_size_enable_t = std::enable_if_t<
 /// \tparam U The second type for the comparison.
 template <typename T, typename U>
 using diff_enable_t =
- std::enable_if_t<!std::is_same_v<std::decay_t<T>, std::decay_t<U>>, int>;
+  std::enable_if_t<!std::is_same_v<std::decay_t<T>, std::decay_t<U>>, int>;
 
 /// Defines a valid type when the number of elements in the variadic pack
 /// matches the size defined by Size.
 /// \tparam Size   The size that the pack must be.
 /// \tparam Values The values in the pack.
 template <std::size_t Size, typename... Values>
-using variadic_size_enable_t =
-  std::enable_if_t<Size == sizeof...(Values), int>;
+using variadic_size_enable_t = std::enable_if_t<Size == sizeof...(Values), int>;
 
 /// Defines a valid type when the number of elements in the variadic pack
 /// is greater than or equal to  the size defined by Size.
 /// \tparam Size   The size that the pack must be.
 /// \tparam Values The values in the pack.
 template <std::size_t Size, typename... Values>
-using variadic_ge_enable_t =
-  std::enable_if_t<(sizeof...(Values) >= Size), int>;
+using variadic_ge_enable_t = std::enable_if_t<(sizeof...(Values) >= Size), int>;
 
 /// Defines a valid type when the number of elements in the variadic pack
 /// is less than the size defined by Size.
 /// \tparam Size   The size that the pack must be.
 /// \tparam Values The values in the pack.
 template <std::size_t Size, typename... Values>
-using variadic_lt_enable_t =
-  std::enable_if_t<(sizeof...(Values) < Size), int>;
+using variadic_lt_enable_t = std::enable_if_t<(sizeof...(Values) < Size), int>;
 
 /// Defines a valid type when the type T is a pointer type.
 /// \tparam T The type to base the enable on.
@@ -159,14 +160,14 @@ using pointer_enable_t = std::enable_if_t<std::is_pointer_v<T>, int>;
 /// Defines a valid type if Size is less than `ripple_max_unroll_depth`.
 /// \tparam Size The size of the unrolling.
 template <std::size_t Size>
-using unroll_enabled_t = 
+using unroll_enabled_t =
   std::enable_if_t<(Size < ripple_max_unroll_depth), int>;
 
-/// Defines a valid type if Size is more than or equal to 
+/// Defines a valid type if Size is more than or equal to
 /// `ripple_max_unroll_depth`.
 /// \tparam Size The size of the unrolling.
 template <std::size_t Size>
-using unroll_disabled_t = 
+using unroll_disabled_t =
   std::enable_if_t<(Size >= ripple_max_unroll_depth), int>;
 
 /// Defines the type of the Nth element in the type list.

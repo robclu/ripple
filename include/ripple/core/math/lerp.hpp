@@ -142,15 +142,16 @@ ripple_host_device auto lerp(Iterator&& it, const Weights& weights)
   static_assert(
     elems == 2, "Iterator dimensionality must match size of weight array."
   );  
-  using value_t = std::decay_t<decltype(weights[0])>;
+  //using value_t = std::decay_t<decltype(weights[0])>;
+  using value_t = double;
 
   // Compute offset params:
-  const auto sign_x   = math::sign(weights[dim_x]);
-  const auto absx     = std::abs(weights[dim_x]);
+  const auto sign_x   = math::sign(value_t{weights[dim_x]});
+  const auto absx     = std::abs(value_t{weights[dim_x]});
   const auto fl_absx  = std::floor(absx);
   const auto offx     = sign_x * fl_absx;
-  const auto sign_y   = math::sign(weights[dim_y]);
-  const auto absy     = std::abs(weights[dim_y]);
+  const auto sign_y   = math::sign(value_t{weights[dim_y]});
+  const auto absy     = std::abs(value_t{weights[dim_y]});
   const auto fl_absy  = std::floor(absy);
   const auto offy     = sign_y * fl_absy;
 

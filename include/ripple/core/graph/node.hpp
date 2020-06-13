@@ -390,6 +390,7 @@ class alignas(Alignment) Node {
   }
 
   /// Add the \p node as a successor for this node.
+  /// \param nod The node to add as a successor to this node.
   auto add_successor(Node& node) noexcept -> void {
     _successors.push_back(&node);
   }
@@ -414,7 +415,7 @@ class alignas(Alignment) Node {
   /// debug mode this will terminate if the executor in \p node is a nullptr.
   /// \param node  The node to check the validity of.
   auto debug_assert_node_valid(const Node& node) const noexcept -> void {
-    assert(node.executor != nullptr && "Node executor can't be a nullptr!");
+    assert(node._executor != nullptr && "Node executor can't be a nullptr!");
   }
 };
 

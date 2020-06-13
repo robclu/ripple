@@ -1,4 +1,4 @@
-//==--- ripple/core/utility/cuda.hpp ---------------------------- -*- C++ -*- ---==//
+//==--- ripple/core/utility/cuda.hpp ----------------------- -*- C++ -*- ---==//
 //            
 //                                Ripple
 // 

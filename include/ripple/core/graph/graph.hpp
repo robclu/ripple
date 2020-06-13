@@ -28,12 +28,15 @@
 namespace ripple {
 
 /// Forward declaration of a graph builder.
-struct GraphBuilder;
+class GraphExecutor;
 
 /// The Graph class is simply a collection of nodes, allocated by the allocator.
 /// The graph can be executed by an Executor which will schedule the nodes to be
 /// run.
 class Graph {
+  /// Allow the executor access to the graph to schedule correctly.
+  friend class GraphExecutor;
+
   //==--- [constants & aliases] --------------------------------------------==//
 
   // clang-format off
@@ -170,6 +173,8 @@ class Graph {
     return allocation_pool_nodes();
   }
 
+  //==--- [creation interface] ---------------------------------------------==//
+
   /// Emplaces a node into the graph, returning a reference to the node.
   /// \param  callable The callable which defines the node's operation.
   /// \param  args     Arguments for the callable.
@@ -212,6 +217,21 @@ class Graph {
     unrolled_for<node_count>([&](auto i) {
       setup_node(*_nodes.emplace_back(&std::get<i>(node_tuple)));
     });
+    return *this;
+  }
+
+  /// Emplaces a node into the graph which runs after all currently emplaced
+  /// nodes.
+  /// \param  callable The callable which defines the node's operation.
+  /// \param  args     Arguments for the callable.
+  /// \tparam F        The type of the callable.
+  /// \tparam Args     The types of the arguments.
+  template <typename F, typename... Args>
+  auto then(F&& callable, Args&&... args) -> Graph& {
+    _join_ids.emplace_back(_nodes.size());
+    // Here the allocator doesn't fail, so we don't need make_unique.
+    setup_node(*_nodes.emplace_back(node_allocator().create<node_t>(
+      std::forward<F>(callable), std::forward<Args>(args)...)));
     return *this;
   }
 

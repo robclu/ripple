@@ -38,7 +38,7 @@ offset_ptr(const void* ptr, uint32_t amount) noexcept -> void* {
 /// \param ptr       The pointer to align.
 /// \param alignment The alignment to ensure.
 static inline auto
-align(const void* ptr, std::size_t alignment) noexcept -> void* {
+align_ptr(const void* ptr, std::size_t alignment) noexcept -> void* {
   assert(
     !(alignment & (alignment - 1)) &&
     "Alignment must be a power of two for linear allocation!");
