@@ -257,13 +257,13 @@ class GraphExecutor {
         [&](ThreadState& state) {
           using namespace std::chrono_literals;
           thread_id = state.id;
-          set_affinity(thread_id);
+          set_affinity(state.id);
 
           while (!state.must_shutdown()) {
-            if (state.paused()) {
-              std::this_thread::sleep_for(50us);
-              continue;
-            }
+            // if (state.paused()) {
+            //  std::this_thread::sleep_for(5us);
+            //  continue;
+            //}
 
             execute_node_work(state);
           }

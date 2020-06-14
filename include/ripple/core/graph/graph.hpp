@@ -190,20 +190,16 @@ class Graph {
     return *this;
   }
 
-  /// Emplaces the \p nodes into the graph, returning a reference to each of the
-  /// emplaced nodes. This is only enabled if the \p nodes are all Node types,
-  /// and should be made using `Graph::make_node()`, for example:
+  /// Emplaces the \p nodes into the graph, which have no ordering dependency
+  /// between them (they can run in parallel).
   ///
   /// ~~~{.cpp}
   /// Graph g;
-  /// int y = 0;
-  /// auto [a, b, c] = graph.emplace_nodes(
+  /// g.emplace_nodes(
   ///   Graph::make_node([] (auto x) { x++; }, y),
   ///   Graph::make_node([] (auto x) { x++; }, y),
   ///   Graph::make_node([] (auto x) { x *= 2; }, y));
   /// ~~~
-  ///
-  /// The references to the nodes are returned as a tuple.
   ///
   /// \param  nodes The nodes to emplace.
   /// \tparam Nodes The types of the nodes.
@@ -223,18 +219,50 @@ class Graph {
   }
 
   /// Emplaces a node into the graph which runs after all currently emplaced
-  /// nodes.
+  /// nodes, i.e the operations run synchronously.
+  ///
+  /// ~~~{.cpp}
+  /// Graph g;
+  /// g.emplace([] { printf("A\n"); })
+  ///  .then([] { printf("B\n"); });
+  /// ~~~
+  ///
+  /// This will run the two operations synchronously.
+  ///
   /// \param  callable The callable which defines the node's operation.
   /// \param  args     Arguments for the callable.
   /// \tparam F        The type of the callable.
   /// \tparam Args     The types of the arguments.
-  template <typename F, typename... Args>
+  template <typename F, typename... Args, non_node_enable_t<F> = 0>
   auto then(F&& callable, Args&&... args) -> Graph& {
     _join_ids.emplace_back(_nodes.size());
-    // Here the allocator doesn't fail, so we don't need make_unique.
-    setup_node(*_nodes.emplace_back(node_allocator().create<node_t>(
-      std::forward<F>(callable), std::forward<Args>(args)...)));
-    return *this;
+    return emplace(std::forward<F>(callable), std::forward<Args>(args)...);
+  }
+
+  /// Emplaces nodes into the graph which run asynchronously with each other,
+  /// but sequentially will all previous nodes.
+  /// nodes.
+  ///
+  /// ~~~{.cpp}
+  /// Graph g;
+  /// g.emplace([] { printf("A\n"); })
+  ///  .then(
+  ///    Graph::make_node([] { printf("B\n"); }),
+  ///    Graph::make_node([] { printf("C\n"); }),
+  ///    Graph::make_node([] { printf("D\n"); }));
+  /// ~~~
+  ///
+  /// This will run A, and then B, C, and D will run __after__ A, but
+  /// may run in paralell with each other.
+  ///
+  /// \param  nodes The nodes to emplace.
+  /// \tparam Nodes The types of the nodes.
+  template <
+    typename... Nodes,
+    all_same_enable_t<node_t, std::decay_t<Nodes>...> = 0>
+  auto then(Nodes&&... nodes) -> Graph& {
+    _join_ids.emplace_back(_nodes.size());
+    return emplace(std::forward<Nodes>(nodes)...);
   }
 
  private:

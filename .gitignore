@@ -1,6 +1,7 @@
 build/
 googletest/
 lib/
+.vscode/
 *.swp
 *.swo
 docs/_build

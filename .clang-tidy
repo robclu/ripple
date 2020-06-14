@@ -1,0 +1,7 @@
+---
+Checks:          '-*,-clang-diagnostic-*,clang-analyzer-*,modernize-*,performance-*,cppcoreguidelines-*,bugprone-*,android-*, objc-*'
+WarningsAsErrors: ''
+HeaderFilterRegex: ''
+AnalyzeTemporaryDtors: false
+FormatStyle:     none
+...
