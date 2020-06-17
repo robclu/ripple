@@ -213,6 +213,18 @@ dot(const Array<ImplA>& a, const Array<ImplB>& b) ->
   return r;
 }
 
+//==--- [div_then_ceil] ----------------------------------------------------==//
+
+/// Computes the division $num / denom$, as double, then computes the ceil,
+/// returning the result as the original types.
+/// \param  num   The numerator for the division.
+/// \param  denon The denominator for the division.
+/// \tparam T     The types for the operations.
+template <typename T>
+ripple_host_device auto div_then_ceil(T num, T denom) -> T {
+  return static_cast<T>(std::ceil(static_cast<double>(num) / denom));
+}
+
 } // namespace ripple::math
 
 #endif // RIPPLE_MATH_MATH_HPP
