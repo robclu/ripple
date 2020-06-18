@@ -32,6 +32,19 @@ ripple_host_device constexpr auto hash(char const* input) -> unsigned int {
                 : 5381;
 }
 
+/// Constexpr hash of two 32 bit unsigned ints. This uses the cantour pairing
+/// formuand is composible, i.e it can be used twice for 3 ints, etc.
+/// \note : It is possible that this overflows for large values of \p a and \p
+/// b.
+/// \param a The first int for the hash.
+/// \param b The second input for the hash.
+ripple_host_device constexpr auto
+hash_combine(uint32_t a, uint32_t b) noexcept -> uint64_t {
+  constexpr uint64_t div_factor = 2;
+  uint64_t           x = a, y = b;
+  return (x + y) * (x + y + uint64_t{1}) / div_factor + y;
+}
+
 /// Literal operator to perform a hash on string literals.
 /// \tparam input The input string to hash.
 ripple_host_device constexpr auto
