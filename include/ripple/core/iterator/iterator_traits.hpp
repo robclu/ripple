@@ -1,7 +1,8 @@
-//==--- ripple/core/iterator/iterator_traits.hpp ---------------- -*- C++ -*- ---==//
-//            
+//==--- ripple/core/iterator/iterator_traits.hpp ---------------- -*- C++ -*-
+//---==//
+//
 //                                Ripple
-// 
+//
 //                      Copyright (c) 2019 Rob Clucas.
 //
 //  This file is distributed under the MIT License. See LICENSE for details.
@@ -33,24 +34,40 @@ namespace ripple {
 ///
 /// \tparam T     The data type which the iterator will access.
 /// \tparam Space The type which defines the iteration space.
-template <typename T, typename Space> class BlockIterator;
+template <typename T, typename Space>
+class BlockIterator;
+
+/// The IndexedIterator class is an extended BlockIterator, with additional
+/// information which provides it with context for where the block is relative
+/// to the global space to which it belongs. It also allows the thread indidces
+/// to be determined.
+///
+/// The type T for the iterator can be either a normal type, or type which
+/// implements the StridableLayout interface. Regardless, the use is the same,
+/// and the iterator operats as if it was a pointer to T.
+///
+/// \tparam T      The data type which the iterator will access.
+/// \tparam Space  The type which defines the iteration space.
+template <typename T, typename Space>
+class IndexedIterator;
 
 //==--- [traits declations] ------------------------------------------------==//
 
 /// Defines a class for traits for iterators.
 /// \tparam Iterator The iterator to get traits for.
-template <typename Iterator> struct IteratorTraits {
+template <typename Iterator>
+struct IteratorTraits {
   //==--- [aliases] --------------------------------------------------------==//
-  
+
   /// Defines the value type of the iterator.
   using value_t = void*;
 
   //==--- [traits] ---------------------------------------------------------==//
-  
+
   /// Defines that the iterator has a single dimension.
   static constexpr size_t dimensions = 1;
   /// Returns that the traits are not for a valid iterator.
-  static constexpr bool  is_iterator = false;
+  static constexpr bool is_iterator = false;
 };
 
 /// Specialization of the iterator traits for a block iterator.
@@ -59,10 +76,11 @@ template <typename Iterator> struct IteratorTraits {
 template <typename T, typename Space>
 struct IteratorTraits<BlockIterator<T, Space>> {
  private:
-   /// Defines the layout traits for the iterator.
+  /// Defines the layout traits for the iterator.
   using layout_traits_t = layout_traits_t<T>;
 
  public:
+  // clang-format off
   /// Defines the value type of the iterator.
   using value_t = typename layout_traits_t::value_t;
   /// Defines the copy type for the iterator, which is the type which ensures
@@ -72,11 +90,44 @@ struct IteratorTraits<BlockIterator<T, Space>> {
   using ref_t   = typename layout_traits_t::iter_ref_t;
 
   //==--- [traits] ---------------------------------------------------------==//
-  
+
   /// Defines the number of dimensions for the iterator.
-  static constexpr size_t dimensions  = space_traits_t<Space>::dimensions;
+  static constexpr size_t dimensions = space_traits_t<Space>::dimensions;
   /// Returns that the traits are for a valid iterator.
-  static constexpr bool   is_iterator = true;
+  static constexpr bool is_iterator  = true;
+  /// Returns that the iterator does not have index information.
+  static constexpr bool has_indices  = false;
+  // clang-format on
+};
+
+/// Specialization of the iterator traits for an indexed iterator.
+/// \tparam T     The type of the block iterator.
+/// \tparam Space The space for the iterator.
+template <typename T, typename Space>
+struct IteratorTraits<IndexedIterator<T, Space>> {
+ private:
+  /// Defines the traits for the block iterator.
+  using block_iter_traits_t = IteratorTraits<BlockIterator<T, Space>>;
+
+ public:
+  // clang-format off
+  /// Defines the value type of the iterator.
+  using value_t = typename block_iter_traits_t::value_t;
+  /// Defines the copy type for the iterator, which is the type which ensures
+  /// that the iterator data is copied.
+  using copy_t  = typename block_iter_traits_t::copy_t;
+  /// Defines the reference type for the iterator.
+  using ref_t   = typename block_iter_traits_t::ref_t;
+
+  //==--- [traits] ---------------------------------------------------------==//
+
+  /// Defines the number of dimensions for the iterator.
+  static constexpr size_t dimensions = block_iter_traits_t::dimensions;
+  /// Returns that the traits are for a valid iterator.
+  static constexpr bool is_iterator  = true;
+  /// Returns that the iterator does have index information.
+  static constexpr bool has_indices  = true;
+  // clang-format on
 };
 
 //==--- [aliases] ----------------------------------------------------------==//
@@ -109,25 +160,22 @@ using non_iterator_enable_t = std::enable_if_t<!is_iterator_v<T>, int>;
 /// dimension.
 /// \tparam T The type to base the enable on.
 template <typename T>
-using it_1d_enable_t = std::enable_if_t<
-  is_iterator_v<T> && iterator_traits_t<T>::dimensions == 1, int
->;
+using it_1d_enable_t = std::
+  enable_if_t<is_iterator_v<T> && iterator_traits_t<T>::dimensions == 1, int>;
 
 /// Defines a valid type if the type T is an iterator, and the iterator has two
 /// dimensions.
 /// \tparam T The type to base the enable on.
 template <typename T>
-using it_2d_enable_t = std::enable_if_t<
-  is_iterator_v<T> && iterator_traits_t<T>::dimensions == 2, int
->;
+using it_2d_enable_t = std::
+  enable_if_t<is_iterator_v<T> && iterator_traits_t<T>::dimensions == 2, int>;
 
 /// Defines a valid type if the type T is an iterator, and the iterator has
 /// three dimensions.
 /// \tparam T The type to base the enable on.
 template <typename T>
-using it_3d_enable_t = std::enable_if_t<
-  is_iterator_v<T> && iterator_traits_t<T>::dimensions == 3, int
->;
+using it_3d_enable_t = std::
+  enable_if_t<is_iterator_v<T> && iterator_traits_t<T>::dimensions == 3, int>;
 
 } // namespace ripple
 
