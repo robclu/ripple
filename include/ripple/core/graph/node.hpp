@@ -20,6 +20,7 @@
 #include <ripple/core/functional/invocable.hpp>
 #include <atomic>
 #include <cassert>
+#include <string>
 #include <vector>
 
 namespace ripple {
@@ -212,6 +213,9 @@ class alignas(Alignment) Node {
   /// Allow the graph class access to the node for building the graph.
   friend Graph;
 
+  /// The NodeInfo struct stores information about a node.
+  struct NodeInfo;
+
   // clang-format off
   /// We use a vector for the successors, because it's only 24 bytes, and
   /// doesn't limit the number of successors of a node. It only really matters
@@ -220,10 +224,15 @@ class alignas(Alignment) Node {
   using successors_t = std::vector<Node*>;
   /// Defines the type of the unfinished counter.
   using counter_t    = std::atomic<uint16_t>;
+  /// Defines the type of the node information.
+  using info_t       = NodeInfo;
+  /// Defines the type of the pointer to the node information.
+  using info_ptr_t   = info_t*;
 
   // clang-format off
   /// Memory required for the parent and the successors.
-  static constexpr size_t node_mem_size = sizeof(Node*) + sizeof(successors_t);
+  static constexpr size_t node_mem_size = 
+    sizeof(Node*) + sizeof(info_ptr_t) + sizeof(successors_t);
   /// Memory required for all node data.
   static constexpr size_t data_mem_size =
     sizeof(NodeExecutor*) + sizeof(counter_t) + node_mem_size;
@@ -247,6 +256,52 @@ class alignas(Alignment) Node {
   static constexpr size_t size =
     spare_mem + (spare_mem >= min_spare_mem ? size_t{0} : Alignment);
 
+  //==--- [node info] ------------------------------------------------------==//
+
+  /// NodeInfo implementation.
+  struct NodeInfo {
+    // clang-format off
+    /// Default id of the node.
+    static constexpr uint64_t default_id = std::numeric_limits<uint64_t>::max();
+    /// Default name of the node.
+    static constexpr auto default_name   = "";
+    // clang-format on
+
+    //==--- [construction] -------------------------------------------------==//
+
+    /// Default constructor for node info.
+    NodeInfo() = default;
+
+    /// Constructor for node info which moves \p n into this info's name.
+    /// \param name The name of the node.
+    NodeInfo(std::string name_) : name(std::move(name_)) {}
+
+    /// Constructor to set the node name and id.
+    /// \param name_ The name of the node.
+    /// \param id_   The id of the node.
+    NodeInfo(std::string name_, uint64_t id_)
+    : name(std::move(name_)), id(id_) {}
+
+    //==--- [deleted] ------------------------------------------------------==//
+
+    // clang-format off
+    /// Copy constructor -- deleted.
+    NodeInfo(const NodeInfo&) = delete;
+    /// Move constructor deleted.
+    NodeInfo(NodeInfo&&) = delete;
+
+    /// Move assignment -- deleted.
+    auto operator=(const NodeInfo&) = delete;
+    /// Copy assignment -- deleted;
+    auto operator=(NodeInfo&&) = delete;
+    // clang-format on
+
+    //==--- [members] ------------------------------------------------------==//
+
+    std::string name = default_name; //!< The name of the node.
+    uint64_t    id   = default_id;   //!< Id of the node.
+  };
+
  public:
   //==--- Con/destruction --------------------------------------------------==//
 
@@ -262,6 +317,9 @@ class alignas(Alignment) Node {
   /// This will check against the executor being a nullptr in debug mode.
   ///
   /// \note This could be expensive if the node has a lot of successors.
+  ///
+  /// \note This does not copy the node's information. Information for a node
+  ///       is unique and should be allocated and set after copying a noce.
   ///
   /// \param other The other task to copy from.
   Node(const Node& other) noexcept {
@@ -283,10 +341,12 @@ class alignas(Alignment) Node {
   Node(Node&& other) noexcept
   : _executor(other._executor),
     _parent(other._parent),
+    _info(other._info),
     _successors(std::move(other._successors)),
     _dependents(other._dependents.load(std::memory_order_relaxed)) {
     other._executor = nullptr;
     other._parent   = nullptr;
+    other._info     = nullptr;
     other._dependents.store(0, std::memory_order_relaxed);
   }
 
@@ -313,6 +373,10 @@ class alignas(Alignment) Node {
   /// Copy assignment overload which clones the executor and copies the node
   /// state.
   /// This will check against the \p other node being a nullptr in debug mode.
+  ///
+  /// \note This does not copy the node information, which should be allocated
+  ///       and then set after copying the node.
+  ///
   /// \param other The other node to copy.
   auto operator=(const Node& other) noexcept -> Node& {
     if (this == &other) {
@@ -344,6 +408,7 @@ class alignas(Alignment) Node {
     debug_assert_node_valid(other);
     _executor   = other._executor;
     _parent     = other._parent;
+    _info       = other._info;
     _successors = std::move(other._successors);
     _dependents.store(
       other._dependents.load(std::memory_order_relaxed),
@@ -351,6 +416,7 @@ class alignas(Alignment) Node {
 
     other._executor = nullptr;
     other._parent   = nullptr;
+    other._info     = nullptr;
     other._dependents.store(0, std::memory_order_relaxed);
     return *this;
   }
@@ -403,8 +469,9 @@ class alignas(Alignment) Node {
  private:
   //==--- [members] --------------------------------------------------------==//
 
-  NodeExecutor* _executor      = nullptr; //!< The executor to run the task.
-  Node*         _parent        = nullptr; //!< Id of the task's parent.
+  NodeExecutor* _executor      = nullptr; //!< The executor to run the node.
+  Node*         _parent        = nullptr; //!< Node's parent.
+  info_ptr_t    _info          = nullptr; //!< Node's info.
   successors_t  _successors    = {};      //!< Array of successors.
   counter_t     _dependents    = 0;       //!< Counter for dependant
   char          _storage[size] = {};      //!< Additional storage.
