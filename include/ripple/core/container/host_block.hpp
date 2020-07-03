@@ -1,7 +1,8 @@
-//==--- ripple/core/container/host_block.hpp -------------------- -*- C++ -*- ---==//
-//            
+//==--- ripple/core/container/host_block.hpp -------------------- -*- C++ -*-
+//---==//
+//
 //                                Ripple
-// 
+//
 //                      Copyright (c) 2019 Rob Clucas.
 //
 //  This file is distributed under the MIT License. See LICENSE for details.
@@ -36,28 +37,33 @@ namespace ripple {
 template <typename T, std::size_t Dimensions>
 class HostBlock {
   //==--- [traits] ---------------------------------------------------------==//
+  // clang-format off
   /// Defines the type of this tensor.
-  using self_t          = HostBlock<T, Dimensions>;
+  using self_t        = HostBlock<T, Dimensions>;
   /// Defines the type of the traits for the block.
-  using traits_t        = BlockTraits<self_t>;
+  using traits_t      = BlockTraits<self_t>;
   /// Defines the type of allocator for the tensor.
-  using allocator_t     = typename traits_t::allocator_t;
+  using allocator_t   = typename traits_t::allocator_t;
   /// Defines the the of the dimension information for the tensor.
-  using space_t         = typename traits_t::space_t;
+  using space_t       = typename traits_t::space_t;
   /// Defines the type of the pointer to the data.
-  using ptr_t           = void*;
+  using ptr_t         = void*;
   /// Defines the type for a reference to an element.
-  using value_t         = typename traits_t::value_t;
+  using value_t       = typename traits_t::value_t;
   /// Defines the type of the iterator for the tensor.
-  using iter_t          = typename traits_t::iter_t;
+  using iter_t        = typename traits_t::iter_t;
   /// Defines the type of a contant iterator.
-  using const_iter_t    = const iter_t;
+  using const_iter_t  = const iter_t;
   /// Defines the type of a host block with the same parameters.
-  using device_block_t  = DeviceBlock<T, Dimensions>;
+  using device_block_t = DeviceBlock<T, Dimensions>;
+  // clang-format on
 
   /// Declare device blocks to be friends, so that we can create host blocks
   /// from device blocks.
   friend device_block_t;
+  /// Declare Block a friend to allow it to allow it to set padding data.
+  template <typename TT, size_t DD>
+  friend class Block;
 
  public:
   //==--- [construction] ---------------------------------------------------==//
@@ -83,8 +89,8 @@ class HostBlock {
   /// \param  sizes   The sizes of the dimensions for the tensor.
   /// \tparam Sizes   The types of other dimension sizes.
   template <
-    typename... Sizes, all_arithmetic_size_enable_t<Dimensions, Sizes...> = 0
-  >
+    typename... Sizes,
+    all_arithmetic_size_enable_t<Dimensions, Sizes...> = 0>
   HostBlock(std::size_t padding, Sizes&&... sizes)
   : _space{padding, std::forward<Sizes>(sizes)...} {
     allocate();
@@ -97,18 +103,15 @@ class HostBlock {
   /// \param sizes  The sizes of the each of the dimensions of the block.
   /// \tparam Sizes The types of the dimension sizes.
   template <
-    typename... Sizes, all_arithmetic_size_enable_t<Dimensions, Sizes...> = 0
-  >
-  HostBlock(Sizes&&... sizes)
-  : _space{std::forward<Sizes>(sizes)...} {
+    typename... Sizes,
+    all_arithmetic_size_enable_t<Dimensions, Sizes...> = 0>
+  HostBlock(Sizes&&... sizes) : _space{std::forward<Sizes>(sizes)...} {
     allocate();
   }
 
   /// Constructor to create the block from another block.
   /// \param other The other block to create this block from.
-  HostBlock(const self_t& other)
-  : _space{other._space} {
-    allocate();
+  HostBlock(const self_t& other) : _space{other._space} {
     const auto bytes = allocator_t::allocation_size(_space.size());
     std::memcpy(_data, other._data, bytes);
   }
@@ -116,22 +119,20 @@ class HostBlock {
   /// Constructor to move the \p other block into this one. The \p other will no
   /// longer have valid data, and it's size is meaningless.
   /// \param other The other block to move to this one.
-  HostBlock(self_t&& other)
-  : _space{other._space} {
+  HostBlock(self_t&& other) : _space{other._space} {
     _data       = other._data;
     other._data = nullptr;
   }
 
   /// Constructor to create the block from a device block.
   /// \param other The other block to create this block from.
-  HostBlock(const device_block_t& other)
-  : _space{other._space} {
+  HostBlock(const device_block_t& other) : _space{other._space} {
     reallocate();
     copy_from_device(other);
   }
 
   //==--- [asynchrnous construction] ---------------------------------------==//
- 
+
   /// Initializes the size of each of the dimensions of the tensor, as well as
   /// the padding for the tensor, as well as providing an option to enable
   /// asynchronous functionality for the block. This is only enabled when the
@@ -143,8 +144,8 @@ class HostBlock {
   /// \param  sizes   The sizes of the dimensions for the tensor.
   /// \tparam Sizes   The types of other dimension sizes.
   template <
-    typename... Sizes, all_arithmetic_size_enable_t<Dimensions, Sizes...> = 0
-  >
+    typename... Sizes,
+    all_arithmetic_size_enable_t<Dimensions, Sizes...> = 0>
   HostBlock(BlockOpKind op_kind, std::size_t padding, Sizes&&... sizes)
   : _space{padding, std::forward<Sizes>(sizes)...} {
     set_op_kind(op_kind);
@@ -152,7 +153,7 @@ class HostBlock {
   }
 
   /// Initializes the size of each of the dimensions of the tensor, as well as
-  /// providing an option to enable asynchronous functionality for the block. 
+  /// providing an option to enable asynchronous functionality for the block.
   /// This is only enabled when the number of size arguments matches the
   /// dimensionality of the tensor, and the sizes are numeric types.
   ///
@@ -160,8 +161,8 @@ class HostBlock {
   /// \param  sizes   The sizes of the dimensions for the tensor.
   /// \tparam Sizes   The types of other dimension sizes.
   template <
-    typename... Sizes, all_arithmetic_size_enable_t<Dimensions, Sizes...> = 0
-  >
+    typename... Sizes,
+    all_arithmetic_size_enable_t<Dimensions, Sizes...> = 0>
   HostBlock(BlockOpKind op_kind, Sizes&&... sizes)
   : _space{std::forward<Sizes>(sizes)...} {
     set_op_kind(op_kind);
@@ -206,7 +207,7 @@ class HostBlock {
   }
 
   //==--- [copying data] ---------------------------------------------------==//
-  
+
   /// Copies the data from the \p other block into this block.
   /// \param other The other block to copy the data from.
   auto copy_data(const device_block_t& other) -> void {
@@ -235,12 +236,9 @@ class HostBlock {
   /// \tparam Indices The types of the indices.
   template <typename... Indices>
   auto operator()(Indices&&... is) -> iter_t {
-    return iter_t{
-      allocator_t::create(
-        _data, _space, std::forward<Indices>(is) + padding()...
-      ),
-      _space
-    };
+    return iter_t{allocator_t::create(
+                    _data, _space, std::forward<Indices>(is) + padding()...),
+                  _space};
   }
 
   /// Overload of operator() to get a constant iterator to the element at the
@@ -251,22 +249,30 @@ class HostBlock {
   auto operator()(Indices&&... is) const -> const_iter_t {
     return const_iter_t{
       allocator_t::create(
-        _data, _space, std::forward<Indices>(is) + padding()...
-      ),
-      _space
-    };
+        _data, _space, std::forward<Indices>(is) + padding()...),
+      _space};
   }
 
   //==--- [interface] ------------------------------------------------------==//
-  
+
   /// Reallocates the data.
   auto reallocate() -> void {
     cleanup();
     allocate();
   }
 
+  /// Reallocates the data and initializes the data using the \p args for the
+  /// construction of the elements.
+  /// \param  args The arguments for the constructor.
+  /// \tparam Args The type of the arguments.
+  template <typename... Args>
+  auto reallocate_and_init(Args&&... args) -> void {
+    cleanup();
+    allocate_and_init(std::forward<Args>(args)...);
+  }
+
   /// Resizes the \p dim dimension to \p dim_size.
-  /// 
+  ///
   /// \note This __does not__ reallocate, since multiple resizings would then
   ///       then make multiple allocations. Call reallocate to reallocate after
   ///       resizing.
@@ -341,9 +347,9 @@ class HostBlock {
   }
 
  private:
-  ptr_t            _data = nullptr;   //!< Storage for the tensor.
-  space_t          _space;            //!< Spatial information for the tensor.
-  BlockMemoryProps _mem_props;        //!< Memory properties for the block.
+  ptr_t            _data = nullptr; //!< Storage for the tensor.
+  space_t          _space;          //!< Spatial information for the tensor.
+  BlockMemoryProps _mem_props;      //!< Memory properties for the block.
 
   /// Allocates data for the block, when the block only requires synchronous
   /// functionality.
@@ -351,8 +357,7 @@ class HostBlock {
     if (_data == nullptr && !_mem_props.allocated) {
       if (_mem_props.pinned) {
         cuda::allocate_host_pinned(
-          reinterpret_cast<void**>(&_data), mem_requirement()
-        ); 
+          reinterpret_cast<void**>(&_data), mem_requirement());
       } else {
         _data = malloc(mem_requirement());
       }
@@ -361,17 +366,33 @@ class HostBlock {
     }
   }
 
+  /// Allocates data for the block, and then initializes the elements by
+  /// forwarding the \p args to the constructor.
+  /// \param  args The args for the constructor.
+  /// \tparam Args The types of the args.
+  template <typename... Args>
+  auto allocate_and_init(Args&&... args) -> void {
+    allocate();
+    invoke(
+      *this,
+      [](auto&& it, auto&&... as) {
+        using type_t = std::decay_t<decltype(*it)>;
+        new (&(*it)) type_t(std::forward<decltype(as)>(as)...);
+      },
+      std::forward<Args>(args)...);
+  }
+
   /// Cleans up the data for the tensor.
   auto cleanup() -> void {
-    if (_data != nullptr && _mem_props.must_free) {
+    if (_data != nullptr && _mem_props.must_free && _mem_props.allocated) {
       if (_mem_props.pinned) {
         cuda::free_host_pinned(_data);
       } else {
         free(_data);
       }
-      _data                 = nullptr;
-      _mem_props.allocated  = false;
-      _mem_props.must_free  = false;
+      _data                = nullptr;
+      _mem_props.allocated = false;
+      _mem_props.must_free = false;
     }
   }
 
@@ -380,19 +401,124 @@ class HostBlock {
   auto copy_from_device(const device_block_t& other) {
     const auto alloc_size = allocator_t::allocation_size(_space.size());
     cuda::memcpy_device_to_host_async(
-      _data, other._data, alloc_size, other.stream()
-    );
+      _data, other._data, alloc_size, other.stream());
   }
 
   // Shifts an iterator by the padding in each direction.
   auto shift_iterator(iter_t& it) const -> void {
-    unrolled_for<Dimensions>([&] (auto dim) {
-      it.shift(dim, _space.padding());
-    });
+    unrolled_for<Dimensions>(
+      [&](auto dim) { it.shift(dim, _space.padding()); });
   }
-};
+
+  //==--- [copying of data for padding] ------------------------------------==//
+
+  /// Copies the data from this block into the other \p block which would be
+  /// used as padding for a neighbour on the left of the x dimension.
+  template <
+    size_t       D,
+    FaceLocation SrcLocation,
+    FaceLocation DstLocation,
+    dim_1d_enable_t<D> = 0>
+  auto copy_padding_into_device(
+    DeviceBlock<T, D>& block,
+    FaceSpecifier<dimx_t::value, SrcLocation>,
+    FaceSpecifier<dimx_t::value, DstLocation>) const -> void {
+    const auto copy_size = allocator_t::allocation_size(padding());
+
+    auto* dst_ptr =
+      DstLocation == FaceLocation::start
+        ? block.begin().data()
+        : block.begin()
+            .offset(dim_x, block.size(dim_x) - block.padding() - 1)
+            .data();
+    auto* src_ptr =
+      SrcLocation == FaceLocation::start
+        ? begin().data()
+        : begin().offset(dim_x, size(dim_x) - padding() - 1).data();
+
+    cudaMemcpyAsync(
+      dst_ptr, src_ptr, copy_size, cudaMemcpyHostToDevice, block.stream());
+  }
+
+  //==--- [host -> device padding 2D] --------------------------------------==//
+
+  /// Copies the data from this block into the other \p block which would be
+  /// used as padding for a neighbour on the left of the x dimension.
+  /// Copies the data next to the left x face from the device to the host
+  template <
+    size_t       D,
+    FaceLocation SrcLocation,
+    FaceLocation DstLocation,
+    dim_2d_enable_t<D> = 0>
+  auto copy_padding_into_device(
+    DeviceBlock<T, D>& block,
+    FaceSpecifier<dimx_t::value, SrcLocation>,
+    FaceSpecifier<dimx_t::value, DstLocation>) const -> void {
+    const size_t byte_size  = allocator_t::allocation_size(1);
+    const size_t copy_width = byte_size * padding();
+    const size_t pitch      = _space.size(dim_x) * byte_size;
+
+    auto* dst_ptr =
+      DstLocation == FaceLocation::start
+        ? block.begin().data()
+        : block.begin()
+            .offset(dim_x, block.size(dim_x) - block.padding() - 1)
+            .data();
+    auto* src_ptr =
+      SrcLocation == FaceLocation::start
+        ? begin().data()
+        : begin().offset(dim_x, size(dim_x) - padding() - 1).data();
+
+    cudaMemcpy2DAsync(
+      dst_ptr,
+      pitch,
+      src_ptr,
+      pitch,
+      copy_width,
+      _space.internal_size(dim_y),
+      cudaMemcpyHostToDevice,
+      block.stream());
+  }
+
+  /// Copies the data from this block into the other \p block which would be
+  /// used as padding for a neighbour on the left of the x dimension.
+  /// Copies the data next to the left x face from the device to the host
+  template <
+    size_t       D,
+    FaceLocation SrcLocation,
+    FaceLocation DstLocation,
+    dim_2d_enable_t<D> = 0>
+  auto copy_padding_into_device(
+    DeviceBlock<T, D>& block,
+    FaceSpecifier<dimy_t::value, SrcLocation>,
+    FaceSpecifier<dimy_t::value, DstLocation>) const -> void {
+    const size_t byte_size  = allocator_t::allocation_size(1);
+    const size_t copy_width = byte_size * _space.internal_size(dim_x);
+    const size_t pitch      = _space.size(dim_x) * byte_size;
+
+    auto* dst_ptr =
+      DstLocation == FaceLocation::start
+        ? block.begin().data()
+        : block.begin()
+            .offset(dim_y, block.size(dim_y) - block.padding() - 1)
+            .data();
+    auto* src_ptr =
+      SrcLocation == FaceLocation::start
+        ? begin().data()
+        : begin().offset(dim_y, size(dim_y) - padding() - 1).data();
+
+    cudaMemcpy2DAsync(
+      dst_ptr,
+      pitch,
+      src_ptr,
+      pitch,
+      copy_width,
+      padding(),
+      cudaMemcpyHostToDevice,
+      block.stream());
+  }
+}; // namespace ripple
 
 } // namespace ripple
 
 #endif // RIPPLE_CONTAINER_HOST_BLOCK_HPP
-
