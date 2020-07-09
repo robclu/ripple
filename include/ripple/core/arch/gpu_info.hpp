@@ -83,6 +83,7 @@ struct GpuInfo {
     int            can_access_peer;
     for (auto dev : range(num_devices)) {
       // Constructor sets the device to the current device.
+      cudaSetDevice(dev);
       auto& info = devices.emplace_back(dev);
       cudaGetDeviceProperties(&device_props, dev);
       info.mem_size = device_props.totalGlobalMem;
@@ -95,6 +96,7 @@ struct GpuInfo {
         cudaDeviceCanAccessPeer(&can_access_peer, dev, i);
         if (can_access_peer) {
           info.peers.emplace_back(i);
+          cudaDeviceEnablePeerAccess(i, 0);
         }
       }
     }
