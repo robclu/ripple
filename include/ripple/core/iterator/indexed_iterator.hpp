@@ -108,7 +108,8 @@ class IndexedIterator : public BlockIterator<T, Space> {
   /// \tparam Dim The type of the dimension specifier.
   template <typename Dim>
   ripple_host_device auto global_idx(Dim&& dim) const noexcept -> size_t {
-    return ::ripple::global_idx(std::forward<Dim>(dim)) + _block_indices[dim];
+    return ::ripple::global_idx(std::forward<Dim>(dim)) +
+           static_cast<size_t>(_block_indices[dim]);
   }
 
   /// Returns true if the iterator is valid for the \p dim dimension -- that its

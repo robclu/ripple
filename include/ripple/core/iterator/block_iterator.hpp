@@ -139,6 +139,8 @@ class BlockIterator {
     return _data_ptr;
   }
 
+  //===--- [unwrap impl] ---------------------------------------------------==//
+
   /// Implementation of unwrapping functionality, to return the type the
   /// iterator iterates over. This overload is for a stridable type.
   ripple_host_device auto unwrap_impl(stridable_overload_t) const -> copy_t {
@@ -156,6 +158,13 @@ class BlockIterator {
   space_t   _space;    //!< The space over which to iterate.
 
  public:
+  // clang-format off
+  /// Defines the type of the raw pointer to the data.
+  using raw_ptr_t       = typename layout_traits_t::raw_ptr_t;
+  /// Defines the type of a const raw pointer to the data.
+  using const_raw_ptr_t = typename layout_traits_t::const_raw_ptr_t;
+  // clang-format on
+
   /// Constructor to create the iterator from the storage type and a space over
   /// which the iterator can iterate. If the type T is a StridableLayout type,
   /// then the storage must be an implementation of the StorageAccessor
@@ -219,6 +228,16 @@ class BlockIterator {
   template <typename Dim>
   ripple_host_device constexpr auto shift(Dim&& dim, int amount = 1) -> void {
     offsetter_t::shift(_data_ptr, _space, dim, amount);
+  }
+
+  /// Returns a pointer to the data for the iterator.
+  ripple_host_device auto data() noexcept -> raw_ptr_t {
+    return _data_ptr;
+  }
+
+  /// Returns a const pointer to the data for the iterator.
+  ripple_host_device auto data() const noexcept -> const_raw_ptr_t {
+    return _data_ptr;
   }
 
   //==--- [dimensions] -----------------------------------------------------==//
