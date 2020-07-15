@@ -18,12 +18,14 @@
 #define RIPPLE_GRAPH_GRAPH_HPP
 
 #include "node.hpp"
+#include "splitter.hpp"
 #include <ripple/core/algorithm/unrolled_for.hpp>
 #include <ripple/core/allocation/allocator.hpp>
 #include <ripple/core/arch/cache.hpp>
 #include <ripple/core/utility/type_traits.hpp>
 #include <memory>
 #include <mutex>
+#include <optional>
 
 namespace ripple {
 
@@ -36,27 +38,31 @@ class GraphExecutor;
 class Graph {
   /// Allow the executor access to the graph to schedule correctly.
   friend class GraphExecutor;
+  /// Allow the slitter access to modify the graph.
+  friend struct Splitter;
 
   //==--- [constants & aliases] --------------------------------------------==//
 
   // clang-format off
   /// The alignment for the nodes.
   static constexpr size_t node_alignment = avoid_false_sharing_size;
-  /// The default number of nodes.
-  static constexpr size_t default_nodes  = 1000;
 
-  /// Defines the type of the nodes for the graph.
-  using node_t           = Node<node_alignment>;
   /// The arena for the allocator. We define this here to explicitly use a heap
   /// arena because the graph builder will potentially have to build a large
   /// number of nodes.
-  using arena_t          = HeapArena;
+  using arena_t               = HeapArena;
+  /// Defines the type of the nodes for the graph.
+  using node_t                = Node<node_alignment>;
+  /// Defines the info type for the nodes.
+  using info_t                = NodeInfo;
   /// Defines the type of the node allocator.
-  using node_allocator_t = ThreadSafeObjectPoolAllocator<node_t, arena_t>;
-  /// Defines the container user for the nodes in the graph.
-  using node_container_t = std::vector<std::unique_ptr<node_t>>;
+  using node_allocator_t      = ThreadSafeObjectPoolAllocator<node_t, arena_t>;
+  /// Defines the type of the info allocator.
+  using info_allocator_t      = ThreadSafeObjectPoolAllocator<info_t, arena_t>;
+  /// Defines the container used for the nodes in the graph.
+  using node_container_t      = std::vector<node_t*>;
   /// Defines a container to store the locations of joins.
-  using join_container_t = std::vector<int>;
+  using id_container_t        = std::vector<int>;
   // clang-format on
 
   /// Defines a valid type if the type T is not a node type.
@@ -66,6 +72,13 @@ class Graph {
     std::enable_if_t<!std::is_same_v<node_t, std::decay_t<T>>, int>;
 
  public:
+  // clang-format off
+  /// The default number of nodes.
+  static constexpr size_t default_nodes  = 1000;
+  /// Default id for a node.
+  static constexpr auto   default_id     = info_t::default_id;
+  // clang-format on
+
   //==--- [construction] ---------------------------------------------------==//
 
   /// Creates a graph with the given allocator.
@@ -146,7 +159,8 @@ class Graph {
   auto reset() noexcept -> void {
     for (auto& node : _nodes) {
       if (node) {
-        node_allocator().recycle(node.release());
+        info_allocator().recycle(node->_info);
+        node_allocator().recycle(node);
       }
     }
   }
@@ -156,7 +170,10 @@ class Graph {
   auto clone() const noexcept -> Graph {
     Graph graph;
     for (const auto& node : _nodes) {
+      // TODO: Add copying of node info for new node.
       graph._nodes.emplace_back(node_allocator().create<node_t>(*node));
+      graph._nodes.back()->_info =
+        info_allocator().create<info_t>(node->_info->name, node->_info->id);
     }
     graph._join_ids.clear();
     for (const auto& id : _join_ids) {
@@ -175,18 +192,60 @@ class Graph {
     return allocation_pool_nodes();
   }
 
+  //==--- [find] -----------------------------------------------------------==//
+
+  /// Returns a reference to the node with \p name.
+  /// \param name The name of the node to find.
+  auto find(std::string name) noexcept -> std::optional<node_t*> {
+    for (auto& node : _nodes) {
+      if (std::strcmp(node->_info->name.c_str(), name.c_str()) == 0) {
+        return std::make_optional<node_t*>(node);
+      }
+    }
+    return std::nullopt;
+  }
+
+  /// Returns a reference to the node with \p name.
+  /// \param name The name of the node to find.
+  auto find_last_of(std::string name) noexcept -> std::optional<node_t*> {
+    for (int i = _nodes.size() - 1; i >= 0; --i) {
+      auto* node = _nodes[i];
+      if (std::strcmp(node->_info->name.c_str(), name.c_str()) == 0) {
+        return std::make_optional<node_t*>(node);
+      }
+    }
+    return std::nullopt;
+  }
+
   //==--- [creation interface] ---------------------------------------------==//
 
-  /// Emplaces a node into the graph, returning a reference to the node.
+  /// Emplaces a node into the graph, returning a reference to the modified
+  /// graph.
   /// \param  callable The callable which defines the node's operation.
   /// \param  args     Arguments for the callable.
   /// \tparam F        The type of the callable.
   /// \tparam Args     The types of the arguments.
   template <typename F, typename... Args, non_node_enable_t<F> = 0>
   auto emplace(F&& callable, Args&&... args) -> Graph& {
+    const auto no_name = std::string("");
+    return emplace_named(
+      no_name, std::forward<F>(callable), std::forward<Args>(args)...);
+  }
+
+  /// Emplaces a node into the graph with name \p name, returning a reference to
+  /// the modified graph.
+  /// \param  name     The name of the node to emplace.
+  /// \param  callable The callable which defines the node's operation.
+  /// \param  args     Arguments for the callable.
+  /// \tparam F        The type of the callable.
+  /// \tparam Args     The types of the arguments.
+  template <typename F, typename... Args, non_node_enable_t<F> = 0>
+  auto emplace_named(NodeInfo info, F&& callable, Args&&... args) -> Graph& {
     // Here the allocator doesn't fail, so we don't need make_unique.
-    setup_node(*_nodes.emplace_back(node_allocator().create<node_t>(
-      std::forward<F>(callable), std::forward<Args>(args)...)));
+    auto& node = *_nodes.emplace_back(node_allocator().create<node_t>(
+      std::forward<F>(callable), std::forward<Args>(args)...));
+    node._info = info_allocator().create<info_t>(info.name, info.id, info.kind);
+    setup_node(node);
     return *this;
   }
 
@@ -215,6 +274,22 @@ class Graph {
     unrolled_for<node_count>([&](auto i) {
       setup_node(*_nodes.emplace_back(&std::get<i>(node_tuple)));
     });
+    return *this;
+  }
+
+  /// Emplaces a node into the graph which creates a sync point in the graph.
+  ///
+  /// \param  callable The callable which defines the node's operation.
+  /// \param  args     Arguments for the callable.
+  /// \tparam F        The type of the callable.
+  /// \tparam Args     The types of the arguments.
+  template <typename F, typename... Args, non_node_enable_t<F> = 0>
+  auto sync(F&& callable, Args&&... args) -> Graph& {
+    _join_ids.emplace_back(_nodes.size());
+    NodeInfo info;
+    info.kind = NodeKind::sync;
+    return emplace_named(
+      info, std::forward<F>(callable), std::forward<Args>(args)...);
     return *this;
   }
 
@@ -265,15 +340,96 @@ class Graph {
     return emplace(std::forward<Nodes>(nodes)...);
   }
 
+  /// Creates a split in the graph by parallelising the \p callable over the \p
+  /// args.
+  /// \param  callable The operations for each node in the fork.
+  /// \param  args     The arguments to the callable.
+  /// \tparam F        The type of the callable.
+  /// \tparam Args     The types of the arguments for the callable.
+  template <typename F, typename... Args>
+  auto split(F&& callable, Args&&... args) -> Graph& {
+    Splitter::split(
+      *this, std::forward<F>(callable), std::forward<Args>(args)...);
+    return *this;
+  }
+
+  /// Creates a split in the graph by parallelising the \p callable over the \p
+  /// args.
+  /// \param  callable The operations for each node in the fork.
+  /// \param  args     The arguments to the callable.
+  /// \tparam F        The type of the callable.
+  /// \tparam Args     The types of the arguments for the callable.
+  template <typename F, typename... Args>
+  auto then_split(F&& callable, Args&&... args) -> Graph& {
+    _join_ids.emplace_back(_nodes.size());
+    _split_ids.emplace_back(_nodes.size());
+    Splitter::split(
+      *this, std::forward<F>(callable), std::forward<Args>(args)...);
+    return *this;
+  }
+
+  /// Returns the number of times the graph has been executed.
+  auto num_executions() const -> size_t {
+    return _exec_count;
+  }
+
  private:
   //==--- [members] --------------------------------------------------------==//
 
-  node_container_t _nodes    = {};     //!< Nodes for the graph.
-  join_container_t _join_ids = {1, 0}; //!< Indices of join nodes.
+  node_container_t _nodes      = {};     //!< Nodes for the graph.
+  id_container_t   _join_ids   = {1, 0}; //!< Indices of join nodes.
+  id_container_t   _split_ids  = {1, 0}; //!< Indices of split nodes.
+  size_t           _exec_count = 0; //!< Number of executions for the graph.
+
+  /// Returns a reference to the node with \p id id in the last split.
+  /// \param id The id of the node to find. If multiple nodes have the
+  auto find_in_last_split(typename info_t::id_t id) noexcept
+    -> std::optional<node_t*> {
+    const int start = _split_ids[_split_ids.size() - 2];
+    const int end   = _split_ids[_split_ids.size() - 1];
+    for (int i = start; i < end; ++i) {
+      auto* node = _nodes[i];
+      if (node->id() == id) {
+        return std::make_optional<node_t*>(node);
+      }
+    }
+    return std::nullopt;
+  }
 
   /// Sets up the node. Initializing the dependency count and successors.
   /// \param node The node to setup for emplacement.
   auto setup_node(node_t& node) -> void {
+    // For a split node, we need to find all the indices in the previous split
+    // and for any node with the same id, we need to add dependencies between
+    // this node. We need to do the same for any friends of the dependents:
+    if (node.kind() == NodeKind::split) {
+      // Only if there has been a split:
+      if (_split_ids.size() > 1) {
+        const int start = _split_ids[_split_ids.size() - 2];
+        const int end   = _split_ids[_split_ids.size() - 1];
+
+        for (int i = start; i < end; ++i) {
+          auto* other = _nodes[i];
+          if (
+            other->kind() != NodeKind::sync &&
+            (other->kind() != NodeKind::split || other->id() != node.id())) {
+            continue;
+          }
+
+          // First add this node as a successor:
+          other->add_successor(node);
+
+          // Now go through all of others friends, and add this node as
+          // successors of them:
+          for (const auto& friend_id : other->friends()) {
+            if (auto friend_node = find_in_last_split(friend_id)) {
+              friend_node.value()->add_successor(node);
+            }
+          }
+        }
+      }
+    }
+
     // This node is a successor of all nodes between the last index in join
     // index vector, and the last node in the node container, so we need to set
     // the number of dependents for the node, and also add this node as a
@@ -282,17 +438,26 @@ class Graph {
       const int start = _join_ids[_join_ids.size() - 2];
       const int end   = _join_ids[_join_ids.size() - 1];
       for (int i = start; i < end; ++i) {
-        auto& other_node = *_nodes[i];
-        other_node.add_successor(node);
-        node.increment_num_dependents();
-
-        // If the node doesn't have a parent, then this other node becomes the
-        // parent.
-        if (node._parent == nullptr) {
-          node._parent = &other_node;
-        }
+        setup_nonsplit_node(node, *_nodes[i]);
       }
     }
+  }
+
+  /// Sets the \p node from the \p other node.
+  /// \param node The node to set up.
+  /// \param other_node The other node to use to setup the node.
+  auto setup_nonsplit_node(node_t& node, node_t& other_node) -> void {
+    constexpr auto split = NodeKind::split;
+    // If this is a split node, and the other node is a split node, then there
+    // is only a dependence if the nodes have the same id.
+    if (
+      node.kind() != NodeKind::sync && other_node.kind() == split &&
+      node.kind() == split) {
+      return;
+    }
+
+    // One of the node kinds is not split, so there is a dependence.
+    other_node.add_successor(node);
   }
 
   //==--- [static methods] -------------------------------------------------==//
@@ -300,6 +465,14 @@ class Graph {
   /// Returns a reference to the allocator for the nodes.
   static auto node_allocator() noexcept -> node_allocator_t& {
     static node_allocator_t allocator(allocation_pool_nodes() * sizeof(node_t));
+    return allocator;
+  }
+
+  /// Returns a reference to the allocator for the node information. Here we use
+  /// this allocator rather than just a vector or something so that the pointer
+  /// in the node to the info is not invalidated when need info is added.
+  static auto info_allocator() noexcept -> info_allocator_t& {
+    static info_allocator_t allocator(allocation_pool_nodes() * sizeof(info_t));
     return allocator;
   }
 
@@ -320,7 +493,7 @@ class Graph {
     static std::mutex m;
     return m;
   }
-};
+}; // namespace ripple
 
 } // namespace ripple
 

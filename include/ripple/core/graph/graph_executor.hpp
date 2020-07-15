@@ -52,49 +52,82 @@ class GraphExecutor {
     // clang-format on
   }
 
-  /// Executes a graph.
-  auto execute(const Graph& graph) -> void {
+  /// Executes a \p graph.
+  /// \param graph The graph to execute.
+  auto execute(Graph& graph) -> void {
     // Check if the threads need to be woken up:
     if (_exec_state != ExecutionState::run) {
       _exec_state.store(ExecutionState::run, std::memory_order_relaxed);
       for (auto& thread_state : _thread_states) {
-        thread_state.run_state.store(ThreadState::RunState::running);
+        thread_state.run_state.store(
+          ThreadState::RunState::running, std::memory_order_relaxed);
       }
     }
-
-    // Set all other threads to be
 
     auto& queue = _queues[thread_id];
     for (auto& node : graph._nodes) {
       while (!queue.try_push(&(*node))) {
         // Spin .. this should never happen ...
       }
+      _total_nodes.fetch_add(1, std::memory_order_relaxed);
+    }
+    graph._exec_count++;
+  }
+
+  /// Executes the \p graph \p n times.
+  /// \param graph The graph to execute.
+  /// \param n     The number of times to execute the graph.
+  auto execute_n(Graph& graph, size_t n) -> void {
+    const auto last = graph.num_executions() + n;
+    graph.sync([this, &graph, end = graph.num_executions() + n] {
+      if (graph.num_executions() < end) {
+        execute(graph);
+      }
+    });
+    execute(graph);
+  }
+
+  /// Executes the \p graph until the \p predicate returns true.
+  /// \param  graph The graph to execute.
+  /// \param  pred  The predicate which returns if the execution must end.
+  /// \param  args  The arguments for the predicate.
+  /// \tparam Pred  The type of the predicate.
+  /// \tparam Args  The type of the predicate arguments.
+  template <typename Pred, typename... Args>
+  auto execute_until(Graph& graph, Pred&& pred, Args&&... args) -> void {
+    graph.sync(
+      [this, &graph](auto&& predicate, auto&&... as) {
+        if (!predicate(std::forward<Args>(as)...)) {
+          execute(graph);
+        }
+      },
+      std::forward<Pred>(pred),
+      std::forward<Args>(args)...);
+
+    if (!pred(std::forward<Args>(args)...)) {
+      execute(graph);
     }
   }
 
   /// Waits for all unfinished operations are finished.
   auto wait_until_finished() noexcept -> void {
-    while (!all_queues_empty()) {
+    while (is_unfinished_work()) {
       execute_node_work(_thread_states[thread_id]);
+    }
+    for (auto i = 0; i < topology().num_gpus(); ++i) {
+      cudaSetDevice(i);
+      cudaDeviceSynchronize();
     }
   }
 
-  /// Returns the number of non-empty work queues at the present time
-  auto all_queues_empty() const noexcept -> bool {
-    // Try from our queue first, so other queues aren't touched if there is
-    // work hereL
-    for (size_t i = thread_id; i < _queues.size(); ++i) {
-      if (_queues[i].size() != 0) {
-        return false;
-      }
+  /// Returns true if there is unfinished work -- that is, if there are threads
+  /// executing, or if there are non-empty queues.
+  auto is_unfinished_work() noexcept -> bool {
+    uint32_t sum = 0;
+    for (size_t i = 0; i < _thread_states.size(); ++i) {
+      sum += _thread_states[i].processed_nodes();
     }
-
-    for (size_t i = 0; i < thread_id; ++i) {
-      if (_queues[i].size() != 0) {
-        return false;
-      }
-    }
-    return true;
+    return sum < _total_nodes.load(std::memory_order_relaxed);
   }
 
  private:
@@ -108,6 +141,9 @@ class GraphExecutor {
   /// The max number of nodes per queue. Nodes are always being pushed and
   /// popped onto the queue, so this doesn't need to be too large.
   static constexpr size_t max_nodes_per_queue = 2048;
+
+  /// Defines the type of the counter for processed nodes.
+  using node_counter_t = std::atomic<uint32_t>;
 
   /// Wrapper struct for a thread with some state.
   struct alignas(avoid_false_sharing_size) ThreadState {
@@ -150,12 +186,28 @@ class GraphExecutor {
 
     //==--- [members] ------------------------------------------------------==//
 
-    uint32_t id          = 0;                //!< Thread's id.
-    uint32_t max_threads = 0;                //!< Max threads.
-    state_t  run_state   = RunState::paused; //!< Thread's run state.
-    Priority priority    = Priority::cpu;    //!< The type of the thread.
+    uint32_t       id          = 0;                //!< Thread's id.
+    uint32_t       max_threads = 0;                //!< Max threads.
+    node_counter_t processed   = 0;                //!< Nodes process.
+    state_t        run_state   = RunState::paused; //!< Thread's run state.
+    Priority       priority    = Priority::cpu;    //!< The type of the thread.
 
     //==--- [methods] ------------------------------------------------------==//
+
+    /// Returns true if the thread is executing, otherwise returns false.
+    auto processed_nodes() const noexcept -> uint32_t {
+      return processed.load(std::memory_order_relaxed);
+    }
+
+    /// Sets that the thread is executing.
+    auto inc_processed_nodes() noexcept -> void {
+      processed.fetch_add(1, std::memory_order_relaxed);
+    }
+
+    /// Returns true if the thread must shutdown.
+    auto shutdown() noexcept -> void {
+      run_state.store(RunState::shutdown, std::memory_order_relaxed);
+    }
 
     /// Returns true if the thread must shutdown.
     auto must_shutdown() const noexcept -> bool {
@@ -222,11 +274,12 @@ class GraphExecutor {
 
   //==--- [members] --------------------------------------------------------==//
 
-  thread_states_t _thread_states; //!< Info for each thread.
-  threads_t       _threads;       //!< Thread for the executor.
-  queues_t        _queues;        //!< Queues of work.
-  stealer_t       _stealer;       //!< The stealer for work stealing.
-  exec_t          _exec_state;    //!< Execution state of executor.
+  thread_states_t _thread_states;   //!< Info for each thread.
+  threads_t       _threads;         //!< Thread for the executor.
+  queues_t        _queues;          //!< Queues of work.
+  stealer_t       _stealer;         //!< The stealer for work stealing.
+  exec_t          _exec_state;      //!< Execution state of executor.
+  node_counter_t  _total_nodes = 0; //!< Total number of nodes to execute.
 
   /// Creates \p cpu_threads whose priority is CPU execution, and \p gpu_threads
   /// whose priority is GPU execution.
@@ -242,7 +295,7 @@ class GraphExecutor {
     _thread_states.emplace_back(
       uint32_t{0},
       total_threads,
-      ThreadState::RunState::running,
+      ThreadState::RunState::paused,
       ThreadState::Priority::cpu);
 
     for (uint32_t i = 1; i < cpu_threads + gpu_threads; ++i) {
@@ -250,7 +303,7 @@ class GraphExecutor {
       _thread_states.emplace_back(
         i,
         total_threads,
-        ThreadState::RunState::paused,
+        ThreadState::RunState::running,
         i < cpu_threads ? ThreadState::Priority::cpu
                         : ThreadState::Priority::gpu);
       _threads.emplace_back(
@@ -261,10 +314,13 @@ class GraphExecutor {
 
           while (!state.must_shutdown()) {
             // if (state.paused()) {
-            //  std::this_thread::sleep_for(5us);
+            //  std::this_thread::sleep_for(500ns);
             //  continue;
             //}
 
+            // Try and do some work. If we did some work, then there is likely
+            // some more work to do, otherwise we couldn't find any work to
+            // execute, so we aren't executing.
             execute_node_work(state);
           }
         },
@@ -285,8 +341,10 @@ class GraphExecutor {
         // Try run the node again, if it fails put it back on the queue.
         if (!node.value()->try_run()) {
           _queues[thread_state.id].push(*node);
+          return;
         }
       }
+      thread_state.inc_processed_nodes();
       return;
     }
 
@@ -307,21 +365,20 @@ class GraphExecutor {
         _stealer);
 
       if (auto node = _queues[steal_id].steal()) {
-        // Couldnt execute here, so we push this into our own queue, and then
-        // return.
-        // return, but we may want to add some pause type utility.
+        // If we stole a node, try and run it:
         if (node.value()->try_run()) {
+          thread_state.inc_processed_nodes();
           return;
         }
 
-        // Node couldn't  run, so push it onto our queue and try and steal
-        // again.
+        // Node couldn't  run, so push it onto our queue.
         _queues[thread_state.id].push(*node);
       }
     }
   }
 };
 
+/// Returns a reference to the graph executor.
 static auto graph_executor() -> GraphExecutor& {
   static GraphExecutor executor;
   return executor;

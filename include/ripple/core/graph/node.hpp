@@ -169,7 +169,8 @@ struct NodeExecutorImpl final : public NodeExecutor {
 /// Defines the kinds of nodes.
 enum class NodeKind : uint8_t {
   normal = 0, //!< Default kind of node.
-  split  = 1  //!< Split kind of node.
+  split  = 1, //!< Split kind of node.
+  sync   = 2  //!< Node kind to explicity create a sync point.
 };
 
 /// NodeInfo implementation.
