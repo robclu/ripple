@@ -18,6 +18,9 @@
 
 #include <ripple/core/container/tuple.hpp>
 #include <ripple/core/functional/invocable.hpp>
+#include <ripple/core/math/math.hpp>
+#include <ripple/core/utility/range.hpp>
+#include <array>
 #include <atomic>
 #include <cassert>
 #include <string>
@@ -161,6 +164,105 @@ struct NodeExecutorImpl final : public NodeExecutor {
   }
 };
 
+//==--- [node info] ------------------------------------------------------==//
+
+/// Defines the kinds of nodes.
+enum class NodeKind : uint8_t {
+  normal = 0, //!< Default kind of node.
+  split  = 1  //!< Split kind of node.
+};
+
+/// NodeInfo implementation.
+struct NodeInfo {
+  // clang-format off
+  /// Defines the type used for the node name.
+  using name_t     = std::string;
+  /// Defines the type used for the node id.
+  using id_t       = uint64_t;
+  /// Defines the type of the friends container.
+  using friends_t  = std::vector<id_t>;
+
+  /// Default id of the node.
+  static constexpr id_t default_id   = std::numeric_limits<id_t>::max();
+  /// Default name of the node.
+  static constexpr auto default_name = "";
+  // clang-format on
+
+  //==--- [static] ---------------------------------------------------------==//
+
+  /// Creates an id for a node from the indices, using hash combining.
+  /// \param  indices The indices to create an id from.
+  /// \tparam Size    The number of ids.
+  template <size_t Size>
+  static auto
+  id_from_indices(const std::array<uint32_t, Size>& indices) -> uint64_t {
+    using namespace math;
+    static_assert(Size <= 3, "Node id only valid for up to 3 dimensions!");
+    return Size == 1
+             ? indices[0]
+             : Size == 2
+                 ? hash_combine(indices[0], indices[1])
+                 : Size == 3
+                     ? hash_combine(
+                         indices[2], hash_combine(indices[0], indices[1]))
+                     : 0;
+  }
+
+  /// Creates a name for a node from the indices.
+  /// \param  indices The indices to create a name from.
+  /// \tparam Size    The number of ids.
+  template <size_t Size>
+  static auto
+  name_from_indices(const std::array<uint32_t, Size>& indices) -> std::string {
+    std::string name = Size == 0 ? "" : std::to_string(indices[0]);
+    for (auto i : range(Size - 1)) {
+      name += "_" + std::to_string(indices[i + 1]);
+    }
+    return name;
+  }
+
+  //==--- [construction] ---------------------------------------------------==//
+
+  /// Default constructor for node info.
+  NodeInfo() = default;
+
+  /// Constructor for node info which moves \p n into this info's name.
+  /// \param name The name of the node.
+  NodeInfo(name_t name_) : name{std::move(name_)} {}
+
+  /// Constructor to set the node name and id.
+  /// \param name_ The name of the node.
+  /// \param id_   The id of the node.
+  NodeInfo(name_t name_, id_t id_) : name{std::move(name_)}, id{id_} {}
+
+  /// Constructor to set the node name , id, and kind.
+  /// \param name_ The name of the node.
+  /// \param id_   The id of the node.
+  NodeInfo(name_t name_, id_t id_, NodeKind kind_)
+  : name{std::move(name_)}, id{id_}, kind{kind_} {}
+
+  //==--- [deleted] --------------------------------------------------------==//
+
+  // clang-format off
+  /// Copy constructor -- deleted.
+  NodeInfo(const NodeInfo& other) = default; 
+  /// Move constructor deleted.
+  NodeInfo(NodeInfo&& other)      = default;
+
+  /// Move assignment -- deleted.
+  auto operator=(const NodeInfo&) = delete;
+  /// Copy assignment -- deleted;
+  auto operator=(NodeInfo&&)      = delete;
+  // clang-format on
+
+  //==--- [members] --------------------------------------------------------==//
+
+  name_t    name    = default_name;     //!< The name of the node.
+  friends_t friends = {};               //!< Siblings for the node.
+  id_t      id      = default_id;       //!< Id of the node.
+  NodeKind  kind    = NodeKind::normal; //!< The kind of the node.
+};
+
 //==--- [node impl] --------------------------------------------------------==//
 
 /// Implementation type of a node in a graph.
@@ -213,21 +315,20 @@ class alignas(Alignment) Node {
   /// Allow the graph class access to the node for building the graph.
   friend Graph;
 
-  /// The NodeInfo struct stores information about a node.
-  struct NodeInfo;
-
   // clang-format off
   /// We use a vector for the successors, because it's only 24 bytes, and
   /// doesn't limit the number of successors of a node. It only really matters
   /// that when all the successors are required, that the pointers are all
   /// contiguous so that they can be iterated over quickly.
-  using successors_t = std::vector<Node*>;
+  using successors_t  = std::vector<Node*>;
+  /// Defines the value type of the counter.
+  using counter_val_t = uint32_t;
   /// Defines the type of the unfinished counter.
-  using counter_t    = std::atomic<uint16_t>;
+  using counter_t     = std::atomic<counter_val_t>;
   /// Defines the type of the node information.
-  using info_t       = NodeInfo;
+  using info_t        = NodeInfo;
   /// Defines the type of the pointer to the node information.
-  using info_ptr_t   = info_t*;
+  using info_ptr_t    = info_t*;
 
   // clang-format off
   /// Memory required for the parent and the successors.
@@ -256,52 +357,6 @@ class alignas(Alignment) Node {
   static constexpr size_t size =
     spare_mem + (spare_mem >= min_spare_mem ? size_t{0} : Alignment);
 
-  //==--- [node info] ------------------------------------------------------==//
-
-  /// NodeInfo implementation.
-  struct NodeInfo {
-    // clang-format off
-    /// Default id of the node.
-    static constexpr uint64_t default_id = std::numeric_limits<uint64_t>::max();
-    /// Default name of the node.
-    static constexpr auto default_name   = "";
-    // clang-format on
-
-    //==--- [construction] -------------------------------------------------==//
-
-    /// Default constructor for node info.
-    NodeInfo() = default;
-
-    /// Constructor for node info which moves \p n into this info's name.
-    /// \param name The name of the node.
-    NodeInfo(std::string name_) : name(std::move(name_)) {}
-
-    /// Constructor to set the node name and id.
-    /// \param name_ The name of the node.
-    /// \param id_   The id of the node.
-    NodeInfo(std::string name_, uint64_t id_)
-    : name(std::move(name_)), id(id_) {}
-
-    //==--- [deleted] ------------------------------------------------------==//
-
-    // clang-format off
-    /// Copy constructor -- deleted.
-    NodeInfo(const NodeInfo&) = delete;
-    /// Move constructor deleted.
-    NodeInfo(NodeInfo&&) = delete;
-
-    /// Move assignment -- deleted.
-    auto operator=(const NodeInfo&) = delete;
-    /// Copy assignment -- deleted;
-    auto operator=(NodeInfo&&) = delete;
-    // clang-format on
-
-    //==--- [members] ------------------------------------------------------==//
-
-    std::string name = default_name; //!< The name of the node.
-    uint64_t    id   = default_id;   //!< Id of the node.
-  };
-
  public:
   //==--- Con/destruction --------------------------------------------------==//
 
@@ -309,7 +364,10 @@ class alignas(Alignment) Node {
   /// Default constructor -- uses the default values of the Node.
   Node() noexcept  = default;
   /// Default destructor.
-  ~Node() noexcept = default;
+  ~Node() noexcept {
+    printf("Destroying : %3lu %s %p\n", 
+      id(), name().c_str(), this);
+  }
   // clang-format on
 
   /// Copy constructor which clones the executor and copies the rest of the node
@@ -325,7 +383,7 @@ class alignas(Alignment) Node {
   Node(const Node& other) noexcept {
     debug_assert_node_valid(other);
     _executor = other._executor->clone(&_storage);
-    _parent   = other._parent;
+    _incoming = other._incoming;
     _dependents.store(
       other._dependents.load(std::memory_order_relaxed),
       std::memory_order_relaxed);
@@ -340,13 +398,13 @@ class alignas(Alignment) Node {
   /// \param other The other task to move from.
   Node(Node&& other) noexcept
   : _executor(other._executor),
-    _parent(other._parent),
     _info(other._info),
+    _incoming(other._incoming),
     _successors(std::move(other._successors)),
     _dependents(other._dependents.load(std::memory_order_relaxed)) {
     other._executor = nullptr;
-    other._parent   = nullptr;
     other._info     = nullptr;
+    other._incoming = 0;
     other._dependents.store(0, std::memory_order_relaxed);
   }
 
@@ -385,7 +443,7 @@ class alignas(Alignment) Node {
 
     debug_assert_valid_node(other);
     _executor = other._executor->clone(&_storage);
-    _parent   = other._parent;
+    _incoming = other._incoming;
     _dependents.store(
       other._dependents.load(std::memory_order_relaxed),
       std::memory_order_relaxed);
@@ -407,16 +465,16 @@ class alignas(Alignment) Node {
 
     debug_assert_node_valid(other);
     _executor   = other._executor;
-    _parent     = other._parent;
     _info       = other._info;
+    _incoming   = other._incoming;
     _successors = std::move(other._successors);
     _dependents.store(
       other._dependents.load(std::memory_order_relaxed),
       std::memory_order_relaxed);
 
     other._executor = nullptr;
-    other._parent   = nullptr;
     other._info     = nullptr;
+    other._incoming = 0;
     other._dependents.store(0, std::memory_order_relaxed);
     return *this;
   }
@@ -449,8 +507,14 @@ class alignas(Alignment) Node {
 
     _executor->execute();
 
+    // Reset the node incase it needs to be run again, as well as to make sure
+    // that it can't be run again until all dependents have run;
+    _dependents.store(_incoming, std::memory_order_relaxed);
+
     for (auto* successor : _successors) {
-      successor->_dependents.fetch_sub(1, std::memory_order_relaxed);
+      if (successor) {
+        successor->_dependents.fetch_sub(1, std::memory_order_relaxed);
+      }
     }
     return true;
   }
@@ -458,22 +522,65 @@ class alignas(Alignment) Node {
   /// Add the \p node as a successor for this node.
   /// \param nod The node to add as a successor to this node.
   auto add_successor(Node& node) noexcept -> void {
+    for (auto* successor : _successors) {
+      if (successor == &node) {
+        return;
+      }
+    }
     _successors.push_back(&node);
+    node.increment_num_dependents();
+  }
+
+  /// Adds the node with \p id as a friend of the node. A friend is a node
+  /// which can execute in parallel with another node, but which is used by the
+  /// other node for the other node's operation, but it not modifies by it. For
+  /// example, if x is a friend of y, then y _uses_ x for an operation, and x
+  /// cannot be modified by any operations on it until _y_ has performed its
+  /// operation.
+  /// \param friend_id The id of the friend to add.
+  auto add_friend(typename info_t::id_t friend_id) noexcept -> void {
+    _info->friends.emplace_back(friend_id);
+  }
+
+  /// Returns a container of all node friend ids.
+  auto friends() const noexcept -> typename info_t::friends_t& {
+    return _info->friends;
   }
 
   /// Increments the number of dependents for the node.
   auto increment_num_dependents() noexcept -> void {
     _dependents.fetch_add(1, std::memory_order_relaxed);
+    _incoming = _dependents.load(std::memory_order_relaxed);
+  }
+
+  /// Returns the name of the node.
+  auto name() const -> typename info_t::name_t {
+    return _info ? _info->name : info_t::default_name;
+  }
+
+  /// Returns the id of the node.
+  auto id() const noexcept -> typename info_t::id_t {
+    return _info ? _info->id : info_t::default_id;
+  }
+
+  /// Returns the kind of the node.
+  auto kind() const noexcept -> NodeKind {
+    return _info ? _info->kind : NodeKind::normal;
+  }
+
+  /// Returns the number of dependents.
+  auto num_dependents() const noexcept -> counter_val_t {
+    return _dependents.load(std::memory_order_relaxed);
   }
 
  private:
   //==--- [members] --------------------------------------------------------==//
 
-  NodeExecutor* _executor      = nullptr; //!< The executor to run the node.
-  Node*         _parent        = nullptr; //!< Node's parent.
-  info_ptr_t    _info          = nullptr; //!< Node's info.
   successors_t  _successors    = {};      //!< Array of successors.
-  counter_t     _dependents    = 0;       //!< Counter for dependant
+  NodeExecutor* _executor      = nullptr; //!< The executor to run the node.
+  info_ptr_t    _info          = nullptr; //!< Node's info.
+  counter_val_t _incoming      = 0;       //!< Number of incomming connections.
+  counter_t     _dependents    = 0;       //!< Counter for dependents.
   char          _storage[size] = {};      //!< Additional storage.
 
   //==--- [methods] --------------------------------------------------------==//
