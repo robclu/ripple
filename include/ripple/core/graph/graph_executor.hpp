@@ -54,7 +54,7 @@ class GraphExecutor {
 
   /// Executes a \p graph.
   /// \param graph The graph to execute.
-  auto execute(Graph& graph) -> void {
+  auto execute(Graph& graph) noexcept -> void {
     // Check if the threads need to be woken up:
     if (_exec_state != ExecutionState::run) {
       _exec_state.store(ExecutionState::run, std::memory_order_relaxed);
@@ -77,7 +77,7 @@ class GraphExecutor {
   /// Executes the \p graph \p n times.
   /// \param graph The graph to execute.
   /// \param n     The number of times to execute the graph.
-  auto execute_n(Graph& graph, size_t n) -> void {
+  auto execute_n(Graph& graph, size_t n) noexcept -> void {
     const auto last = graph.num_executions() + n;
     graph.sync([this, &graph, end = graph.num_executions() + n] {
       if (graph.num_executions() < end) {
@@ -87,24 +87,25 @@ class GraphExecutor {
     execute(graph);
   }
 
-  /// Executes the \p graph until the \p predicate returns true.
+  /// Executes the \p graph until the \p predicate returns false.
   /// \param  graph The graph to execute.
   /// \param  pred  The predicate which returns if the execution must end.
   /// \param  args  The arguments for the predicate.
   /// \tparam Pred  The type of the predicate.
   /// \tparam Args  The type of the predicate arguments.
   template <typename Pred, typename... Args>
-  auto execute_until(Graph& graph, Pred&& pred, Args&&... args) -> void {
+  auto
+  execute_until(Graph& graph, Pred&& pred, Args&&... args) noexcept -> void {
     graph.sync(
       [this, &graph](auto&& predicate, auto&&... as) {
-        if (!predicate(std::forward<Args>(as)...)) {
+        if (predicate(std::forward<Args>(as)...)) {
           execute(graph);
         }
       },
       std::forward<Pred>(pred),
       std::forward<Args>(args)...);
 
-    if (!pred(std::forward<Args>(args)...)) {
+    if (pred(std::forward<Args>(args)...)) {
       execute(graph);
     }
   }
@@ -313,10 +314,10 @@ class GraphExecutor {
           set_affinity(state.id);
 
           while (!state.must_shutdown()) {
-            // if (state.paused()) {
-            //  std::this_thread::sleep_for(500ns);
-            //  continue;
-            //}
+            if (state.paused()) {
+              std::this_thread::sleep_for(500ns);
+              continue;
+            }
 
             // Try and do some work. If we did some work, then there is likely
             // some more work to do, otherwise we couldn't find any work to
@@ -382,6 +383,12 @@ class GraphExecutor {
 static auto graph_executor() -> GraphExecutor& {
   static GraphExecutor executor;
   return executor;
+}
+
+/// Wrapper function for a cleaner interface for executing a \p graph.
+/// \param graph The graph to execute.
+static inline auto execute(Graph& graph) noexcept -> void {
+  graph_executor().execute(graph);
 }
 
 } // namespace ripple

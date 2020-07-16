@@ -19,6 +19,7 @@
 
 #include "node.hpp"
 #include "splitter.hpp"
+#include "reducer.hpp"
 #include <ripple/core/algorithm/unrolled_for.hpp>
 #include <ripple/core/allocation/allocator.hpp>
 #include <ripple/core/arch/cache.hpp>
@@ -29,8 +30,18 @@
 
 namespace ripple {
 
+//==--- [forward declarations] ---------------------------------------------==//
+
+/// Forward declaration of the Graph class.
+class Graph;
+
+/// Forward declaration of the execution function for a graph.
+static inline auto execute(Graph& g) noexcept -> void;
+
 /// Forward declaration of a graph builder.
 class GraphExecutor;
+
+//==--- [implementation] ---------------------------------------------------==//
 
 /// The Graph class is simply a collection of nodes, allocated by the allocator.
 /// The graph can be executed by an Executor which will schedule the nodes to be
@@ -74,9 +85,9 @@ class Graph {
  public:
   // clang-format off
   /// The default number of nodes.
-  static constexpr size_t default_nodes  = 1000;
+  static constexpr size_t default_nodes = 1000;
   /// Default id for a node.
-  static constexpr auto   default_id     = info_t::default_id;
+  static constexpr auto   default_id    = info_t::default_id;
   // clang-format on
 
   //==--- [construction] ---------------------------------------------------==//
@@ -340,6 +351,24 @@ class Graph {
     return emplace(std::forward<Nodes>(nodes)...);
   }
 
+  /// If the \p pred returns _true_, then the graph is _scheduled_ to be
+  /// executed.
+  /// \param  pred  The predicate which returns if the execution must end.
+  /// \param  args  The arguments for the predicate.
+  /// \tparam Pred  The type of the predicate.
+  /// \tparam Args  The type of the predicate arguments.
+  template <typename Pred, typename... Args>
+  auto conditional(Pred&& pred, Args&&... args) -> Graph& {
+    return sync(
+      [this](auto&& predicate, auto&&... as) {
+        if (predicate(std::forward<Args>(as)...)) {
+          execute(*this);
+        }
+      },
+      std::forward<Pred>(pred),
+      std::forward<Args>(args)...);
+  }
+
   /// Creates a split in the graph by parallelising the \p callable over the \p
   /// args.
   /// \param  callable The operations for each node in the fork.
@@ -366,6 +395,60 @@ class Graph {
     Splitter::split(
       *this, std::forward<F>(callable), std::forward<Args>(args)...);
     return *this;
+  }
+
+  /// Performs a reduction of the \p data, if the container is reducible.
+  /// \param  data      The data to reduce, if reducible.
+  /// \tparam Container The container for the data.
+  template <
+    typename Container,
+    typename Result,
+    typename Pred,
+    typename... Args>
+  auto
+  reduce(Container& data, Result& result, Pred&& pred, Args&&... args) noexcept
+    -> Graph& {
+    using traits_t  = tensor_traits_t<Container>;
+    using value_t   = typename traits_t::value_t;
+    using reducer_t = Reducer<value_t, traits_t::dimensions>;
+
+    reducer_t::reduce(
+      *this,
+      data,
+      result,
+      std::forward<Pred>(pred),
+      std::forward<Args>(args)...);
+
+    // Add a final reduction over the results:
+    // auto& results = reducer_t::results_container();
+    return *this;
+    /*
+        return then(
+          [&result](auto& res, auto&& p, auto&&... as) {
+            result = ::ripple::reduce(res, p, as...);
+            printf("Finished: %4.4f\n", result);
+          },
+          reducer_t::results_container(),
+          std::forward<Pred>(pred),
+          std::forward<Args>(args)...);
+    */
+  }
+
+  /// Performs a reduction of the \p data, if the container is reducible.
+  /// \param  data      The data to reduce, if reducible.
+  /// \tparam Container The container for the data.
+  template <
+    typename Container,
+    typename Result,
+    typename Pred,
+    typename... Args>
+  auto then_reduce(
+    Container& data, Result& result, Pred&& pred, Args&&... args) noexcept
+    -> Graph& {
+    _join_ids.emplace_back(_nodes.size());
+    _split_ids.emplace_back(_nodes.size());
+    return this->reduce(
+      data, result, std::forward<Pred>(pred), std::forward<Args>(args)...);
   }
 
   /// Returns the number of times the graph has been executed.
