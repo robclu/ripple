@@ -43,7 +43,17 @@ class PrintableElement {
     invalid //!< Invalid data.
   };
 
+ private:
+  value_container_t _values = {}; //!< Element values.
+
+ public:
+  std::string   name = "";                    //!< Element name.
+  AttributeKind kind = AttributeKind::scalar; //!< Element kind.
+
   //==--- [construction] ---------------------------------------------------==//
+
+  /// Default constructor which creates an empty element.
+  PrintableElement() = default;
 
   /// Creates a printable element with the \p name and \p kind, with \p values
   /// values.
@@ -55,15 +65,15 @@ class PrintableElement {
   PrintableElement(
     std::string name, AttributeKind kind, Values&&... values) noexcept
   : _values{static_cast<value_t>(values)...},
-    _name{std::move(name)},
-    _kind{kind} {}
+    name{std::move(name)},
+    kind{kind} {}
 
   //==--- [comparison] -----------------------------------------------------==//
 
   /// Compares this element against another element, returning true if the
   /// element names match, otherwise returning false.
   auto operator==(const PrintableElement& other) const noexcept -> bool {
-    return std::memcmp(&other._name[0], &_name[0], _name.length()) == 0;
+    return std::memcmp(&other.name[0], &name[0], name.length()) == 0;
   }
 
   /// Compares this element against another element, returning true if the
@@ -83,12 +93,7 @@ class PrintableElement {
   /// Returns a reference to the values to print. If the kind is a vector, then
   /// the vector rquires 3 elements, which will be default added as zero
   /// components if there are not enough components.
-  auto values() noexcept -> value_container_t& {
-    if (_kind == AttributeKind::vector && _values.size() < 3) {
-      while (_values.size() < 3) {
-        _values.emplace_back(value_t{0});
-      }
-    }
+  auto values() const noexcept -> const value_container_t& {
     return _values;
   }
 
@@ -98,39 +103,14 @@ class PrintableElement {
     return _values[0];
   }
 
-  /// Returns a reference to the kind of the element.
-  auto kind() noexcept -> AttributeKind& {
-    return _kind;
-  }
-
-  /// Returns the kind of the printable element.
-  auto kind() const noexcept -> AttributeKind {
-    return _kind;
-  }
-
-  /// Returns a reference to the name of the element.
-  auto name() noexcept -> std::string& {
-    return _name;
-  }
-
-  /// Returns a constant reference to the name of the element.
-  auto name() const noexcept -> const std::string& {
-    return _name;
-  }
-
   //==--- [invalid interface] ----------------------------------------------==//
 
   /// Returns a PrintableElement with the name 'not found' and an invalid kind.
   static auto not_found() -> PrintableElement {
     return PrintableElement("not found", AttributeKind::invalid);
   }
-
- private:
-  value_container_t _values = {};                    //!< Element values.
-  std::string       _name   = "";                    //!< Element name.
-  AttributeKind     _kind   = AttributeKind::scalar; //!< Element kind.
 };
 
 } // namespace ripple
 
-#endif // RIPPLE_VIZ_PRINTABLE_PRINTABLE_ELEMENT_HPP
+#endif // RIPPLE_IO_PRINTABLE_ELEMENT_HPP
