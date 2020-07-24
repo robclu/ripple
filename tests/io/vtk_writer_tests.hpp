@@ -1,7 +1,7 @@
 //==--- ripple/tests/io/vtk_writer_tests.hpp --------------- -*- C++ -*- ---==//
-//            
+//
 //                                Ripple
-// 
+//
 //                      Copyright (c) 2020 Rob Clucas.
 //
 //  This file is distributed under the MIT License. See LICENSE for details.
@@ -16,7 +16,7 @@
 #ifndef RIPPLE_TESTS_IO_VTK_WRITER_TESTS_HPP
 #define RIPPLE_TESTS_IO_VTK_WRITER_TESTS_HPP
 
-#include <ripple/viz/io/vtk_writer.hpp>
+#include <ripple/core/io/vtk_writer.hpp>
 #include <gtest/gtest.h>
 #include <cstring>
 
@@ -29,18 +29,22 @@ TEST(io_vtk_writer_tests, can_write_metadata_correctly) {
   std::string correct_file   = this_file_path() + "/metadata_test_correct.vtk";
   std::string test_file_base = "metadata_test";
 
-  ripple::viz::VtkWriter w(test_file_base, "Metadata Test");
+  using writer_t = ripple::MultidimWriter;
+  using dims_t   = typename writer_t::DimSizes;
+  dims_t dims{10, 1, 0};
 
-  w.set_dimensions(10, 1, 0);
-  w.set_resolution(0.1);
+  std::unique_ptr<writer_t> writer =
+    std::make_unique<ripple::VtkWriter>(test_file_base, "Metadata Test");
+
+  writer->set_resolution(0.1);
 
   // Write the header:
-  w.open();
-  w.write_metadata();
-  w.close();
+  writer->open();
+  writer->write_metadata(dims);
+  writer->close();
 
-  int correct_length = 0, test_length = 0;
-  char* correct_buf = nullptr, *test_buf = nullptr;
+  int   correct_length = 0, test_length = 0;
+  char *correct_buf = nullptr, *test_buf = nullptr;
 
   // Compare the file against the header.
   std::ifstream correct(correct_file);
@@ -68,14 +72,14 @@ TEST(io_vtk_writer_tests, can_write_metadata_correctly) {
     EXPECT_TRUE(false);
   }
   EXPECT_EQ(test_length, correct_length);
-  
+
   auto res = std::memcmp(test_buf, correct_buf, test_length);
   EXPECT_EQ(res, 0);
 
   correct.close();
   test.close();
-  delete correct_buf;
-  delete test_buf;
+  free(correct_buf);
+  free(test_buf);
 }
 
 #endif // RIPPLE_TESTS_IO_VTK_WRITER_TESTS_HPP
