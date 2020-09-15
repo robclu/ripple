@@ -183,8 +183,6 @@ auto reduce(const DeviceBlock<T, Dims>& block, Pred&& pred, Args&&... args) {
   cudaSetDevice(block.device_id());
   results.set_device_id(block.device_id());
 
-  // DeviceBlock<T, Dims> results(block.stream());
-  // results.set_device_id(block.device_id());
   unrolled_for<Dims>(
     [&](auto dim, auto& blocks) {
       results.resize_dim(
