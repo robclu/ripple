@@ -1,9 +1,8 @@
-//==--- ripple/core/algorithm/reduce.hpp ------------------------ -*- C++ -*-
-//---==//
+//==--- ripple/core/algorithm/reduce.hpp ------------------- -*- C++ -*- ---==//
 //
 //                                Ripple
 //
-//                      Copyright (c) 2019 Ripple.
+//                      Copyright (c) 2019, 2020 Rob Clucas.
 //
 //  This file is distributed under the MIT License. See LICENSE for details.
 //
@@ -23,158 +22,202 @@
 
 namespace ripple {
 
-//==--- [predicates] -------------------------------------------------------==//
+/*==--- [predicates] -------------------------------------------------------==*/
 
-/// Functor which can be used with the reduction to perform a reduction sum.
+/**
+ * Functor which can be used with the reduction to perform a reduction sum.
+ */
 struct SumReducer {
-  /// Adds the data pointed to by the \p from iterator to the data pointed to by
-  /// \p into iterator.
-  /// \param  into An iterator to the data to add to.
-  /// \param  from An iterator to the data to add.
-  /// \tparam T    The type of the iterator.
+  /**
+   * Adds the data pointed to by the \p from iterator to the data pointed to by
+   * \p into iterator.
+   * \param  into An iterator to the data to add to.
+   * \param  from An iterator to the data to add.
+   * \tparam T    The type of the iterator.
+   */
   template <typename T>
-  ripple_host_device auto operator()(T& into, const T& from) const -> void {
+  ripple_host_device auto
+  operator()(T& into, const T& from) const noexcept -> void {
     *into += *from;
   }
 
-  /// Adds the data \p a and \p b and returns the result.
-  /// \param  a The first data to add.
-  /// \param  b The second data to add.
-  /// \tparam T The type of the data.
+  /**
+   * Adds the data \p a and \p b and returns the result.
+   * \param  a The first data to add.
+   * \param  b The second data to add.
+   * \tparam T The type of the data.
+   * \return The addition of the two elements.
+   */
   template <typename T>
-  ripple_host_device auto operator()(const T& a, const T& b) const -> T {
-    return a + b;
+  ripple_host_device auto
+  operator()(const T& a, const T& b) const noexcept -> T {
+    return T{a + b};
   }
 };
 
-/// Functor which can be used with the reduction to perform a reduction
-/// subtraction.
+/**
+ * Functor which can be used with the reduction to perform a reduction
+ * subtraction.
+ */
 struct SubtractionReducer {
-  /// Subtracts the data pointed to by the \p with iterator from the data
-  /// pointed to by \p from iterator.
-  /// \param  from An iterator to the data to subtract from.
-  /// \param  with An iterator to the data to suctract with.
-  /// \tparam T    The type of the iterator.
+  /**
+   * Subtracts the data pointed to by the \p with iterator from the data
+   * pointed to by \p from iterator.
+   * \param  from An iterator to the data to subtract from.
+   * \param  with An iterator to the data to suctract with.
+   * \tparam T    The type of the iterator.
+   */
   template <typename T>
-  ripple_host_device auto operator()(T& from, const T& with) const -> void {
+  ripple_host_device auto
+  operator()(T& from, const T& with) const noexcept -> void {
     *from -= *with;
   }
 
-  /// Subtracts the data \p b from \p a and returns the result.
-  /// \param  a The first data to subtract from.
-  /// \param  b The second data to subtract with.
-  /// \tparam T The type of the data.
+  /**
+   * Subtracts the data \p b from \p a and returns the result.
+   * \param  a The first data to subtract from.
+   * \param  b The second data to subtract with.
+   * \tparam T The type of the data.
+   * \return The subtraction of b from a.
+   */
   template <typename T>
-  ripple_host_device auto operator()(const T& a, const T& b) const -> T {
+  ripple_host_device auto
+  operator()(const T& a, const T& b) const noexcept -> T {
     return a - b;
   }
 };
 
-/// Functor which can be used with the reduction to find a max value over a
-/// dataset.
+/**
+ * Functor which can be used with the reduction to find a max value over a
+ * dataset.
+ */
 struct MaxReducer {
-  /// Sets the \p a data to the max of \p a and \p b.
-  /// \param  a The component to set to the max.
-  /// \param  b The compoennt to comapare with.
-  /// \tparam T The type of the iterator.
+  /**
+   * Sets the \p a data to the max of \p a and \p b.
+   * \param  a The component to set to the max.
+   * \param  b The compoennt to comapare with.
+   * \tparam T The type of the iterator.
+   */
   template <typename T>
-  ripple_host_device auto operator()(T& a, const T& b) const -> void {
+  ripple_host_device auto operator()(T& a, const T& b) const noexcept -> void {
     *a = std::max(*a, *b);
   }
 
-  /// Returns the max of \p a and \p b
-  /// \param  a The first input for comparison.
-  /// \param  b The second input for comparison
-  /// \tparam T The type of the data.
+  /**
+   * Returns the max of \p a and \p b
+   * \param  a The first input for comparison.
+   * \param  b The second input for comparison
+   * \tparam T The type of the data.
+   * \return The max of a and b.
+   */
   template <typename T>
-  ripple_host_device auto operator()(const T& a, const T& b) const -> T {
+  ripple_host_device auto
+  operator()(const T& a, const T& b) const noexcept -> T {
     return std::max(a, b);
   }
 };
 
-/// Functor which can be used with the reduction to find a min value over a
-/// dataset.
+/**
+ * Functor which can be used with the reduction to find a min value over a
+ * dataset.
+ */
 struct MinReducer {
-  /// Sets the \p a data to the min of \p a and \p b.
-  /// \param  a The component to set to the min.
-  /// \param  b The compoennt to comapare with.
-  /// \tparam T The type of the iterator.
+  /**
+   * Sets the \p a data to the min of \p a and \p b.
+   * \param  a The component to set to the min.
+   * \param  b The compoennt to comapare with.
+   * \tparam T The type of the iterator.
+   */
   template <typename T>
-  ripple_host_device auto operator()(T& a, const T& b) const -> void {
+  ripple_host_device auto operator()(T& a, const T& b) const noexcept -> void {
     *a = std::min(*a, *b);
   }
 
-  /// Returns the min of \p a and \p b
-  /// \param  a The first input for comparison.
-  /// \param  b The second input for comparison
-  /// \tparam T The type of the data.
+  /**
+   * Returns the min of \p a and \p b
+   * \param  a The first input for comparison.
+   * \param  b The second input for comparison
+   * \tparam T The type of the data.
+   * \return The min of a and b.
+   */
   template <typename T>
-  ripple_host_device auto operator()(const T& a, const T& b) const -> T {
+  ripple_host_device auto
+  operator()(const T& a, const T& b) const noexcept -> T {
     return std::min(a, b);
   }
 };
 
-//==--- [interface] --------------------------------------------------------==//
+/*==--- [interface] --------------------------------------------------------==*/
 
-/// Reduces the \p block using the \p pred, returning the result.
-///
-/// The pred must have the following form:
-///
-/// ~~~.cpp
-/// ripple_host_device auto (T<&> into, <const> T<&> from) const -> void {
-///   //...
-/// };
-/// ~~~
-///
-/// where T is an iterator, over the type T, which is the type of the data in
-/// the block. Because an iterator is passing, the reference is optional. The
-/// predicate must modify the data pointed to by the `into` iterator (first
-/// argument), as appropriate, using the `from` iterator. Modifying the
-/// `from` iterator may  cause unexpectd results, so make it const if it should
-/// not be modified.
-///
-/// This overload is for device blocks.
-///
-/// \param  block The block to reduce.
-/// \param  pred  The predicate for the reduction.
-/// \param  args  Arguments for the predicate.
-/// \tparam T     The type of the data in the block.
-/// \tparam Dims  The number of dimensions in the block.
-/// \tparam Pred  The type of the predicate.
-/// \tparam Args  The type of the arguments for the invocation.
+/**
+ * Reduces the \p block using the \p pred, returning the result.
+ *
+ * The pred must have the following form:
+ *
+ * ~~~.cpp
+ * ripple_host_device auto (T<&> into, <const> T<&> from) const -> void {
+ *   //...
+ * };
+ * ~~~
+ *
+ * where T is an iterator over the type T, or a pointer, which can be
+ * dereferenced.
+ *
+ * The predicate *must modify* the data pointed to by the `into` iterator (first
+ * argument), as appropriate, using the `from` iterator. Modifying the
+ * `from` iterator may  cause unexpectd results, so make it const if it should
+ * not be modified.
+ *
+ * This overload is for device blocks.
+ *
+ * \param  block The block to reduce.
+ * \param  pred  The predicate for the reduction.
+ * \param  args  Arguments for the predicate.
+ * \tparam T     The type of the data in the block.
+ * \tparam Dims  The number of dimensions in the block.
+ * \tparam Pred  The type of the predicate.
+ * \tparam Args  The type of the arguments for the invocation.
+ */
 template <typename T, std::size_t Dims, typename Pred, typename... Args>
-auto reduce(const DeviceBlock<T, Dims>& block, Pred&& pred, Args&&... args)
+auto reduce(
+  const DeviceBlock<T, Dims>& block, Pred&& pred, Args&&... args) noexcept
   -> T {
   return kernel::cuda::reduce(
     block, std::forward<Pred>(pred), std::forward<Args>(args)...);
 }
 
-/// Reduces the \p block using the \p pred, returning the result.
-///
-/// The pred must have the form:
-///
-/// ~~~.cpp
-/// ripple_host_device auto (T<&> into, <const> T<&> from) const -> void {
-///   //...
-/// };
-/// ~~~
-///
-/// where T is an iterator, and therefore the reference is optional. The
-/// predicate must modify the data pointed to by the `into` iterator, as
-/// appropriate, using the `from` iterator. Modifying the `from` iterator may
-/// cause unexpectd results.
-///
-/// This overload is for host blocks.
-///
-/// \param  block The block to reduce.
-/// \param  pred  The predicate for the reduction.
-/// \param  args  Arguments for the predicate.
-/// \tparam T     The type of the data in the block.
-/// \tparam Dims  The number of dimensions in the block.
-/// \tparam Pred  The type of the predicate.
-/// \tparam Args  The type of the arguments for the invocation.
+/**
+ * Reduces the \p block using the \p pred, returning the result.
+ *
+ * The pred must have the form:
+ *
+ * ~~~.cpp
+ * ripple_host_device auto (T<&> into, <const> T<&> from) const -> void {
+ *   //...
+ * };
+ * ~~~
+ *
+ * where T is an iterator over the type T, or a pointer, which can be
+ * dereferenced.
+ *
+ * The predicate *must modify* the data pointed to by the `into` iterator (first
+ * argument), as appropriate, using the `from` iterator. Modifying the
+ * `from` iterator may  cause unexpectd results, so make it const if it should
+ * not be modified.
+ *
+ * This overload is for host blocks.
+ *
+ * \param  block The block to reduce.
+ * \param  pred  The predicate for the reduction.
+ * \param  args  Arguments for the predicate.
+ * \tparam T     The type of the data in the block.
+ * \tparam Dims  The number of dimensions in the block.
+ * \tparam Pred  The type of the predicate.
+ * \tparam Args  The type of the arguments for the invocation.
+ */
 template <typename T, std::size_t Dims, typename Pred, typename... Args>
-auto reduce(const HostBlock<T, Dims>& block, Pred&& pred, Args&&... args) -> T {
+auto reduce(
+  const HostBlock<T, Dims>& block, Pred&& pred, Args&&... args) noexcept -> T {
   return kernel::reduce(
     block, std::forward<Pred>(pred), std::forward<Args>(args)...);
 }

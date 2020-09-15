@@ -1,7 +1,8 @@
-//==--- ripple/core/container/device_block.hpp ---------------------- -*- C++ -*- ---==//
-//            
+//==--- ripple/core/container/device_block.hpp ---------------------- -*- C++
+//-*- ---==//
+//
 //                                Ripple
-// 
+//
 //                      Copyright (c) 2019 Rob Clucas.
 //
 //  This file is distributed under the MIT License. See LICENSE for details.
@@ -35,6 +36,8 @@ namespace ripple {
 template <typename T, std::size_t Dimensions>
 class DeviceBlock {
   //==--- [traits] ---------------------------------------------------------==//
+
+  // clang-format off
   /// Defines the type of this tensor.
   using self_t          = DeviceBlock<T, Dimensions>;
   /// Defines the type of the traits for the tensor.
@@ -55,12 +58,19 @@ class DeviceBlock {
   using host_block_t    = HostBlock<T, Dimensions>;
   /// Defines the type of the stream for the block.
   using stream_t        = cudaStream_t;
+  // clang-format on
 
   /// Declare host blocks to be friends, so that we can create device blocks
   /// from host blocks.
   friend host_block_t;
+  /// Declare Block a friend to allow it to allow it to set padding data.
+  template <typename TT, size_t DD>
+  friend class Block;
 
  public:
+  /// Defines the type used for padding.
+  using padding_t = typename space_t::padding_t;
+
   //==--- [construction] ---------------------------------------------------==//
 
   /// Default constructor which just initializes the storage. This constructor
@@ -89,10 +99,8 @@ class DeviceBlock {
   /// \tparam Sizes The types of other dimension sizes.
   template <
     typename... Sizes,
-    all_arithmetic_size_enable_t<Dimensions, Sizes...> = 0
-  >
-  DeviceBlock(Sizes&&... sizes)
-  : _space{std::forward<Sizes>(sizes)...} {
+    all_arithmetic_size_enable_t<Dimensions, Sizes...> = 0>
+  DeviceBlock(Sizes&&... sizes) : _space{std::forward<Sizes>(sizes)...} {
     cudaStreamCreate(&_stream);
     allocate();
   }
@@ -107,9 +115,8 @@ class DeviceBlock {
   /// \tparam Sizes   The types of other dimension sizes.
   template <
     typename... Sizes,
-    all_arithmetic_size_enable_t<Dimensions, Sizes...> = 0
-  >
-  DeviceBlock(std::size_t padding, Sizes&&... sizes)
+    all_arithmetic_size_enable_t<Dimensions, Sizes...> = 0>
+  DeviceBlock(padding_t padding, Sizes&&... sizes)
   : _space{padding, std::forward<Sizes>(sizes)...} {
     cudaStreamCreate(&_stream);
     allocate();
@@ -127,8 +134,7 @@ class DeviceBlock {
   /// Constructor to create the block from a host block. This copies the memory
   /// from the host block into the device memory for this block.
   ///
-  DeviceBlock(const host_block_t& other)
-  : _space{other._space} {
+  DeviceBlock(const host_block_t& other) : _space{other._space} {
     cudaStreamCreate(&_stream);
     allocate();
     copy_from_host(other);
@@ -149,7 +155,7 @@ class DeviceBlock {
   /// Constructor to create the block from another block.
   /// \param other The other block to create this block from.
   auto operator=(const host_block_t& other) -> self_t& {
-    _space  = other._space;
+    _space = other._space;
     cudaStreamCreate(&_stream);
     reallocate();
     copy_from_host(other);
@@ -164,7 +170,7 @@ class DeviceBlock {
   }
 
   //==--- [copying data] ---------------------------------------------------==//
-  
+
   /// Copies the data from the \p other block into this block.
   /// \param other The other block to copy the data from.
   auto copy_data(const host_block_t& other) -> void {
@@ -172,22 +178,20 @@ class DeviceBlock {
   }
 
   //==--- [access] ---------------------------------------------------------==//
-  
+
   /// Gets an iterator to the beginning of the block.
   ripple_host_device auto begin() -> iter_t {
     auto it = iter_t{allocator_t::create(_data, _space), _space};
-    unrolled_for<Dimensions>([&] (auto dim) {
-      it.shift(dim, _space.padding());
-    });
+    unrolled_for<Dimensions>(
+      [&](auto dim) { it.shift(dim, _space.padding()); });
     return it;
   }
 
   /// Gets a constant iterator to the beginning of the block.
   ripple_host_device auto begin() const -> const_iter_t {
     auto it = const_iter_t{allocator_t::create(_data, _space), _space};
-    unrolled_for<Dimensions>([&] (auto dim) {
-      it.shift(dim, _space.padding());
-    });
+    unrolled_for<Dimensions>(
+      [&](auto dim) { it.shift(dim, _space.padding()); });
     return it;
   }
 
@@ -199,10 +203,8 @@ class DeviceBlock {
   ripple_host_device auto operator()(Indices&&... is) -> iter_t {
     return iter_t{
       allocator_t::create(
-        _data, _space, std::forward<Indices>(is) + _space.padding()...
-      ),
-      _space
-    };
+        _data, _space, std::forward<Indices>(is) + _space.padding()...),
+      _space};
   }
 
   /// Overload of operator() to get a constant iterator to the element at the
@@ -213,14 +215,12 @@ class DeviceBlock {
   ripple_host_device auto operator()(Indices&&... is) const -> const_iter_t {
     return const_iter_t{
       allocator_t::create(
-        _data, _space, std::forward<Indices>(is) + _space.padding()...
-      ),
-      _space
-    };
+        _data, _space, std::forward<Indices>(is) + _space.padding()...),
+      _space};
   }
 
   //==--- [interface] ------------------------------------------------------==//
-  
+
   /// Reallocates the data.
   auto reallocate() -> void {
     cleanup();
@@ -228,7 +228,7 @@ class DeviceBlock {
   }
 
   /// Resizes the \p dim dimension to \p dim_size.
-  /// 
+  ///
   /// \note This __does not__ reallocate, since multiple resizings would then
   ///       then make multiple allocations. Call reallocate to reallocate after
   ///       resizing.
@@ -266,8 +266,17 @@ class DeviceBlock {
     return _space.internal_size(std::forward<Dim>(dim));
   }
 
+  /// Returns the pitch of the block in the \p dim dimension, which is the
+  /// total number of elements in the dimension, including padding.
+  /// \param  dim The dimension to get the pitch for.
+  /// \tparam Dim The type of the dimension specifier.
+  template <typename Dim>
+  constexpr auto pitch(Dim&& dim) const noexcept -> size_t {
+    return _space.size(std::forward<Dim>(dim));
+  }
+
   /// Returns the number of dimensions for the block.
-  constexpr auto dimensions() const -> std::size_t {
+  constexpr auto dimensions() const noexcept -> size_t {
     return Dimensions;
   }
 
@@ -275,12 +284,12 @@ class DeviceBlock {
   /// memory for the block, so a call to `reallocate()` should be made if the
   /// block owns the memory.
   /// \param padding The amount of padding.
-  auto set_padding(size_t padding) -> void {
+  auto set_padding(padding_t padding) -> void {
     _space.padding() = padding;
   }
 
   /// Returns the amount of padding for the block.
-  auto padding() const -> size_t {
+  auto padding() const -> padding_t {
     return _space.padding();
   }
 
@@ -288,6 +297,16 @@ class DeviceBlock {
   /// block as well as the internal data for the block.
   auto mem_requirement() const -> size_t {
     return allocator_t::allocation_size(_space.size());
+  }
+
+  /// Sets the device id for the block.
+  auto set_device_id(uint32_t device_id) noexcept -> void {
+    _device_id = device_id;
+  }
+
+  /// Gets the device id for the block.
+  auto device_id() const noexcept -> uint32_t {
+    return _device_id;
   }
 
   //==--- [stream] ---------------------------------------------------------==//
@@ -303,19 +322,37 @@ class DeviceBlock {
     _stream = stream;
   }
 
+  /// Destroys the stream for the block.
+  auto destroy_stream() -> void {
+    cudaSetDevice(_device_id);
+    cudaStreamDestroy(_stream);
+  }
+
+  //==--- [copy type] ------------------------------------------------------==//
+
+  /// Returns the copy type required to copy from this block to another block
+  /// with type Block.
+  /// \tparam Block The block to determine the copy type from.
+  template <typename Block>
+  constexpr auto get_copy_type() const -> cudaMemcpyKind {
+    return is_host_block_v<Block> ? cudaMemcpyDeviceToHost
+                                  : cudaMemcpyDeviceToDevice;
+  }
+
  private:
-  ptr_t            _data   = nullptr; //!< Storage for the tensor.
-  space_t          _space;            //!< Spatial information for the tensor.
-  stream_t         _stream;          //!< The stream to use for the block.
-  BlockMemoryProps _mem_props;        //!< Memory properties for the block data.
+  ptr_t            _data = nullptr; //!< Storage for the tensor.
+  space_t          _space;          //!< Spatial information for the tensor.
+  stream_t         _stream;         //!< The stream to use for the block.
+  uint32_t         _device_id = 0;  //!< Id of the device for the block.
+  BlockMemoryProps _mem_props;      //!< Memory properties for the block data.
 
   /// Allocates data for the tensor.
   auto allocate() -> void {
     // Can only allocate if the memory is not allocated, and if we own it.
     if (_data == nullptr && !_mem_props.allocated) {
+      cudaSetDevice(_device_id);
       cuda::allocate_device(
-        reinterpret_cast<void**>(&_data), mem_requirement()
-      );
+        reinterpret_cast<void**>(&_data), mem_requirement());
       _mem_props.allocated = true;
       _mem_props.must_free = true;
     }
@@ -324,6 +361,7 @@ class DeviceBlock {
   /// Cleans up the data for the tensor.
   auto cleanup() -> void {
     if (_data != nullptr && _mem_props.must_free) {
+      cudaSetDevice(_device_id);
       cuda::free_device(_data);
       _data                = nullptr;
       _mem_props.must_free = false;
@@ -334,19 +372,18 @@ class DeviceBlock {
   /// Copies data from the host block \p other into this block.
   /// \p other The other block to copy data from.
   auto copy_from_host(const host_block_t& other) {
+    cudaSetDevice(_device_id);
     const auto alloc_size = allocator_t::allocation_size(_space.size());
-    cuda::memcpy_host_to_device_async(
-      _data, other._data, alloc_size, _stream
-    );
+    cuda::memcpy_host_to_device_async(_data, other._data, alloc_size, _stream);
   }
 
   /// Copies data from the host block \p other into this block.
   /// \p other The other block to copy data from.
   auto copy_from_device(const self_t& other) {
+    cudaSetDevice(_device_id);
     const auto alloc_size = allocator_t::allocation_size(_space.size());
     cuda::memcpy_device_to_device_async(
-      _data, other._data, alloc_size, other.stream()
-    );
+      _data, other._data, alloc_size, other.stream());
   }
 };
 
@@ -384,4 +421,3 @@ ripple_host_device auto iter_or_ref(const T& non_block) -> const T& {
 } // namespace ripple
 
 #endif // RIPPLE_CONTAINER_DEVICE_BLOCK_HPP
-

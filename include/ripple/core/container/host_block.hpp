@@ -66,6 +66,18 @@ class HostBlock {
   friend class Block;
 
  public:
+  /// Defines the type of the padding.
+  using padding_t = typename space_t::padding_t;
+
+  /// Swaps the blocks \p lhs and \p rhs.
+  /// \param lhs The left tensor to swap.
+  /// \param rhs The right tensor to swap.
+  friend auto swap(HostBlock& lhs, HostBlock& rhs) noexcept -> void {
+    using std::swap;
+    // TODO: Check that
+    swap(lhs._data, rhs._data);
+  }
+
   //==--- [construction] ---------------------------------------------------==//
 
   /// Default constructor which just initializes the storage. This constructor
@@ -91,7 +103,7 @@ class HostBlock {
   template <
     typename... Sizes,
     all_arithmetic_size_enable_t<Dimensions, Sizes...> = 0>
-  HostBlock(std::size_t padding, Sizes&&... sizes)
+  HostBlock(padding_t padding, Sizes&&... sizes)
   : _space{padding, std::forward<Sizes>(sizes)...} {
     allocate();
   }
@@ -310,8 +322,17 @@ class HostBlock {
     return _space.internal_size(std::forward<Dim>(dim));
   }
 
+  /// Returns the pitch of the block in the \p dim dimension, which is the
+  /// total number of elements in the dimension, including padding.
+  /// \param  dim The dimension to get the pitch for.
+  /// \tparam Dim The type of the dimension specifier.
+  template <typename Dim>
+  constexpr auto pitch(Dim&& dim) const noexcept -> size_t {
+    return _space.size(std::forward<Dim>(dim));
+  }
+
   /// Returns the number of dimensions for the block.
-  constexpr auto dimensions() const -> std::size_t {
+  constexpr auto dimensions() const noexcept -> size_t {
     return Dimensions;
   }
 
@@ -331,12 +352,12 @@ class HostBlock {
   /// memory for the block, so a call to `reallocate()` should be made if the
   /// block owns the memory.
   /// \param padding The amount of padding for the block.
-  auto set_padding(size_t padding) -> void {
+  auto set_padding(padding_t padding) -> void {
     _space.padding() = padding;
   }
 
   /// Returns the amount of padding for the block.
-  auto padding() const -> size_t {
+  auto padding() const -> padding_t {
     return _space.padding();
   }
 
@@ -344,6 +365,24 @@ class HostBlock {
   /// block as well as the padding data.
   auto mem_requirement() const -> size_t {
     return allocator_t::allocation_size(_space.size());
+  }
+
+  //==--- [stream] ---------------------------------------------------------==//
+
+  /// Returns the stream used by the block.
+  auto stream() const -> cudaStream_t {
+    return 0;
+  }
+
+  //==--- [copy type] ------------------------------------------------------==//
+
+  /// Returns the copy type required to copy from this block into a another
+  /// block of type Block.
+  /// \tparam Block The block to determine the copy type from.
+  template <typename Block>
+  constexpr auto get_copy_type() const -> cudaMemcpyKind {
+    return is_host_block_v<Block> ? cudaMemcpyHostToHost
+                                  : cudaMemcpyHostToDevice;
   }
 
  private:
@@ -409,115 +448,7 @@ class HostBlock {
     unrolled_for<Dimensions>(
       [&](auto dim) { it.shift(dim, _space.padding()); });
   }
-
-  //==--- [copying of data for padding] ------------------------------------==//
-
-  /// Copies the data from this block into the other \p block which would be
-  /// used as padding for a neighbour on the left of the x dimension.
-  template <
-    size_t       D,
-    FaceLocation SrcLocation,
-    FaceLocation DstLocation,
-    dim_1d_enable_t<D> = 0>
-  auto copy_padding_into_device(
-    DeviceBlock<T, D>& block,
-    FaceSpecifier<dimx_t::value, SrcLocation>,
-    FaceSpecifier<dimx_t::value, DstLocation>) const -> void {
-    const auto copy_size = allocator_t::allocation_size(padding());
-
-    auto* dst_ptr =
-      DstLocation == FaceLocation::start
-        ? block.begin().data()
-        : block.begin()
-            .offset(dim_x, block.size(dim_x) - block.padding() - 1)
-            .data();
-    auto* src_ptr =
-      SrcLocation == FaceLocation::start
-        ? begin().data()
-        : begin().offset(dim_x, size(dim_x) - padding() - 1).data();
-
-    cudaMemcpyAsync(
-      dst_ptr, src_ptr, copy_size, cudaMemcpyHostToDevice, block.stream());
-  }
-
-  //==--- [host -> device padding 2D] --------------------------------------==//
-
-  /// Copies the data from this block into the other \p block which would be
-  /// used as padding for a neighbour on the left of the x dimension.
-  /// Copies the data next to the left x face from the device to the host
-  template <
-    size_t       D,
-    FaceLocation SrcLocation,
-    FaceLocation DstLocation,
-    dim_2d_enable_t<D> = 0>
-  auto copy_padding_into_device(
-    DeviceBlock<T, D>& block,
-    FaceSpecifier<dimx_t::value, SrcLocation>,
-    FaceSpecifier<dimx_t::value, DstLocation>) const -> void {
-    const size_t byte_size  = allocator_t::allocation_size(1);
-    const size_t copy_width = byte_size * padding();
-    const size_t pitch      = _space.size(dim_x) * byte_size;
-
-    auto* dst_ptr =
-      DstLocation == FaceLocation::start
-        ? block.begin().data()
-        : block.begin()
-            .offset(dim_x, block.size(dim_x) - block.padding() - 1)
-            .data();
-    auto* src_ptr =
-      SrcLocation == FaceLocation::start
-        ? begin().data()
-        : begin().offset(dim_x, size(dim_x) - padding() - 1).data();
-
-    cudaMemcpy2DAsync(
-      dst_ptr,
-      pitch,
-      src_ptr,
-      pitch,
-      copy_width,
-      _space.internal_size(dim_y),
-      cudaMemcpyHostToDevice,
-      block.stream());
-  }
-
-  /// Copies the data from this block into the other \p block which would be
-  /// used as padding for a neighbour on the left of the x dimension.
-  /// Copies the data next to the left x face from the device to the host
-  template <
-    size_t       D,
-    FaceLocation SrcLocation,
-    FaceLocation DstLocation,
-    dim_2d_enable_t<D> = 0>
-  auto copy_padding_into_device(
-    DeviceBlock<T, D>& block,
-    FaceSpecifier<dimy_t::value, SrcLocation>,
-    FaceSpecifier<dimy_t::value, DstLocation>) const -> void {
-    const size_t byte_size  = allocator_t::allocation_size(1);
-    const size_t copy_width = byte_size * _space.internal_size(dim_x);
-    const size_t pitch      = _space.size(dim_x) * byte_size;
-
-    auto* dst_ptr =
-      DstLocation == FaceLocation::start
-        ? block.begin().data()
-        : block.begin()
-            .offset(dim_y, block.size(dim_y) - block.padding() - 1)
-            .data();
-    auto* src_ptr =
-      SrcLocation == FaceLocation::start
-        ? begin().data()
-        : begin().offset(dim_y, size(dim_y) - padding() - 1).data();
-
-    cudaMemcpy2DAsync(
-      dst_ptr,
-      pitch,
-      src_ptr,
-      pitch,
-      copy_width,
-      padding(),
-      cudaMemcpyHostToDevice,
-      block.stream());
-  }
-}; // namespace ripple
+};
 
 } // namespace ripple
 
