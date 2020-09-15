@@ -1,7 +1,7 @@
-//==--- ripple/core/boundary/copy_loader.hpp -------------------- -*- C++ -*- ---==//
-//            
+//==--- ripple/core/boundary/fo_extrap_loader.hpp ---------- -*- C++ -*- ---==//
+//
 //                                Ripple
-// 
+//
 //                      Copyright (c) 2020 Rob Clucas.
 //
 //  This file is distributed under the MIT License. See LICENSE for details.
@@ -22,35 +22,42 @@
 
 namespace ripple {
 
-/// The FOExtrapLoader is an implementation of an BoundaryLoader which copies
-/// the data from the closest valid cell inside the domain to all boundary
-/// cells.
+/**
+ * The FOExtrapLoader is an implementation of an BoundaryLoader which copies
+ * the data from the closest valid cell inside the domain to all boundary
+ * cells.
+ *
+ * It performs a first order extrapolation of the data in an iterator into the
+ * boundary data for the iterator.
+ */
 struct FOExtrapLoader : public BoundaryLoader<FOExtrapLoader> {
-  /// Loads the front boundary in the \p dim dimension, using the value of
-  /// the \p index in the dimension to find the appropriate cell.
-  /// \param  it       An iterator to the boundary cell to load.
-  /// \param  index    The index of the boundary cell in the dimension.
-  /// \param  dim      The dimension to load the boundary in.
-  /// \tparam Iterator The type of the iterator.
-  /// \tparam Dim      The type of the dimension specifier.
+  /**
+   * Loads the front boundary in the \p dim dimension, using the value of
+   * the \p index in the dimension to find the appropriate cell.
+   * \param  it       An iterator to the boundary cell to load.
+   * \param  index    The index of the boundary cell in the dimension.
+   * \param  dim      The dimension to load the boundary in.
+   * \tparam Iterator The type of the iterator.
+   * \tparam Dim      The type of the dimension specifier.
+   */
   template <typename Iterator, typename Dim>
-  ripple_host_device constexpr auto load_front(
-    Iterator&& it, int index, Dim&& dim
-  ) const -> void {
+  ripple_host_device constexpr auto
+  load_front(Iterator&& it, int index, Dim&& dim) const noexcept -> void {
     *it = *it.offset(dim, index);
   }
 
-  /// Loads the back boundary in the \p dim dimension, using the value of
-  /// the \p index in the dimension to find the appropriate cell.
-  /// \param  it       An iterator to the boundary cell to load.
-  /// \param  index    The index of the boundary cell in the dimension.
-  /// \param  dim      The dimension to load the boundary in.
-  /// \tparam Iterator The type of the iterator.
-  /// \tparam Dim      The type of the dimension specifier.
+  /**
+   * Loads the back boundary in the \p dim dimension, using the value of
+   * the \p index in the dimension to find the appropriate cell.
+   * \param  it       An iterator to the boundary cell to load.
+   * \param  index    The index of the boundary cell in the dimension.
+   * \param  dim      The dimension to load the boundary in.
+   * \tparam Iterator The type of the iterator.
+   * \tparam Dim      The type of the dimension specifier.
+   */
   template <typename Iterator, typename Dim>
-  ripple_host_device constexpr auto load_back(
-    Iterator&& it, int index, Dim&& dim
-  ) const -> void {
+  ripple_host_device constexpr auto
+  load_back(Iterator&& it, int index, Dim&& dim) const noexcept -> void {
     *it = *it.offset(dim, index);
   }
 };

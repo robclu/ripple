@@ -1,8 +1,8 @@
-//==--- ripple/core/boundary/boundary_loader.hpp ---------------- -*- C++ -*- ---==//
-//            
+//==--- ripple/core/boundary/boundary_loader.hpp ----------- -*- C++ -*- ---==//
+//
 //                                Ripple
-// 
-//                      Copyright (c) 2019 Rob Clucas.
+//
+//                      Copyright (c) 2019, 2020 Rob Clucas.
 //
 //  This file is distributed under the MIT License. See LICENSE for details.
 //
@@ -20,61 +20,76 @@
 
 namespace ripple {
 
-/// The BoundaryLoader class defines an interface for boundary loading.
-/// \tparam Impl The implementation of the loading interface.
+/**
+ * The BoundaryLoader class defines an interface for boundary loading.
+ * \tparam Impl The implementation of the loading interface.
+ */
 template <typename Impl>
 class BoundaryLoader {
-  /// Defines the type of the implementation.
+  /** Defines the type of the implementation. */
   using impl_t = std::decay_t<Impl>;
 
-  /// Returns a const pointer to the implementation.
-  ripple_host_device constexpr auto impl() const -> const impl_t* {
+  /**
+   * Gets a const pointer to the implementation type.
+   * \return A const pointer to the implementation.
+   */
+  ripple_host_device constexpr auto impl() const noexcept -> const impl_t* {
     return static_cast<const impl_t*>(this);
   }
 
  public:
-  /// Loads the front boundary in the \p dim dimension, using the value of
-  /// the \p index in the dimension to find the appropriate cell.
-  /// \param  it       An iterator to the boundary cell to load.
-  /// \param  index    The index of the boundary cell in the dimension.
-  /// \param  dim      The dimension to load the boundary in.
-  /// \param  args     Additional arguments for the loading.
-  /// \tparam Iterator The type of the iterator.
-  /// \tparam Dim      The type of the dimension specifier.
-  /// \tparam Args     The types of the additional arguments.
+  /**
+   * Loads the front boundary in the \p dim dimension, using the value of
+   * the \p index in the dimension to find the appropriate cell.
+   * \param  it       An iterator to the boundary cell to load.
+   * \param  index    The index of the boundary cell in the dimension.
+   * \param  dim      The dimension to load the boundary in.
+   * \param  args     Additional arguments for the loading.
+   * \tparam Iterator The type of the iterator.
+   * \tparam Dim      The type of the dimension specifier.
+   * \tparam Args     The types of the additional arguments.
+   */
   template <typename Iterator, typename Dim, typename... Args>
-  ripple_host_device constexpr auto load_front(
-    Iterator&& it, int index, Dim&& dim, Args&&... args
-  ) const -> void {
+  ripple_host_device constexpr auto
+  load_front(Iterator&& it, int index, Dim&& dim, Args&&... args) const noexcept
+    -> void {
     impl()->load_front(
       std::forward<Iterator>(it),
-      index                     ,
-      std::forward<Dim>(dim)    ,
-      std::forward<Args>(args)...
-    );
+      index,
+      std::forward<Dim>(dim),
+      std::forward<Args>(args)...);
   }
 
-  /// Loads the back boundary in the \p dim dimension, using the value of
-  /// the \p index in the dimension to find the appropriate cell.
-  /// \param  it       An iterator to the boundary cell to load.
-  /// \param  index    The index of the boundary cell in the dimension.
-  /// \param  dim      The dimension to load the boundary in.
-  /// \param  args     Additional arguments for the loading.
-  /// \tparam Iterator The type of the iterator.
-  /// \tparam Dim      The type of the dimension specifier.
-  /// \tparam Args     The types of the additional arguments.
+  /**
+   * Loads the back boundary in the \p dim dimension, using the value of
+   * the \p index in the dimension to find the appropriate cell.
+   * \param  it       An iterator to the boundary cell to load.
+   * \param  index    The index of the boundary cell in the dimension.
+   * \param  dim      The dimension to load the boundary in.
+   * \param  args     Additional arguments for the loading.
+   * \tparam Iterator The type of the iterator.
+   * \tparam Dim      The type of the dimension specifier.
+   * \tparam Args     The types of the additional arguments.
+   */
   template <typename Iterator, typename Dim, typename... Args>
-  ripple_host_device constexpr auto load_back(
-    Iterator&& it, int index, Dim&& dim, Args&&... args
-  ) const -> void {
+  ripple_host_device constexpr auto
+  load_back(Iterator&& it, int index, Dim&& dim, Args&&... args) const noexcept
+    -> void {
     impl()->load_back(
       std::forward<Iterator>(it),
-      index                     ,
-      std::forward<Dim>(dim)    ,
-      std::forward<Args>(args)...
-    );
+      index,
+      std::forward<Dim>(dim),
+      std::forward<Args>(args)...);
   }
 };
+
+/**
+ * Determines if a type implements the loader interface.
+ * \param T The type to check if is a boundary loader.
+ */
+template <typename T>
+static constexpr bool is_loader_v =
+  std::is_base_of_v<BoundaryLoader<std::decay_t<T>>, std::decay_t<T>>;
 
 } // namespace ripple
 
