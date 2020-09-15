@@ -22,27 +22,45 @@
 
 namespace ripple {
 
-/// The Topology struct stores information about the topology of the system. It
-/// holds information about the caches, processors, processor mapping, gpu
-/// devies, etc, which can be used to optimally partiion parallel algorithms.
+/**
+ * The Topology struct stores information about the topology of the system. It
+ * holds information about the caches, processors, processor mapping, gpu
+ * devies, etc, which can be used to optimally partiion parallel algorithms.
+ */
 struct Topology {
-  /// Constructor to create the topology.
-  Topology() {
+ private:
+  /** Conversion factor for bytes to gb. */
+  static constexpr float bytes_to_gb = 1.0f / 1073741824.0f;
+
+ public:
+  /**
+   * Constructor to create the topology.
+   */
+  Topology() noexcept {
     gpus = GpuInfo::create_for_all_devices();
   }
 
-  /// Returns the total number of gpus in the system.
-  auto num_gpus() -> size_t {
+  /**
+   * Gets the number of gpus in the system.
+   * \return The total number of gpus in the system.
+   */
+  auto num_gpus() const noexcept -> size_t {
     return gpus.size();
   }
 
-  /// Returns the number of cpu cores for the system.
-  auto num_cores() -> size_t {
+  /**
+   * Gets the number of cpu cores for the system.
+   * \return The number of independent cpu cores in the system.
+   */
+  auto num_cores() const noexcept -> size_t {
     return cpu_info.available_cores();
   }
 
-  /// Returns the total number of bytes of memory available from all gpus.
-  auto combined_gpu_memory() const -> uint64_t {
+  /**
+   * Calculates the total number of bytes of memory available from all gpus.
+   * \return The total number of bytes of gpu memory in the system.
+   */
+  auto combined_gpu_memory() const noexcept -> uint64_t {
     uint64_t total_mem = 0;
     for (const auto& gpu : gpus) {
       total_mem += gpu.mem_size;
@@ -50,17 +68,33 @@ struct Topology {
     return total_mem;
   }
 
-  /// Returns the total number of gb of available memory from all gpus.
-  auto combined_gpu_memory_gb() const -> float {
-    return static_cast<float>(combined_gpu_memory()) / float{1073741824};
+  /**
+   * Calculates the total number of gigabytes of memory available from all gpus.
+   * \return The total number of gigabytes of gpu memory in the system.
+   */
+  auto combined_gpu_memory_gb() const noexcept -> float {
+    return static_cast<float>(combined_gpu_memory()) * bytes_to_gb;
+  }
+
+  /**
+   * Determines if peer to peer access is possible between two gpus.
+   * \param size_t gpu_id1 The index of the first gpu.
+   * \param size_t gpu_id2 The index of the second gpu.
+   * \return true if peer to peer is possible between the gpus.
+   */
+  auto device_to_device_available(size_t gpu_id1, size_t gpu_id2) const noexcept
+    -> bool {
+    return gpu_id1 == gpu_id2 || gpus[gpu_id1].peer_to_peer_available(gpu_id2);
   }
 
   std::vector<GpuInfo> gpus;     //!< Gpus for the system.
   CpuInfo              cpu_info; //!< Cpu info for the system.
 };
 
-/// Returns a reference to the topology.
-static auto topology() -> Topology& {
+/**
+ * Returns a reference to the topology.
+ */
+static inline auto topology() noexcept -> Topology& {
   static Topology topo;
   return topo;
 }

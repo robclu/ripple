@@ -17,28 +17,34 @@
 #define RIPPLE_ARCH_CACHE_HPP
 
 #include <cstdint>
+#include <new>
 
 namespace ripple {
 
-/// Defines the number of bytes to allocate to avoid false sharing. This is 128b
-/// rather than 64b because in the Intel Optimization guide, chapter 2.1.5.4,
-/// the prefetcher likes to keep pairs of cache lines in the L2 cache, unless
-/// the size is defined as a compiler flag.
+/**
+ * Defines the number of bytes to allocate to avoid false sharing. This is 128b
+ * rather than 64b because in the Intel Optimization guide, chapter 2.1.5.4,
+ * the prefetcher likes to keep pairs of cache lines in the L2 cache, unless
+ * the size is defined as a compiler flag.
+ */
 static constexpr std::size_t avoid_false_sharing_size =
 #if defined(RIPPLE_AVOID_FALSE_SHARING_SIZE)
   RIPPLE_AVOID_FALSE_SHARING_SIZE;
 #else
-  // Not yet implemented, so just use 2 * most cache line sizes.
-  // std::hardware_destructive_interference_size;
-  128;
+  // Not yet implemented, so just use the most cache line size.
+  64;
 #endif
 
-/// Stores information for a cache.
+/**
+ * Stores information for a cache.
+ */
 struct Cache {
-  /// Constant to convert bytes to kb.
+  /** Constant to convert bytes to kb. */
   static constexpr uint32_t bytes_in_kb = 1024;
 
-  /// Defines the type of the cache, as per the Intel spec.
+  /**
+   * Defines the type of the cache, as per the Intel spec.
+   */
   enum Type : uint32_t {
     Null        = 0x0, //!< Null or invalid cache.
     Data        = 0x1, //!< Data cache.
@@ -46,7 +52,10 @@ struct Cache {
     Unified     = 0x3  //!< Unified cache.
   };
 
-  /// Returns the size of the cache in kB.
+  /**
+   * Gets the size of the cache.
+   * \return The size of the cache in kB.
+   */
   auto size() const -> uint32_t {
     return assosciativity * partitions * linesize * sets / bytes_in_kb;
   }
