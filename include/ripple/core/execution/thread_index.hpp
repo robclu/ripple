@@ -1,8 +1,8 @@
-//==--- ripple/core/execution/thread_index.hpp ------------------ -*- C++ -*- ---==//
-//            
+//==--- ripple/core/execution/thread_index.hpp ------------- -*- C++ -*- ---==//
+//
 //                                Ripple
-// 
-//                      Copyright (c) 2019 Rob Clucas.
+//
+//                      Copyright (c) 2019, 2020 Rob Clucas.
 //
 //  This file is distributed under the MIT License. See LICENSE for details.
 //
@@ -13,150 +13,245 @@
 //
 //==------------------------------------------------------------------------==//
 
-#ifndef RIPPLE_EXECUTION_THREAD_INDEX_HPP 
+#ifndef RIPPLE_EXECUTION_THREAD_INDEX_HPP
 #define RIPPLE_EXECUTION_THREAD_INDEX_HPP
 
 #include "detail/thread_index_impl_.hpp"
 
 namespace ripple {
 
-//==--- [sizes] ------------------------------------------------------------==//
+/*==--- [sizes] ------------------------------------------------------------==*/
 
-/// Returns the value of the block size in the grid in a given dimension. The
-/// dimension must be one of dim_x, dim_y, dim_z, or a value specifting the
-/// index of the dimension.
-/// \param  dim the dimension to get the block size for.
-/// \tparam Dim the type of the dimension specifier.
+/**
+ * Gets the value of the block size in the grid in a given dimension. The
+ * dimension must be one of dim_x, dim_y, dim_z, or a value specifting the
+ * index of the dimension.
+ *
+ * \param  dim the dimension to get the block size for.
+ * \tparam Dim the type of the dimension specifier.
+ * \return The size of the block for the dimension (number of threads).
+ */
 template <typename Dim>
-ripple_host_device inline auto block_size(Dim&& dim) -> std::size_t {
+ripple_host_device inline auto block_size(Dim&& dim) noexcept -> size_t {
   return detail::block_size(std::forward<Dim>(dim));
 }
 
-/// Returns the value of the grid size in the grid (number of blocks in the
-/// grid) in a given dimension. The dimension must be one of dim_x, dim_y,
-/// dim_z, or a value specifting the index of the dimension.
-/// \param  dim the dimension to get the block size for.
-/// \tparam Dim the type of the dimension specifier.
+/**
+ * Gets the value of the grid size in the grid (number of blocks in the
+ * grid) in a given dimension. The dimension must be one of dim_x, dim_y,
+ * dim_z, or a value specifting the index of the dimension.
+ *
+ * \note This is the size of the grid local to the device on which the code is
+ *       executing. If there are multiple devices being used, each has its own
+ *       size.
+ *
+ * \param  dim the dimension to get the block size for.
+ * \tparam Dim the type of the dimension specifier.
+ * \return The size of the grid in the given dimension (number of blocks).
+ */
 template <typename Dim>
-ripple_host_device inline auto grid_size(Dim&& dim) -> std::size_t {
+ripple_host_device inline auto grid_size(Dim&& dim) noexcept -> size_t {
   return detail::grid_size(std::forward<Dim>(dim));
 }
 
-/// Returns the value of the global size of the grid (number of threads in the
-/// grid) in a given dimension. The dimension must be one of dim_x, dim_y,
-/// dim_z, or a value specifting the index of the dimension.
-/// \param  dim the dimension to get the global size for.
-/// \tparam Dim the type of the dimension specifier.
+/**
+ * Gets the value of the global size of the grid (number of threads in the
+ * grid) in a given dimension. The dimension must be one of dim_x, dim_y,
+ * dim_z, or a value specifting the index of the dimension.
+ *
+ * \note This is the size of the grid local to the device on which the code is
+ *       executing. If there are multiple devices being used, each has its own
+ *       size.
+ *
+ * \param  dim the dimension to get the block size for.
+ * \tparam Dim the type of the dimension specifier.
+ * \return The global size of the grid in the given dimension (number of
+ *         threads).
+ */
 template <typename Dim>
-ripple_host_device inline auto global_size(Dim&& dim) -> std::size_t {
+ripple_host_device inline auto global_size(Dim&& dim) noexcept -> size_t {
   return detail::grid_size(dim) * detail::block_size(dim);
 }
 
-//==--- [indexing] ---------------------------------------------------------==//
+/*==--- [indexing] ---------------------------------------------------------==*/
 
-/// Returns the value of the thread index in the block in a given dimension. The
-/// dimension must be one of dim_x, dim_y, dim_z, or a value specifting the
-/// index of the dimension.
-/// \param  dim the dimension to get the thread index for.
-/// \tparam Dim the type of the dimension specifier.
+/**
+ * Gets the value of the thread index int he block in the given dimension.
+ * The dimension must be one of dim_x, dim_y, dim_z, or a value specifting the
+ * index of the dimension.
+ *
+ * \note This index is local to the execution device, if multiple devices are
+ *       used, the same thread index may be on both devices.
+ *
+ * \param  dim the dimension to get the thread index for.
+ * \tparam Dim the type of the dimension specifier.
+ * \return The index of the thread in the given dimension for the block its in.
+ */
 template <typename Dim>
-ripple_host_device inline auto thread_idx(Dim&& dim) -> std::size_t {
+ripple_host_device inline auto thread_idx(Dim&& dim) noexcept -> size_t {
   return detail::thread_idx(std::forward<Dim>(dim));
 }
 
-/// Returns the value of the block index in the grid in a given dimension. The
-/// dimension must be one of dim_x, dim_y, dim_z, or a value specifting the
-/// index of the dimension.
-/// \param  dim the dimension to get the block index for.
-/// \tparam Dim the type of the dimension specifier.
+/**
+ * Gets the value of the block index in the grid in the given dimension.
+ * The dimension must be one of dim_x, dim_y, dim_z, or a value specifting the
+ * index of the dimension.
+ *
+ * \note This index is local to the execution device, if multiple devices are
+ *       used, the same block index may be on both devices.
+ *
+ * \param  dim the dimension to get the index for.
+ * \tparam Dim the type of the dimension specifier.
+ * \return The index of the thread in the given dimension.
+ */
 template <typename Dim>
-ripple_host_device inline auto block_idx(Dim&& dim) -> std::size_t {
+ripple_host_device inline auto block_idx(Dim&& dim) noexcept -> size_t {
   return detail::block_idx(std::forward<Dim>(dim));
 }
 
-/// Returns the value of the thread index globally in the grid in a given
-/// dimension. The dimension must be one of dim_x, dim_y, dim_z, or a value
-/// specifting the index of the dimension.
-/// \param  dim the dimension to get the global index for.
-/// \tparam Dim the type of the dimension specifier.
+/**
+ * Gets the value of the global index in the grid in the given dimension.
+ * The dimension must be one of dim_x, dim_y, dim_z, or a value specifting the
+ * index of the dimension.
+ *
+ * \note This index is local to the execution device, if multiple devices are
+ *       used, the same global index may be on both devices.
+ *
+ * \param  dim the dimension to get the index for.
+ * \tparam Dim the type of the dimension specifier.
+ * \return The global index of the thread in the given dimension.
+ */
 template <typename Dim>
-ripple_host_device inline auto global_idx(Dim&& dim) -> std::size_t {
+ripple_host_device inline auto global_idx(Dim&& dim) noexcept -> size_t {
   return detail::global_idx(std::forward<Dim>(dim));
 }
 
-/// Returns the normalized global index in the \p dim dimension, using the
-/// global number of threads as the dimension size. This returns the cell
-/// centered index of the cell.
-/// \param  dim The dimension to get the normalized index for.
-/// \tparam Dim The type of the dimension specifier.
+/**
+ * Gets the value of the global normalized index in the grid in the given
+ * dimension. The dimension must be one of dim_x, dim_y, dim_z, or a value
+ * specifting the index of the dimension.
+ *
+ * \note This index is local to the execution device, if multiple devices are
+ *       used, the same global index may be on both devices.
+ *
+ * \param  dim the dimension to get the index for.
+ * \tparam Dim the type of the dimension specifier.
+ * \return The global normalized index of the thread in the given dimension.
+ */
 template <typename Dim>
-ripple_host_device inline auto global_norm_idx(Dim&& dim) -> float {
-  return (static_cast<float>(global_idx(dim)) + 0.5f) 
-    / detail::global_elements(dim);
+ripple_host_device inline auto global_norm_idx(Dim&& dim) noexcept -> double {
+  return (static_cast<double>(global_idx(dim)) + 0.5) /
+         static_cast<double>(detail::global_elements(dim));
 }
 
-/// Returns the normalized block index in the \p dim dimension, using the number
-/// of threads in the block as the block size.
-/// \param  dim The dimension to get the normalized index for.
-/// \tparam Dim The type of the dimension specifier.
+/**
+ * Gets the value of the normalized index in the block in the given
+ * dimension. The dimension must be one of dim_x, dim_y, dim_z, or a value
+ * specifting the index of the dimension.
+ *
+ * \param  dim the dimension to get the index for.
+ * \tparam Dim the type of the dimension specifier.
+ * \return The normalized index of the thread in block for the given dimension.
+ */
 template <typename Dim>
-ripple_host_device inline auto block_norm_idx(Dim&& dim) -> float {
-  return static_cast<float>(block_idx(dim)) 
-    / static_cast<float>(block_size(dim));
+ripple_host_device inline auto block_norm_idx(Dim&& dim) noexcept -> double {
+  return static_cast<double>(block_idx(dim)) /
+         static_cast<double>(block_size(dim));
 }
 
-//==--- [utilities] --------------------------------------------------------==//
+/*==--- [utilities] --------------------------------------------------------==*/
 
-/// Returns true if the thread is the first thread in the block for all
-/// dimensions.
-ripple_host_device inline auto first_thread_in_block() -> bool {
-  return detail::thread_idx(dim_x) == std::size_t{0} &&
-         detail::thread_idx(dim_y) == std::size_t{0} &&
-         detail::thread_idx(dim_z) == std::size_t{0};
-}
-
-/// Returns true if the thread is the first thread in the block for dimension
-/// \p dim.
-/// \param  dim The dimension to check for the first thread.
-/// \tparam Dim The type of the dimension specifier.
+/**
+ * Determines if a thread is the first thread in its block for the given
+ * dimension.
+ * \param  dim The dimension to check if this is the first thread of.
+ * \tparam Dim The type of the dimension specifier.
+ * \return true if the executing thread is the first thread in the block.
+ */
 template <typename Dim>
-ripple_host_device inline auto first_thread_in_block(Dim&& dim) -> bool {
-  return detail::thread_idx(dim) == std::size_t{0};
+ripple_host_device inline auto
+first_thread_in_block(Dim&& dim) noexcept -> bool {
+  return detail::thread_idx(std::forward<Dim>(dim)) == size_t{0};
 }
 
-/// Returns true if the thread is the last thread in the block for dimension
-/// \p dim.
-/// \param  dim The dimension to check for the first thread.
-/// \tparam Dim The type of the dimension specifier.
+/**
+ * Determines if a thread is the first thread in its block, which requires that
+ * its the first thread in each dimension.
+ * \return true if the executing thread is the first thread in the block.
+ */
+ripple_host_device inline auto first_thread_in_block() noexcept -> bool {
+  return first_thread_in_block(dim_x) && first_thread_in_block(dim_y) &&
+         first_thread_in_block(dim_z);
+}
+
+/**
+ * Determines if the executing thread is the last thread in the block for the
+ * given dimension.
+ * \param  dim The dimension to check in.
+ * \tparam Dim The type of the dimension specifier.
+ * \return true if this is the last thread in the block.
+ */
 template <typename Dim>
-ripple_host_device inline auto last_thread_in_block(Dim&& dim) -> bool {
-  return detail::thread_idx(dim) == (detail::block_size(dim) - 1);
+ripple_host_device inline auto
+last_thread_in_block(Dim&& dim) noexcept -> bool {
+  return detail::thread_idx(std::forward<Dim>(dim)) ==
+         (detail::block_size(std::forward<Dim>(dim)) - 1);
 }
 
-/// Returns true if the thread is the first thread in the grid for all
-/// dimensions.
-ripple_host_device inline auto first_thread_in_grid() -> bool {
-  return detail::global_idx(dim_x) == std::size_t{0} &&
-         detail::global_idx(dim_y) == std::size_t{0} &&
-         detail::global_idx(dim_z) == std::size_t{0};
+/**
+ * Determines if the executing thread is the last thread in the block, which
+ * requries that its the last thread in each dimension, for a specific
+ * dimension.
+ * \param  dim The dimension to check in.
+ * \tparam Dim The type of the dimension specifier.
+ *  \return true if this is the last thread in the block.
+ */
+ripple_host_device inline auto last_thread_in_block() noexcept -> bool {
+  return last_thread_in_block(dim_x) && last_thread_in_block(dim_y) &&
+         last_thread_in_block(dim_z);
 }
 
-/// Returns true if the thread is the first thread in the grid for dimension
-/// \p dim.
-/// \param  dim The dimension to check for the first thread.
-/// \tparam Dim The type of the dimension specifier.
+/**
+ * Determines if this is the first thread in the grid for the given dimension.
+ * \param  dim The dimension to check for.
+ * \tparam Dim The type of the dimension specifier.
+ * \return true if this is the first thread in the grid for the given dimension.
+ */
 template <typename Dim>
-ripple_host_device inline auto first_thread_in_grid(Dim&& dim) -> bool {
-  return detail::global_idx(dim) == std::size_t{0};
+ripple_host_device inline auto
+first_thread_in_grid(Dim&& dim) noexcept -> bool {
+  return detail::global_idx(std::forward<Dim>(dim)) == size_t{0};
 }
 
-/// Returns true if the thread is the last thread in the block for dimension
-/// \p dim.
-/// \param  dim The dimension to check for the first thread.
-/// \tparam Dim The type of the dimension specifier.
+/**
+ * Determines if the excecuting thread is the first thread in the grid for the
+ * device it is executing on.
+ * \return true if this is the first thread in the grid.
+ */
+ripple_host_device inline auto first_thread_in_grid() noexcept -> bool {
+  return first_thread_in_grid(dim_x) && first_thread_in_grid(dim_y) &&
+         first_thread_in_grid(dim_z);
+}
+
+/**
+ * Determines if this is the last thread in the grid for the given dimension.
+ * \param  dim The dimension to check for.
+ * \tparam Dim The type of the dimension specifier.
+ * \return true if this is the first thread in the grid for the given dimension.
+ */
 template <typename Dim>
-ripple_host_device inline auto last_thread_in_grid(Dim&& dim) -> bool {
-  return detail::global_idx(dim) == (global_size(dim) - 1);
+ripple_host_device inline auto last_thread_in_grid(Dim&& dim) noexcept -> bool {
+  return detail::global_idx(std::forward<Dim>(dim)) ==
+         (detail::global_elements(std::forward<Dim>(dim)) - 1);
+}
+
+/**
+ * Determines if this is the last thread in the grid.
+ * \return true if this is the first thread in the grid.
+ */
+ripple_host_device inline auto last_thread_in_grid() noexcept -> bool {
+  return last_thread_in_grid(dim_x) && last_thread_in_grid(dim_y) &&
+         last_thread_in_grid(dim_z);
 }
 
 } // namespace ripple
