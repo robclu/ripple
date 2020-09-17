@@ -66,7 +66,7 @@ struct CpuInfo {
   //==--- [interface] ------------------------------------------------------==//
 
   /// Returns the number of available physical cores.
-  auto available_cores() -> uint32_t {
+  auto available_cores() const -> uint32_t {
     return _num_packages * _cores_per_package;
   }
 
