@@ -35,7 +35,7 @@ namespace ripple::detail {
  * \tparam ItTo     The type of the to iterator.
  */
 template <
-  size_t Dims, typename IteFrom, typename ItTo, dim_1d_enable_t<Dims> = 0>
+  size_t Dims, typename ItFrom, typename ItTo, dim_1d_enable_t<Dims> = 0>
 ripple_host_device auto
   load_internal(ItFrom&& it_from, ItTo&& it_to) noexcept -> void {
   // clang-format on
