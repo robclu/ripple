@@ -93,8 +93,7 @@ load_boundary(Iterator&& it, Loader&& loader, Args&&... args) noexcept -> void {
  */
 template <size_t Dims, typename ItFrom, typename ItTo>
 ripple_host_device auto
-load_internal_boundary(IteratorFrom&& it_from, IteratorTo&& it_to) noexcept
-  -> void {
+load_internal_boundary(ItFrom&& it_from, ItTo&& it_to) noexcept -> void {
   static constexpr auto dims_from = iterator_traits_t<ItFrom>::dimensions;
   static constexpr auto dims_to   = iterator_traits_t<ItTo>::dimensions;
   static_assert(
