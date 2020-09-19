@@ -1,8 +1,8 @@
-//==--- ripple/core/storage/contiguous_storage_view.hpp --------- -*- C++ -*- ---==//
-//            
+//==--- ripple/core/storage/contiguous_storage_view.hpp ---- -*- C++ -*- ---==//
+//
 //                                Ripple
-// 
-//                      Copyright (c) 2019 Rob Clucas
+//
+//                      Copyright (c) 2019, 2020 Rob Clucas.
 //
 //  This file is distributed under the MIT License. See LICENSE for details.
 //
@@ -23,439 +23,551 @@
 
 namespace ripple {
 
-/// Defines a view into contiguous storage for Ts types.
-/// See ContiguousStorageView for more information.
-/// \tparam Ts The types to create a storage view for.
+/**
+ * Implementation of contiguous view storage.
+ * \tparam Ts The types to create a storage view for.
+ */
 template <typename... Ts>
-class ContiguousStorageView : 
-    public StorageAccessor<ContiguousStorageView<Ts...>> {
-  /// Defines the data type for the buffer.
+class ContiguousStorageView
+: public StorageAccessor<ContiguousStorageView<Ts...>> {
+  // clang-format off
+  /** Defines the data type for the buffer. */
   using ptr_t           = void*;
-  /// Defines the type of the storage.
+  /** Defines the type of the storage. */
   using storage_t       = ContiguousStorageView<Ts...>;
-  /// Defines the type of owned storage.
+  /** Defines the type of owned storage. */
   using owned_storage_t = OwnedStorage<Ts...>;
+  // clang-format on
 
-  //==--- [traits] ---------------------------------------------------------==//
-
-  /// Gets the value type of the storage element traits for a type.
-  /// \tparam T The type to get the storage element traits for.
+  /**
+   * Gets the value type of the storage element traits for a type.
+   * \tparam T The type to get the storage element traits for.
+   */
   template <typename T>
   using element_value_t = typename storage_element_traits_t<T>::value_t;
 
-  //==--- [constants] ------------------------------------------------------==//
+  /*==--- [constants] ------------------------------------------------------==*/
 
-  /// Defines the number of different types.
+  /** Defines the number of different types. */
   static constexpr auto num_types = sizeof...(Ts);
 
-  /// Gets the numbber of components for the storage element.
-  /// \tparam T The type to get the size of.
+  /**
+   * Gets the number of components for the storage element.
+   * \tparam T The type to get the size of.
+   */
   template <typename T>
   static constexpr auto element_components_v =
     storage_element_traits_t<T>::num_elements;
 
-  /// Defines the sizes of each of the types.
-  static constexpr std::size_t byte_sizes[num_types] = {
-    storage_element_traits_t<Ts>::byte_size...
-  };
-  /// Defines the alignment sizes of each of the types.
-  static constexpr std::size_t align_sizes[num_types] = {
-    storage_element_traits_t<Ts>::align_size...
-  };
-  /// Defines the number of components in each of the types.
-  static constexpr std::size_t components[num_types] = {
-    element_components_v<Ts>...
-  };
-  /// Gets the number of components for the nth element.
-  /// \tparam I The index of the component to get the number of elements for.
-  template <std::size_t I>
+  /** Defines the sizes of each of the types. */
+  static constexpr size_t byte_sizes[num_types] = {
+    storage_element_traits_t<Ts>::byte_size...};
+
+  /** Defines the alignment sizes of each of the types. */
+  static constexpr size_t align_sizes[num_types] = {
+    storage_element_traits_t<Ts>::align_size...};
+
+  /** Defines the number of components in each of the types. */
+  static constexpr size_t components[num_types] = {element_components_v<Ts>...};
+
+  /**
+   * Gets the number of components for the nth element.
+   * \tparam I The index of the component to get the number of elements for.
+   */
+  template <size_t I>
   static constexpr auto nth_element_components_v =
     element_components_v<nth_element_t<I, Ts...>>;
 
-  /// Returns the effective byte size of all elements to store, including any
-  /// required padding. This should not be called, other than to define
-  /// byte_size_v, since it is expensive to compile.
-  static constexpr auto storage_byte_size() -> std::size_t {
-    auto size = byte_sizes[0];
+  /**
+   * Determines the effective byte size of all elements to store, including any
+   * required padding. This should not be called, other than to define
+   * byte_size_v, since it is expensive to compile.
+   * \return The number of bytes required for the storage.
+   */
+  static constexpr auto storage_byte_size() noexcept -> size_t {
+    size_t size = byte_sizes[0];
     for (size_t i = 1; i < num_types; ++i) {
       // If not aligned, find the first alignment after the total size:
       if ((size % align_sizes[i]) != 0) {
-        auto first_align = align_sizes[i];
-        while (first_align < size) {
-          first_align += align_sizes[i];
+        size_t next_align = align_sizes[i];
+        while (next_align < size) {
+          next_align += align_sizes[i];
         }
-        // New size is smallest alignment.
-        size = first_align;
+        size = next_align; // New size is smallest alignment.
       }
-      // Add the size of the component:
       size += byte_sizes[i];
     }
     return size;
   }
 
-  /// Returns the offset, in bytes, to the index I in the type list, accounding
-  /// for any required padding dues to __badly specifier__ data layout.
-  /// \tparam I The index of the type to get the offset to.
-  template <std::size_t I>
-  static constexpr auto offset_to() {
-    auto offset = std::size_t{0};
-    for (std::size_t i = 1; i <= I; ++i) {
+  /**
+   * Determines the offset, in bytes, to the index I in the type list,
+   * accounting for any required padding due to *badly specified* data layout.
+   * \tparam I The index of the type to get the offset to.
+   * \return The offset in bytes to the Ith type.
+   */
+  template <size_t I>
+  static constexpr auto offset_to() noexcept -> size_t {
+    auto offset = size_t{0};
+    for (size_t i = 1; i <= I; ++i) {
       offset += byte_sizes[i - 1];
       // If not aligned, find the first alignment after the total size:
       if ((offset % align_sizes[i]) != 0 || offset < align_sizes[i]) {
-        auto first_align = align_sizes[i];
-        while (first_align < offset) {
-          first_align += align_sizes[i];
+        size_t next_align = align_sizes[i];
+        while (next_align < offset) {
+          next_align += align_sizes[i];
         }
-        // New size is smallest alignment.
-        offset = first_align;
+        offset = next_align;
       }
     }
     return offset;
   }
 
-  /// Returns the effective byte size of all elements in the storage.
+  /** Returns the effective byte size of all elements in the storage. */
   static constexpr auto storage_byte_size_v = storage_byte_size();
 
-  //==--- [allocator] ------------------------------------------------------==//
+  /*==--- [allocator] ------------------------------------------------------==*/
 
-  /// Allocator for contiguous storage. This can be used to determine the memory
-  /// requirement for the storage for different spatial configurations, as well
-  /// as to offset ContiguousStorage elements within the allocated space.
+  /**
+   * Allocator for contiguous storage. This can be used to determine the memory
+   * requirement for the storage for different spatial configurations, as well
+   * as to offset ContiguousStorage elements within the allocated space.
+   */
   struct Allocator {
-    /// Returns the number of bytes required to allocate a total of \p elements
-    /// of the types defined by Ts.
-    ///
-    /// \param elements The number of elements to allocate.
-    ripple_host_device static constexpr auto allocation_size(
-      std::size_t elements
-    ) -> std::size_t {
+    /**
+     * Determines the number of bytes required to allocate a total of \p
+     * elements of the types defined by Ts.
+     *
+     * \param elements The number of elements to allocate.
+     * \return The number of bytes required to allocate the given number of
+     *         elements.
+     */
+    ripple_host_device static constexpr auto
+    allocation_size(size_t elements) noexcept -> size_t {
       return storage_byte_size_v * elements;
     }
 
-    /// Returns the number of bytes required to allocate a total of Elements
-    /// of the types defined by Ts. This overload of the function can be used to
-    /// allocate static memory when the number of elements in the space is known
-    /// at compile time.
-    /// \tparam Elements The number of elements to allocate.
-    template <std::size_t Elements>
-    ripple_host_device static constexpr auto allocation_size() -> std::size_t {
+    /**
+     * Determines the number of bytes required to allocate a total of Elements
+     * of the types defined by Ts. This overload of the function can be used to
+     * allocate static memory when the number of elements in the space is known
+     * at compile time.
+     * \tparam Elements The number of elements to allocate.
+     * \return The number of bytes required to allocate the given number of
+     *         elements.
+     */
+    template <size_t Elements>
+    ripple_host_device static constexpr auto
+    allocation_size() noexcept -> size_t {
       return storage_byte_size_v * Elements;
     }
 
-    /// Offsets the storage by the amount specified by the indices \p is. This
-    /// assumes that the data into which the storage can offset is valid, which
-    /// is the case if the storage was created through the allocator.
-    ///
-    /// This returns a new ContiguousStorage, offset to the new indices in the
-    /// space.
-    ///
-    /// \param  storage   The storage to offset.
-    /// \param  space     The space for which the storage is defined.
-    /// \param  is        The indices to offset to in the space.
-    /// \tparam SpaceImpl The implementation of the spatial interface.
-    /// \tparam Indices   The types of the indices.
+    // clang-format off
+    /**
+     * Offsets the \p storage by the amount specified by the indices \p is. 
+     * 
+     * \note This assumes that the data into which the storage can offset is
+     *       valid, which is the case if the storage was created through the
+     *       allocator. If not, the behaviour is undefined.
+     * 
+     * \param  storage The storage to offset.
+     * \param  space   The space for which the storage is defined.
+     * \param  is      The indices to offset to in the space.
+     * \tparam Space   The implementation of the spatial interface.
+     * \tparam Is      The types of the indices.
+     * \return A new ContiguousStorageView which points to offset data.
+     */
     template <
-      typename SpaceImpl,
-      typename... Indices,
-      variadic_ge_enable_t<1, Indices...> = 0
-    >
+      typename SpaceImpl, typename... Is, variadic_ge_enable_t<1, Is...> = 0>
     ripple_host_device static auto offset(
       const storage_t&                storage,
-      const MultidimSpace<SpaceImpl>& space  ,
-      Indices&&...                    is
-    ) -> storage_t {
+      const MultidimSpace<SpaceImpl>& space,
+      Is&&...                         is) noexcept -> storage_t {
       storage_t r;
       r._data = static_cast<void*>(
-        static_cast<char*>(storage._data) + offset_to_aos(
-          space, storage_byte_size_v, std::forward<Indices>(is)...
-        )
-      );
+        static_cast<char*>(storage._data) +
+        offset_to_aos(space, storage_byte_size_v, std::forward<Is>(is)...));
       return r;
     }
+    // clang-format on
 
-    /// Offsets the storage by the amount specified by \p amount in the
-    /// dimension \p dim.
-    ///
-    /// This returns a new ContiguousStorage, offset to the new indices in the
-    /// space.
-    ///
-    /// \param  storage   The storage to offset.
-    /// \param  space     The space for which the storage is defined.
-    /// \param  dim       The dimension to offset in.
-    /// \tparam SpaceImpl The implementation of the spatial interface.
-    /// \tparam Dim       The type of the dimension.
+    /**
+     * Offsets the storage by the amount specified by \p amount in the
+     * dimension \p dim.
+     *
+     * This returns a new ContiguousStorage, offset to the new indices in the
+     * space.
+     *
+     * \param  storage   The storage to offset.
+     * \param  space     The space for which the storage is defined.
+     * \param  dim       The dimension to offset in.
+     * \tparam SpaceImpl The implementation of the spatial interface.
+     * \tparam Dim       The type of the dimension.
+     * \return A new ContiguousStorageView which points to the offset data.
+     */
     template <typename SpaceImpl, typename Dim, diff_enable_t<Dim, int> = 0>
     ripple_host_device static auto offset(
       const storage_t&                storage,
       const MultidimSpace<SpaceImpl>& space,
       Dim&&                           dim,
-      int                             amount
-    ) -> storage_t {
+      int                             amount) noexcept -> storage_t {
       storage_t r;
       r._data = static_cast<void*>(
-        static_cast<char*>(storage._data) + 
-        amount * storage_byte_size_v * space.step(dim)
-      );
+        static_cast<char*>(storage._data) +
+        amount * storage_byte_size_v * space.step(dim));
       return r;
     }
 
-    /// Shifts the storage by the amount specified by \p amount in the
-    /// dimension \p dim.
-    ///
-    /// This returns a new ContiguousStorage, offset to the new indices in the
-    /// space.
-    ///
-    /// \param  storage   The storage to offset.
-    /// \param  space     The space for which the storage is defined.
-    /// \param  dim       The dimension to offset in.
-    /// \tparam SpaceImpl The implementation of the spatial interface.
-    /// \tparam Dim       The type of the dimension.
+    /**
+     * Shifts the storage by the amount specified by \p amount in the
+     * dimension \p dim.
+     *
+     * \note This is essentially an in-place offset which modifies the \p
+     *       storage to point to the new location.
+     *
+     * \param  storage   The storage to offset.
+     * \param  space     The space for which the storage is defined.
+     * \param  dim       The dimension to offset in.
+     * \tparam SpaceImpl The implementation of the spatial interface.
+     * \tparam Dim       The type of the dimension.
+     */
     template <typename SpaceImpl, typename Dim>
     ripple_host_device static auto shift(
       storage_t&                      storage,
       const MultidimSpace<SpaceImpl>& space,
       Dim&&                           dim,
-      int                             amount
-    ) -> void {
+      int                             amount) noexcept -> void {
       storage._data = static_cast<void*>(
-        static_cast<char*>(storage._data) + 
-        amount * storage_byte_size_v * space.step(dim)
-      );
+        static_cast<char*>(storage._data) +
+        amount * storage_byte_size_v * space.step(dim));
     }
 
-    /// Creates the storage, initializing a ContiguousStorage instance which has
-    /// its data pointer pointing to the location defined by the indices \p is.
-    /// which is pointed to by \p ptr. The memory space should have a size which
-    /// is returned by the `allocation_size()` method, otherwise this may index
-    /// into undefined memory.
-    /// \param  ptr       A pointer to the beginning of the memory space.
-    /// \param  space     The multidimensional space which defines the domain.
-    /// \param  is        The indices of the element in the space to create.
-    /// \tparam SpaceImpl The implementation of the spatial interface.
-    /// \tparam Indices   The type of the indices.
+    // clang-format off
+    /**
+     * Creates the storage, initializing a ContiguousStorageView instance which
+     * has its data pointer pointing to the location defined by the indices \p
+     * is, from the initial \p ptr. 
+     * 
+     * \note The memory space should have a size which is returned by the 
+     *       `allocation_size()` method, otherwise this may index into undefined
+     *       memory.
+     * 
+     * \param  ptr       A pointer to the beginning of the memory space.
+     * \param  space     The multidimensional space which defines the domain.
+     * \param  is        The indices of the element in the space to create.
+     * \tparam SpaceImpl The implementation of the spatial interface.
+     * \tparam Is        The type of the indices.
+     * \return A new ContiguousStorageView which is offset to the location
+     *         specified by the indices.
+     */
     template <
-      typename    SpaceImpl,
-      typename... Indices  ,
-      variadic_ge_enable_t<1, Indices...> = 0
-    > 
-    ripple_host_device static auto create(
-      void*                           ptr  ,
-      const MultidimSpace<SpaceImpl>& space,
-      Indices&&...                    is
-    ) -> storage_t {
+      typename SpaceImpl, typename... Is, variadic_ge_enable_t<1, Is...> = 0>
+    ripple_host_device static auto
+    create(void* ptr, const MultidimSpace<SpaceImpl>& space, Is&&... is)
+      noexcept -> storage_t {
       storage_t r;
       r._data = static_cast<void*>(
-        static_cast<char*>(ptr) + offset_to_aos(
-          space, storage_byte_size_v, std::forward<Indices>(is)...  
-        )  
-      );
+        static_cast<char*>(ptr) +
+        offset_to_aos(space, storage_byte_size_v, std::forward<Is>(is)...));
       return r;
     }
+    // clang-format on
 
-    /// Creates the storage, initializing a ContiguousStorage instance which has
-    /// its data pointer pointing to the \p ptr. The memory space should have a
-    /// size which is returned by the `allocation_size()` method, otherwise this
-    /// may index into undefined memory.
-    /// \param  ptr       A pointer to the beginning of the memory space.
-    /// \param  space     The multidimensional space which defines the domain.
-    /// \tparam SpaceImpl The implementation of the spatial interface.
-    template <typename SpaceImpl> 
-    ripple_host_device static auto create(
-      void*                           ptr,
-      const MultidimSpace<SpaceImpl>& space
-    ) -> storage_t {
+    /**
+     * Creates the storage, initializing a ContiguousStorageView instance which
+     * has its data pointer pointing to the \p ptr.
+     *
+     * \note The memory space should have a size which is returned by the
+     *       `allocation_size()` method, otherwise this may index into undefined
+     *       memory.
+     *
+     * \param  ptr       A pointer to the beginning of the memory space.
+     * \param  space     The multidimensional space which defines the domain.
+     * \tparam SpaceImpl The implementation of the spatial interface.
+     */
+    template <typename SpaceImpl>
+    ripple_host_device static auto
+    create(void* ptr, const MultidimSpace<SpaceImpl>& space) noexcept
+      -> storage_t {
       storage_t r;
       r._data = ptr;
       return r;
     }
   };
 
-  //==--- [members] --------------------------------------------------------==//
+  /*==--- [members] --------------------------------------------------------==*/
 
-  ptr_t _data = nullptr;  //!< Pointer to the data.
+  ptr_t _data = nullptr; //!< Pointer to the data.
 
  public:
-  //==--- [traits] ---------------------------------------------------------==//
+  /*==--- [traits] ---------------------------------------------------------==*/
 
-  /// Defines the type of the allocator for creating StridedStorage.
+  /** Defines the type of the allocator for creating StridedStorage. */
   using allocator_t = Allocator;
 
-  //==--- [construction] ---------------------------------------------------==//
+  /*==--- [construction] ---------------------------------------------------==*/
 
-  /// Default constructor for the contguous storage.
-  ripple_host_device ContiguousStorageView() = default;
+  /**
+   * Default constructor for the contguous storage.
+   */
+  ripple_host_device ContiguousStorageView() noexcept = default;
 
-  /// Constructor to set the contiguous storage from another StorageAccessor.
-  /// \param  from The accessor to copy the data from.
-  /// \tparam Impl The implementation of the StorageAccessor.
+  /**
+   * Set the contiguous storage from a type which implements the StorageAccess
+   * interface.
+   *
+   * \note This will fail at compile time if Impl doesn't implement the
+   *       StorageAccessor interface, \sa StorageAccessor.
+   *
+   * \param  from The accessor to copy the data from.
+   * \tparam Impl The implementation of the StorageAccessor.
+   */
   template <typename Impl>
-  ripple_host_device ContiguousStorageView(const StorageAccessor<Impl>& from) {
-    unrolled_for<num_types>([&] (auto i) {
-      constexpr std::size_t type_idx = i;
-      constexpr auto        values   = 
-        element_components_v<nth_element_t<type_idx, Ts...>>;
+  ripple_host_device ContiguousStorageView(const Impl& from) noexcept {
+    static_assert(
+      is_storage_accessor_v<Impl>, "Argument type isn't a StorageAccessor!");
 
+    unrolled_for<num_types>([&](auto i) {
+      constexpr size_t type_idx = i;
+      constexpr auto   values =
+        element_components_v<nth_element_t<type_idx, Ts...>>;
       copy_from_to<type_idx, values>(static_cast<const Impl&>(from), *this);
     });
   }
 
-  //==--- [operator overload] ----------------------------------------------==//
+  /*==--- [operator overloads] ---------------------------------------------==*/
 
-  /// Overload of operator= to set the data for the ContiguousStorageView from
-  /// another StorageAccessor. This returns the contiguousStorageView with the
-  /// data copied from \p from.
-  /// \param  from The accessor to copy the data from.
-  /// \tparam Impl The implementation of the StorageAccessor.
+  /**
+   * Overload of operator= to set the data for the ContiguousStorageView from
+   * a type which implements the StorageAccessor interface.
+   *
+   * \note This will fail at compile time if Impl doesn't implement the
+   *       StorageAccessor interface, \sa StorageAccessor.
+   *
+   * \param  from The accessor to copy the data from.
+   * \tparam Impl The implementation of the StorageAccessor.
+   * \return A reference to the newly created storage.
+   */
   template <typename Impl>
-  //ripple_host_device auto operator=(const StorageAccessor<Impl>& from)
-  ripple_host_device auto operator=(const Impl& from)
-  -> storage_t& {
-    unrolled_for<num_types>([&] (auto i) {
-      constexpr std::size_t type_idx = i;
-      constexpr auto        values   = 
+  ripple_host_device auto operator=(const Impl& from) noexcept -> storage_t& {
+    static_assert(
+      is_storage_accessor_v<Impl>, "Argument type isn't a StorageAccessor!");
+
+    unrolled_for<num_types>([&](auto i) {
+      constexpr size_t type_idx = i;
+      constexpr auto   values =
         element_components_v<nth_element_t<type_idx, Ts...>>;
-  
       copy_from_to<type_idx, values>(static_cast<const Impl&>(from), *this);
     });
     return *this;
   }
 
-  //==--- [interface] ------------------------------------------------------==//
+  /*==--- [interface] ------------------------------------------------------==*/
 
-  /// Copies the data from the \p other conitguous view.
-  /// \param  other The other contiguous view to copy from.
-  /// \tparam Other The type of the other storage to copy from.
+  /**
+   * Gets a pointer to the data for the storage.
+   * \return A pointer to the data for the storage.
+   */
+  ripple_host_device auto data() noexcept -> void* {
+    return _data;
+  }
+
+  /**
+   * Gets a const pointer to the data.
+   * \return A const pointer to the data for the storage.
+   */
+  ripple_host_device auto data() const noexcept -> const void* {
+    return _data;
+  }
+
+  /**
+   * Copies the data from the \p other conitguous view.
+   * \param  other The other contiguous view to copy from.
+   * \tparam Other The type of the other storage to copy from.
+   */
   template <typename Other>
-  ripple_host_device auto copy(const Other& other) -> void {
-    unrolled_for<num_types>([&] (auto i) {
+  ripple_host_device auto copy(const Other& other) noexcept -> void {
+    static_assert(
+      is_storage_accessor_v<Other>, "Argument type isn't a StorageAccessor!");
+    unrolled_for<num_types>([&](auto i) {
       constexpr std::size_t type_idx = i;
-      constexpr auto        values   = 
+      constexpr auto        values =
         element_components_v<nth_element_t<type_idx, Ts...>>;
 
       copy_from_to<type_idx, values>(other, *this);
     });
   }
 
-  /// Returns the number of components in the Ith type being stored. For
-  /// non-indexable types this will always return 1, otherwise will return the
-  /// number of possible components which can be indexed.
-  /// \tparam I The index of the type to get the number of components for.
-  template <std::size_t I>
-  ripple_host_device constexpr auto components_of() const -> std::size_t {
+  /**
+   * Gets the number of components in the Ith type being stored. For
+   * non-indexable types this will always return 1, otherwise it will return the
+   * number of possible components which can be indexed.
+   *
+   * For example:
+   *
+   * ~~~{.cpp}
+   * // Returns 1 -- only 1 type:
+   * ContiguousStorageView<int>().conponents_of<0>();
+   *
+   * struct A : StridableLayout<A> {
+   *  using descriptor_t = StorageElement<int, 4>;
+   * };
+   * // Returns 4:
+   * ContiguousStorageView<A>().components_of<0>();
+   * ~~~
+   *
+   * \tparam I The index of the type to get the number of components for.
+   * \return The number of components in the type I.
+   */
+  template <size_t I>
+  ripple_host_device constexpr auto components_of() const noexcept -> size_t {
     return nth_element_components_v<I>;
   }
 
-  /// Gets a reference to the Ith data type. This will only be enabled when the
-  /// type of the Ith type is not a StorageElement<>.
-  /// \tparam I The index of the type to get the data from.
-  /// \tparam T The type of the Ith element.
+  /**
+   * Gets a reference to the Ith data type.
+   *
+   * \note This will only be enabled when the type of the Ith type is not a
+   *       StorageElement<>.
+   *
+   * \note All offsetting calculations are performed at compile time.
+   *
+   * \tparam I The index of the type to get the data from.
+   * \tparam T The type of the Ith element.
+   * \return A reference to the Ith type, if the type is not a StorageElement.
+   */
   template <
-    std::size_t I,
-    typename    T = nth_element_t<I, Ts...>,
-    non_storage_element_enable_t<T> = 0
-  >
-  ripple_host_device auto get() -> element_value_t<T>& {
+    size_t I,
+    typename T                      = nth_element_t<I, Ts...>,
+    non_storage_element_enable_t<T> = 0>
+  ripple_host_device auto get() const noexcept -> element_value_t<T>& {
     constexpr auto offset = offset_to<I>();
-    return *reinterpret_cast<element_value_t<T>*>(
-      static_cast<char*>(_data) + offset
-    );
+    return *static_cast<element_value_t<T>*>(
+      static_cast<void*>(static_cast<char*>(_data) + offset));
   }
 
-  /// Gets a const reference to the Ith data type. This will only be enabled
-  /// when the type of the Ith type is not a StorageElement<>.
-  /// \tparam I The index of the type to get the data from.
-  /// \tparam T The type of the Ith element.
+  /**
+   * Gets a const reference to the Ith data type.
+   *
+   * \note This will only be enabled  when the type of the Ith type is not a
+   *       StorageElement<>.
+   *
+   * \note All offsetting calculations are performed at compile time.
+   *
+   * \tparam I The index of the type to get the data from.
+   * \tparam T The type of the Ith element.
+   * \return A const reference to the Ith type, if the type is not a
+   *         StorageElement.
+   */
   template <
-    std::size_t I,
-    typename    T = nth_element_t<I, Ts...>,
-    non_storage_element_enable_t<T> = 0
-  >
-  ripple_host_device auto get() const -> const element_value_t<T>& {
+    size_t I,
+    typename T                      = nth_element_t<I, Ts...>,
+    non_storage_element_enable_t<T> = 0>
+  ripple_host_device auto get() const noexcept -> const element_value_t<T>& {
     constexpr auto offset = offset_to<I>();
-    return *reinterpret_cast<const element_value_t<T>*>(
-      static_cast<const char*>(_data) + offset
-    );
+    return *static_cast<const element_value_t<T>*>(
+      static_cast<void*>(static_cast<char*>(_data) + offset));
   }
 
-  /// Gets a reference to the Jth element of the Ith data type. This will only
-  /// be enabled when the type of the Ith type is a StorageElement<> so that the
-  /// call to operator[] on the Ith type is valid.
-  /// \tparam I The index of the type to get the data from.
-  /// \tparam J The index in the type to get.
-  /// \tparam T The type of the Ith element.
+  /**
+   * Gets a reference to the Jth element of the Ith data type.
+   *
+   * \note This will only be enabled when the type of the Ith type is a
+   *       StorageElement<> so that the call to operator[] on the Ith type is
+   *       valid.
+   *
+   * \note All offsetting calculations are performed at compile time.
+   *
+   * \tparam I The index of the type to get the data from.
+   * \tparam J The index in the type to get.
+   * \tparam T The type of the Ith element.
+   * \return A reference to the Jth element of the Ith type.
+   */
   template <
-    std::size_t I,
-    std::size_t J,
-    typename    T = nth_element_t<I, Ts...>,
-    storage_element_enable_t<T> = 0
-  >
-  ripple_host_device auto get() -> element_value_t<T>& {
+    size_t I,
+    size_t J,
+    typename T                  = nth_element_t<I, Ts...>,
+    storage_element_enable_t<T> = 0>
+  ripple_host_device auto get() noexcept -> element_value_t<T>& {
     static_assert(
-      J < element_components_v<T>, "Out of range acess for storage element!"
-    );
+      J < element_components_v<T>, "Out of range acess for storage element!");
     constexpr auto offset = offset_to<I>();
-    return reinterpret_cast<element_value_t<T>*>(
-      static_cast<char*>(_data) + offset
-    )[J];
+    return static_cast<element_value_t<T>*>(
+      static_cast<void*>(static_cast<char*>(_data) + offset))[J];
   }
 
-  /// Gets a const reference to the Jth element of the Ith data type. This will
-  /// only be enabled when the type of the Ith type is a StorageElement<> so
-  /// that the call to operator[] on the Ith type is valid.
-  /// \tparam I The index of the type to get the data from.
-  /// \tparam J The index in the type to get.
-  /// \tparam T The type of the Ith element.
+  /**
+   * Gets a const reference to the Jth element of the Ith data type.
+   *
+   * \note This will only be enabled when the type of the Ith type is a
+   *       StorageElement<> so that the call to operator[] on the Ith type is
+   *       valid.
+   *
+   * \note All offsetting calculations are performed at compile time.
+   *
+   * \tparam I The index of the type to get the data from.
+   * \tparam J The index in the type to get.
+   * \tparam T The type of the Ith element.
+   * \return A const reference to the Jth element of the Ith type.
+   */
   template <
-    std::size_t I,
-    std::size_t J,
-    typename    T = nth_element_t<I, Ts...>,
-    storage_element_enable_t<T> = 0
-  >
-  ripple_host_device auto get() const -> const element_value_t<T>& {
+    size_t I,
+    size_t J,
+    typename T                  = nth_element_t<I, Ts...>,
+    storage_element_enable_t<T> = 0>
+  ripple_host_device auto get() const noexcept -> const element_value_t<T>& {
     static_assert(
-      J < element_components_v<T>, "Out of range acess for storage element!"
-    );
+      J < element_components_v<T>, "Out of range acess for storage element!");
     constexpr auto offset = offset_to<I>();
-    return reinterpret_cast<const element_value_t<T>*>(
-      static_cast<const char*>(_data) + offset
-    )[J];
+    return static_cast<const element_value_t<T>*>(
+      static_cast<void*>(static_cast<char*>(_data) + offset))[J];
   }
 
-  /// Gets a reference to the jth element of the Ith data type. This will only
-  /// be enabled when the type of the Ith type is a StorageElement<> so that the
-  /// call to operator[] on the Ith type is valid.
-  /// \param  j The index of the component in the type to get.
-  /// \tparam I The index of the type to get the data from.
-  /// \tparam T The type of the Ith element.
+  /**
+   * Gets a reference to the jth element of the Ith data type.
+   *
+   * \note This will only be enabled when the type of the Ith type is a
+   *       StorageElement<> so that the call to operator[] on the Ith type is
+   *       valid.
+   *
+   * \note The offset of j is performed at runtime.
+   *
+   * \param  j The index of the component in the type to get.
+   * \tparam I The index of the type to get the data from.
+   * \tparam T The type of the Ith element.
+   * \return A reference to the jth element of the Ith type.
+   */
   template <
-    std::size_t I,
-    typename    T = nth_element_t<I, Ts...>,
-    storage_element_enable_t<T> = 0
-  >
-  ripple_host_device auto get(std::size_t j) -> element_value_t<T>& {
+    size_t I,
+    typename T                  = nth_element_t<I, Ts...>,
+    storage_element_enable_t<T> = 0>
+  ripple_host_device auto get(size_t j) noexcept -> element_value_t<T>& {
     constexpr auto offset = offset_to<I>();
-    return reinterpret_cast<element_value_t<T>*>(
-      static_cast<char*>(_data) + offset
-    )[j];
+    return static_cast<element_value_t<T>*>(
+      static_cast<void*>(static_cast<char*>(_data) + offset))[j];
   }
 
-  /// Gets a const reference to the jth element of the Ith data type. This will
-  /// only be enabled when the type of the Ith type is a StorageElement<> so
-  /// that the call to operator[] on the Ith type is valid.
-  /// \param  j The index of the component in the type to get.
-  /// \tparam I The index of the type to get the data from.
-  /// \tparam T The type of the Ith element.
+  /**
+   * Gets a const reference to the jth element of the Ith data type.
+   *
+   * \note This will only be enabled when the type of the Ith type is a
+   *       StorageElement<> so that the call to operator[] on the Ith type is
+   *       valid.
+   *
+   * \param  j The index of the component in the type to get.
+   * \tparam I The index of the type to get the data from.
+   * \tparam T The type of the Ith element.
+   * \return A const reference to the jth element of the Ith type.
+   */
   template <
-    std::size_t I,
-    typename    T = nth_element_t<I, Ts...>,
-    storage_element_enable_t<T> = 0
-  >
-  ripple_host_device auto get(std::size_t j) const -> const element_value_t<T>& {
+    size_t I,
+    typename T                  = nth_element_t<I, Ts...>,
+    storage_element_enable_t<T> = 0>
+  ripple_host_device auto
+  get(std::size_t j) const noexcept -> const element_value_t<T>& {
     constexpr auto offset = offset_to<I>();
-    return reinterpret_cast<const element_value_t<T>*>(
-      static_cast<const char*>(_data) + offset
-    )[j];
+    return static_cast<const element_value_t<T>*>(
+      static_cast<void*>(static_cast<char*>(_data) + offset))[j];
   }
 };
 
