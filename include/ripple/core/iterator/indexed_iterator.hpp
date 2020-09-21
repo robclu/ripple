@@ -90,8 +90,8 @@ class IndexedIterator : public BlockIterator<T, Space> {
   ripple_host_device constexpr auto
   offset(Dim&& dim, int amount = 1) const noexcept -> self_t {
     auto res = self_t{block_iter_t::offset(std::forward<Dim>(dim), amount)};
-    res._block_indices = _block_indices;
-    res._global_sizes  = _global_sizes;
+    res._block_start_indices = _block_start_indices;
+    res._global_sizes        = _global_sizes;
     return res;
   }
 
@@ -106,7 +106,7 @@ class IndexedIterator : public BlockIterator<T, Space> {
   template <typename Dim>
   ripple_host_device auto
   block_start_index(Dim&& dim) const noexcept -> index_t {
-    return _thread_start_indices.at(std::forward<Dim>(dim));
+    return _block_start_indices.at(std::forward<Dim>(dim));
   }
 
   /**
@@ -158,7 +158,7 @@ class IndexedIterator : public BlockIterator<T, Space> {
   template <typename Dim>
   ripple_host_device auto global_idx(Dim&& dim) const noexcept -> size_t {
     return ::ripple::global_idx(std::forward<Dim>(dim)) +
-           static_cast<size_t>(_block_indices[dim]);
+           static_cast<size_t>(_block_start_indices[dim]);
   }
 
   /**

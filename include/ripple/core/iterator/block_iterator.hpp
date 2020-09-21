@@ -21,6 +21,7 @@
 #include <ripple/core/math/math.hpp>
 #include <ripple/core/storage/storage_traits.hpp>
 #include <ripple/core/execution/thread_index.hpp>
+#include <cassert>
 
 namespace ripple {
 
@@ -80,6 +81,20 @@ class BlockIterator {
   /** Defines the type of a vector of value_t with matching dimensions. */
   using vec_t           = Vector<copy_t, dims, contiguous_owned_t>;
   // clang-format on
+
+  /**
+   * Defines a valid type if D is 2.
+   * \tparam D The number of dimensions to base the enable on.
+   */
+  template <size_t D>
+  using enable_2d_t = std::enable_if_t<D == 2, int>;
+
+  /**
+   * Defines a valid type if D is 3.
+   * \tparam D The number of dimensions to base the enable on.
+   */
+  template <size_t D>
+  using enable_3d_t = std::enable_if_t<D == 3, int>;
 
   /*==--- [constants] ------------------------------------------------------==*/
 
@@ -265,9 +280,10 @@ class BlockIterator {
    * Overload of the access operator to access the underlying data.
    * \return A pointer, or pointer-like oject to the iterated type.
    */
-  ripple_host_device auto operator-> () const noexcept -> const_ptr_t {
+  ripple_host_device auto operator->() const noexcept -> const_ptr_t {
     return access_impl(is_stridable_overload_v);
   }
+  // clang-format on
 
   /**
    * Unwraps the iterated type.
@@ -279,7 +295,7 @@ class BlockIterator {
 
   /*==--- [offsetting] -----------------------------------------------------==*/
 
-  /** 
+  /**
    * Offsets the iterator by \p amount positions in the block in the \p dim
    * dimension.
    * \param  dim    The dimension to offset in
@@ -303,7 +319,8 @@ class BlockIterator {
    * \tparam Dim    The type of the dimension specifier.
    */
   template <typename Dim>
-  ripple_host_device constexpr auto shift(Dim&& dim, int amount = 1) noexcept -> void {
+  ripple_host_device constexpr auto
+  shift(Dim&& dim, int amount = 1) noexcept -> void {
     offsetter_t::shift(_data_ptr, _space, std::forward<Dim>(dim), amount);
   }
 
@@ -345,7 +362,7 @@ class BlockIterator {
 
   /*==--- [dimensions] -----------------------------------------------------==*/
 
-  /** 
+  /**
    * Provides the number of dimension for the iterator.
    * \return The number of dimensions for the iterator.
    */
@@ -355,7 +372,7 @@ class BlockIterator {
 
   /*==--- [gradients] ------------------------------------------------------==*/
 
-  /** 
+  /**
    * Computes the backward difference between this iterator and the iterator \p
    * amount places from from this iterator in dimension \p dim.
    *
@@ -370,7 +387,7 @@ class BlockIterator {
    * auto diff = it.backward_diff(ripple::dim_x);
    * auto diff = it.backward_diff(ripple::dim_x, 1);
    * ~~~
-   * 
+   *
    * \note If the iterated data is a vector type, the difference is computed
    *       elementwise for each component.
    *
@@ -402,7 +419,7 @@ class BlockIterator {
    * auto diff = it.forward_diff(ripple::dim_x);
    * auto diff = it.forward_diff(ripple::dim_x, 1);
    * ~~~
-   * 
+   *
    * \note If the iterated data is a vector type, the difference is computed
    *       elementwise for each component.
    *
@@ -436,7 +453,7 @@ class BlockIterator {
    * auto diff = it.central_diff(ripple::dim_x);
    * auto diff = it.central_diff(ripple::dim_x, 1);
    * ~~~
-   * 
+   *
    * \note If the iterated data is a vector type, the difference is computed
    *       elementwise for each component.
    *
@@ -451,6 +468,88 @@ class BlockIterator {
   central_diff(Dim&& dim, unsigned int amount = 1) const noexcept -> copy_t {
     return *offset(std::forward<Dim>(dim), amount) -
            *offset(std::forward<Dim>(dim), -static_cast<int>(amount));
+  }
+
+  /**
+   * Computes the second derivative with respect to the given dimension.
+   *
+   * \begin{equation}
+   *   \phi_{dd} =
+   *      \phi_{d + \textrm{amount}) -
+   *      2 \phi_{d} +
+   *      \phi_{d - \textrm{amount})
+   * \end{equation}
+   *
+   * \note This does not do the divison by $h^2$, as it assumes that it is 1.
+   *
+   * The default is that \p amount is 1, i.e:
+   *
+   * ~~~{.cpp}
+   * // The following is the same:
+   * auto diff = it.second_diff(ripple::dim_x);
+   * auto diff = it.second_diff(ripple::dim_x, 1);
+   * ~~~
+   *
+   * \note If the iterated data is a vector type, the difference is computed
+   *       elementwise for each component.
+   *
+   * \param  dim    The dimension to offset in.
+   * \param  amount The amount to offset the iterator by.
+   * \tparam Dim    The type of the dimension.
+   * \return The second difference in the given dimension.
+   */
+  template <typename Dim>
+  ripple_host_device constexpr auto
+  second_diff(Dim&& dim, unsigned int amount = 1) const noexcept -> copy_t {
+    return *offset(std::forward<Dim>(dim), amount) +
+           *offset(std::forward<Dim>(dim), -static_cast<int>(amount)) -
+           (T(2) * this->operator*());
+  }
+
+  /**
+   * Computes the second partialderivative with respect to the given dimensions:
+   *
+   * \begin{equation}
+   *   \phi_{dd} =
+   *    \frac{
+   *      \phi_{d1 + \textrm{a}, d2 + \textrm{a}) -
+   *      \phi_{d1 + \textrm{a}, d2 - \textrm{a}) -
+   *      \phi_{d1 - \textrm{a}, d2 + \textrm{a}) +
+   *      \phi_{d1 - \textrm{a}, d2 - \textrm{a})
+   *    }{4}
+   * \end{equation}
+   *
+   * \note This does not do the divison by $h^2$, as it assumes that it is 1.
+   *
+   * The default is that \p amount is 1, i.e:
+   *
+   * ~~~{.cpp}
+   * // The following is the same:
+   * auto diff = it.second_diff(ripple::dim_x);
+   * auto diff = it.second_diff(ripple::dim_x, 1);
+   * ~~~
+   *
+   * \note If the iterated data is a vector type, the difference is computed
+   *       elementwise for each component.
+   *
+   * \param  dim    The dimension to offset in.
+   * \param  amount The amount to offset the iterator by.
+   * \tparam Dim    The type of the dimension.
+   * \return The second difference in the given dimension.
+   */
+  template <typename Dim1, typename Dim2>
+  ripple_host_device constexpr auto
+  second_partial_diff(Dim1&& dim1, Dim2&& dim2, unsigned int amount = 1) const
+    noexcept -> copy_t {
+    const auto scale   = 0.25;
+    const int  namount = -static_cast<int>(amount);
+    const auto next    = offset(std::forward<Dim1>(dim1), amount);
+    const auto prev    = offset(std::forward<Dim1>(dim1), namount);
+
+    return scale * ((*next.offset(std::forward<Dim2>(dim2), amount)) -
+                    (*next.offset(std::forward<Dim2>(dim2), namount)) -
+                    (*prev.offset(std::forward<Dim2>(dim2), amount)) +
+                    (*prev.offset(std::forward<Dim2>(dim2), namount)));
   }
 
   /**
@@ -469,19 +568,20 @@ class BlockIterator {
    * \note The gradient computation for each deimension uses the central
    *       difference, thus the iterator must be valid on both sides in all
    *       dimensions, otherwise the resulting behaviour is undefined.
-   * 
+   *
    * \note If the iterated data is a vector type, the gradient is computed
    *       elementwise for each component.
-   * 
+   *
    * \see grad_dim
-   * 
+   *
    * \param  dh       The resolution of the grid the iterator iterates over.
    * \tparam DataType The type of the resolution operator.
    * \return A vector of N dimensions, with the value in each dimension set to
    *         the gradient in the given dimension.
    */
   template <typename DataType>
-  ripple_host_device constexpr auto grad(DataType dh = 1) const noexcept -> vec_t {
+  ripple_host_device constexpr auto
+  grad(DataType dh = 1) const noexcept -> vec_t {
     auto result = vec_t();
     unrolled_for<dims>([&](auto d) { result[d] = grad_dim(d, dh); });
     return result;
@@ -497,7 +597,7 @@ class BlockIterator {
    * \note The gradient computation uses the central difference, so the data
    *       on each side of the iterator must be valid, otherwise the resulting
    *       behaviour is undefined.
-   * 
+   *
    * \note If the iterated data is a vector type, the gradient is computed
    *       elementwise for each component.
    *
@@ -535,9 +635,9 @@ class BlockIterator {
    *   - \frac{\nabla \phi}{|\nabla \phi|}
    * \end{equation}
    *
-   * \note If the iterated data is a vector type the computation is performed 
+   * \note If the iterated data is a vector type the computation is performed
    *       elementwise for each component of the vector type.
-   * 
+   *
    * \note This will assert in debug if the division is too close to zero.
    *
    * \param  dh       The resolution of the grid the iterator iterates over.
@@ -562,7 +662,7 @@ class BlockIterator {
       }
       mag += result[d] * result[d];
     });
-    assert(std::abs(std::sqrt(mag)) < 1e-22 && "Division by zero in norm!");
+    // assert(std::abs(std::sqrt(mag)) < 1e-22 && "Division by zero in norm!");
     result /= std::sqrt(mag);
     return result;
   }
@@ -579,17 +679,18 @@ class BlockIterator {
    *
    * In this case, the computation of the magnitude, and the subsequent
    * division by its square root can be avoided, which is a significant
-   * performance improvement. 
-   * 
-   * \note If the iterated data is a vector type the computation is performed 
+   * performance improvement.
+   *
+   * \note If the iterated data is a vector type the computation is performed
    *       elementwise for each component of the vector type.
-   * 
+   *
    * \param  dh       The resolution of the grid the iterator iterates over.
    * \tparam DataType The type of descretization resolution.
    * \return The norm of the iterated data.
    */
   template <typename DataType>
-  ripple_host_device constexpr auto norm_sd(DataType dh = 1) const noexcept -> vec_t {
+  ripple_host_device constexpr auto
+  norm_sd(DataType dh = 1) const noexcept -> vec_t {
     // NOTE: Here we do not use the grad() function to save some loops.
     // If grad was used, then an extra multiplication would be required per
     // element for vector types.
@@ -605,6 +706,37 @@ class BlockIterator {
     return result;
   }
 
+  /*==--- [curvature] ------------------------------------------------------==*/
+
+  /**
+   * Computes the curvature for the iterator, which is defined as:
+   *
+   * \begin{equation}
+   *    \kappa = \nabla \cdot \eft( \frac{\nabla \phi}{|\nabla \phi|} \right)
+   * \end{equation}
+   *
+   * \param  dh       The resolution of the iteration domain.
+   * \tparam DataType The type of the data for the resolution.
+   * \return A value of the curvature.
+   */
+  template <typename DataType, enable_2d_t<dims> = 0>
+  ripple_host_device constexpr auto
+  curvature(DataType dh = 1) const noexcept -> DataType {
+    DataType   res = 0, mag = 0;
+    const auto px      = grad_dim(dim_x, dh);
+    const auto py      = grad_dim(dim_y, dh);
+    const auto px2     = px * px;
+    const auto py2     = py * py;
+    const auto px2_py2 = px2 + py2;
+    const auto dh2     = DataType(1) / (dh * dh);
+    const auto pxx     = second_diff(dim_x);
+    const auto pyy     = second_diff(dim_y);
+    const auto pxy     = second_partial_diff(dim_x, dim_y);
+
+    return dh2 * (pxx * py2 - 2 * py * px * pxy + pyy * px2) /
+           (math::sqrt(px2_py2 * px2_py2 * px2 + py2));
+  }
+
   /*==--- [size] -----------------------------------------------------------==*/
 
   /**
@@ -616,7 +748,7 @@ class BlockIterator {
     return _space.internal_size();
   }
 
-  /** 
+  /**
    * Getss the size of the iteration space in the given dimension \p dim.
    * \note The size *does not* include padding elements.
    * \param  dim The dimension to get the size of.
@@ -631,10 +763,10 @@ class BlockIterator {
 
   /**
    * Gets the amount of padding for the iteration space.
-   * 
+   *
    * \note All dimensions have this amount of padding on each side of the
-   *       dimension. 
-   * 
+   *       dimension.
+   *
    * \return The amount of padding for a single side of a dimension in the
    *         iteration space.
    */
