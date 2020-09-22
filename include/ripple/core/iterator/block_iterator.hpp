@@ -722,7 +722,6 @@ class BlockIterator {
   template <typename DataType, enable_2d_t<dims> = 0>
   ripple_host_device constexpr auto
   curvature(DataType dh = 1) const noexcept -> DataType {
-    DataType   res = 0, mag = 0;
     const auto px      = grad_dim(dim_x, dh);
     const auto py      = grad_dim(dim_y, dh);
     const auto px2     = px * px;
@@ -734,7 +733,7 @@ class BlockIterator {
     const auto pxy     = second_partial_diff(dim_x, dim_y);
 
     return dh2 * (pxx * py2 - 2 * py * px * pxy + pyy * px2) /
-           (math::sqrt(px2_py2 * px2_py2 * px2 + py2));
+           math::sqrt(px2_py2 * px2_py2 * px2_py2);
   }
 
   /*==--- [size] -----------------------------------------------------------==*/
