@@ -1,16 +1,15 @@
-//==--- ripple/core/storage/default_allocator.hpp --------------- -*- C++ -*- ---==//
-//            
+//==--- ripple/core/storage/default_allocator.hpp ---------- -*- C++ -*- ---==//
+//
 //                                Ripple
-// 
-//                      Copyright (c) 2019 Rob Clucas
+//
+//                      Copyright (c) 2019, 2020 Rob Clucas
 //
 //  This file is distributed under the MIT License. See LICENSE for details.
 //
 //==------------------------------------------------------------------------==//
 //
-/// \file  default_allocator.hpp
-/// \brief This file defines an allocation class to allocate types which do not
-///        have auto layout.
+/// \file  default_storage.hpp
+/// \brief This file defines a class for defauly storage.
 //
 //==------------------------------------------------------------------------==//
 
@@ -22,143 +21,162 @@
 
 namespace ripple {
 
-/// Default allocator to provide allocation information for a type T.
-/// \tparam T The type for allocation.
+/**
+ * Default storage to store a type T.
+ * \tparam T The type for allocation.
+ */
 template <typename T>
 class DefaultStorage {
-  /// The type of the storage.
-  using storage_t = T*;
+  /** The type of the storage. */
+  using Storage = T*;
 
-  /// Allocator for default storage. This can be used to determine the memory
-  /// requirement for the storage for different spatial configurations, as well
-  /// as to offset DefaultStorage elements within the allocated space.
+  /**
+   * Allocator for default storage. This can be used to determine the memory
+   * requirement for the storage for different spatial configurations, as well
+   * as to offset DefaultStorage elements within the allocated space.
+   */
   struct Allocator {
-    /// Returns the number of bytes required to allocate a total of \p elements
-    /// of the types defined by Ts.
-    /// \param elements The number of elements to allocate.
-    ripple_host_device static constexpr auto allocation_size(
-      std::size_t elements
-    ) -> std::size_t {
+    /**
+     * Gets the number of bytes required to allocate a total of \p elements
+     * of the types defined by Ts.
+     * \param  elements The number of elements to allocate.
+     * \return The number of bytes required to allocate the given number of
+     *         elements.
+     */
+    ripple_host_device static constexpr auto
+    allocation_size(size_t elements) noexcept -> size_t {
       return sizeof(T) * elements;
     }
 
-    /// Returns the number of bytes required to allocate a total of Elements
-    /// of the types defined by Ts. This overload of the function can be used to
-    /// allocate static memory when the number of elements in the space is known
-    /// at compile time.
-    /// \tparam Elements The number of elements to allocate.
-    template <std::size_t Elements>
-    ripple_host_device static constexpr auto allocation_size() -> std::size_t {
+    /**
+     * Gets the number of bytes required to allocate a total of Elements
+     * of the types defined by Ts. This overload of the function can be used to
+     * allocate static memory when the number of elements in the space is known
+     * at compile time.
+     * \tparam Elements The number of elements to allocate.
+     * \return The number of bytes required to allocate the given number of
+     *         elements.
+     */
+    template <size_t Elements>
+    ripple_host_device static constexpr auto
+    allocation_size() noexcept -> size_t {
       return sizeof(T) * Elements;
     }
 
-    /// Offsets the storage by the amount specified by the indices \p is. This
-    /// assumes that the data into which the storage can offset is valid, which
-    /// is the case if the storage was created through the allocator.
-    ///
-    /// This returns a new DefaultStorage<T>, offset to the new indices in the
-    /// space.
-    ///
-    /// \param  storage   The storage to offset.
-    /// \param  space     The space for which the storage is defined.
-    /// \param  is        The indices to offset to in the space.
-    /// \tparam SpaceImpl The implementation of the spatial interface.
-    /// \tparam Indices   The types of the indices.
+    /**
+     * Offsets the storage by the amount specified by the indices \p is.
+     *
+     * \note This assumes that the data into which the storage can offset is
+     *       valid, which is the case if the storage was created through the
+     *       allocator.
+     *
+     *
+     * \param  storage   The storage to offset.
+     * \param  space     The space for which the storage is defined.
+     * \param  is        The indices to offset to in the space.
+     * \tparam SpaceImpl The implementation of the spatial interface.
+     * \tparam Indices   The types of the indices.
+     * \return A new DefaultStorage type offset to the given indices.
+     */
     template <
-      typename    SpaceImpl,
-      typename... Indices  ,
-      variadic_ge_enable_t<1, Indices...> = 0
-    >
+      typename SpaceImpl,
+      typename... Indices,
+      variadic_ge_enable_t<1, Indices...> = 0>
     ripple_host_device static auto offset(
-      const storage_t&                storage,
-      const MultidimSpace<SpaceImpl>& space  ,
-      Indices&&...                    is
-    ) -> storage_t {
-      storage_t r;
+      const Storage&                  storage,
+      const MultidimSpace<SpaceImpl>& space,
+      Indices&&... is) -> Storage {
+      Storage r;
       r = storage + offset_to_aos(space, 1, std::forward<Indices>(is)...);
       return r;
     }
 
-    /// Offsets the storage by the amount specified by \p amount in the
-    /// dimension \p dim.
-    ///
-    /// This returns a new DefaultStorage, offset to the new indices in the
-    /// space.
-    ///
-    /// \param  storage   The storage to offset.
-    /// \param  space     The space for which the storage is defined.
-    /// \param  dim       The dimension to offset in.
-    /// \tparam SpaceImpl The implementation of the spatial interface.
-    /// \tparam Dim       The type of the dimension.
+    /**
+     * Offsets the storage by the amount specified by \p amount in the
+     * dimension \p dim.
+     *
+     *
+     * \param  storage   The storage to offset.
+     * \param  space     The space for which the storage is defined.
+     * \param  dim       The dimension to offset in.
+     * \tparam SpaceImpl The implementation of the spatial interface.
+     * \tparam Dim       The type of the dimension.
+     * \return A new DefaultStorage offset by the given amount.
+     */
     template <typename SpaceImpl, typename Dim, diff_enable_t<Dim, int> = 0>
     ripple_host_device static auto offset(
-      const storage_t&                storage,
-      const MultidimSpace<SpaceImpl>& space  ,
-      Dim&&                           dim    ,
-      int                             amount
-    ) -> storage_t {
-      storage_t r;
-      r = storage + amount * space.step(dim);
+      const Storage&                  storage,
+      const MultidimSpace<SpaceImpl>& space,
+      Dim&&                           dim,
+      int                             amount) -> Storage {
+      Storage r;
+      r = storage + amount * space.step(std::forward<Dim>(dim));
       return r;
     }
 
-    /// Offsets the storage by the amount specified by \p amount in the
-    /// dimension \p dim.
-    ///
-    /// \param  storage   The storage to offset.
-    /// \param  space     The space for which the storage is defined.
-    /// \param  dim       The dimension to offset in.
-    /// \tparam SpaceImpl The implementation of the spatial interface.
-    /// \tparam Dim       The type of the dimension.
+    /**
+     * Shifts the storage by the amount specified by \p amount in the
+     * dimension \p dim.
+     *
+     * \param  storage   The storage to offset.
+     * \param  space     The space for which the storage is defined.
+     * \param  dim       The dimension to offset in.
+     * \tparam SpaceImpl The implementation of the spatial interface.
+     * \tparam Dim       The type of the dimension.
+     */
     template <typename SpaceImpl, typename Dim>
     ripple_host_device static auto shift(
-      storage_t&                      storage,
-      const MultidimSpace<SpaceImpl>& space  ,
-      Dim&&                           dim    ,
-      int                             amount
-    ) -> void {
+      Storage&                        storage,
+      const MultidimSpace<SpaceImpl>& space,
+      Dim&&                           dim,
+      int                             amount) -> void {
       storage = storage + (amount * space.step(dim));
     }
 
-    /// Creates the storage, initializing a T instance which points to \p ptr,
-    /// and which is then offset the the location in memory defined by the \p
-    /// is. The memory space should have enough space allocated to offset to the
-    /// given location.
-    /// \param  ptr       A pointer to the beginning of the memory space.
-    /// \param  space     The multidimensional space which defines the domain.
-    /// \param  is        The indices of the element to create.
-    /// \tparam SpaceImpl The implementation of the spatial interface.
-    /// \tparam Indices   The indices to offset into to create the element.
+    /**
+     * Creates the storage, initializing a T instance which points to \p ptr,
+     * and which is then offset to the location in memory from \p ptr by the
+     * amount defined by \p is.
+     *
+     * \note The memory space should have enough space allocated to offset to
+     *       the required location.
+     *
+     * \param  ptr       A pointer to the beginning of the memory space.
+     * \param  space     The multidimensional space which defines the domain.
+     * \param  is        The indices of the element to create.
+     * \tparam SpaceImpl The implementation of the spatial interface.
+     * \tparam Indices   The indices to offset into to create the element.
+     * \return A new DefaultStorage type pointing to the given location offset
+     *         from the given pointer.
+     */
     template <
-      typename    SpaceImpl,
-      typename... Indices  ,
-      variadic_ge_enable_t<1, Indices...> = 0
-    >
-    ripple_host_device static auto create(
-      void*                           ptr  ,
-      const MultidimSpace<SpaceImpl>& space,
-      Indices&&...                    is
-    ) -> storage_t {
-      return static_cast<T*>(ptr) 
-        + offset_to_aos(space, 1, std::forward<Indices>(is)...);
+      typename SpaceImpl,
+      typename... Indices,
+      variadic_ge_enable_t<1, Indices...> = 0>
+    ripple_host_device static auto
+    create(void* ptr, const MultidimSpace<SpaceImpl>& space, Indices&&... is)
+      -> Storage {
+      return static_cast<T*>(ptr) +
+             offset_to_aos(space, 1, std::forward<Indices>(is)...);
     }
 
-    /// Creates the storage, initializing a T instance which points to \p ptr.
-    /// \param  ptr       A pointer to the beginning of the memory space.
-    /// \param  space     The multidimensional space which defines the domain.
-    /// \tparam SpaceImpl The implementation of the spatial interface.
+    /**
+     * Creates the storage, initializing a T instance which points to \p ptr.
+     *
+     * \param  ptr       A pointer to the beginning of the memory space.
+     * \param  space     The multidimensional space which defines the domain.
+     * \tparam SpaceImpl The implementation of the spatial interface.
+     * \return A new DefaultStorage type pointing to the given pointer.
+     */
     template <typename SpaceImpl>
-    ripple_host_device static auto create(
-      void*                           ptr,
-      const MultidimSpace<SpaceImpl>& space
-    ) -> storage_t {
+    ripple_host_device static auto
+    create(void* ptr, const MultidimSpace<SpaceImpl>& space) -> Storage {
       return static_cast<T*>(ptr);
     }
-
   };
 
  public:
-  /// Defines the type of the allocator for the storage.
+  /** Defines the type of the allocator for the storage. */
   using allocator_t = Allocator;
 };
 
