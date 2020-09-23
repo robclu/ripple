@@ -176,6 +176,14 @@ class DefaultStorage {
   };
 
  public:
+  /**
+   * Defines the number of components for the Nth element, which in this case
+   * is always 1.
+   * \tparam I The index of the element to get the number of components for.
+   */
+  template <size_t I>
+  static constexpr size_t nth_element_components_v = 1;
+
   /** Defines the type of the allocator for the storage. */
   using allocator_t = Allocator;
 };

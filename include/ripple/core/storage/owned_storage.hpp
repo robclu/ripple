@@ -61,6 +61,11 @@ class OwnedStorage : public StorageAccessor<OwnedStorage<Ts...>> {
   static constexpr size_t element_components_v =
     storage_element_traits_t<T>::num_elements;
 
+  /*==--- [members] --------------------------------------------------------==*/
+
+  buffer_t _data[storage_byte_size_v] = {}; //!< Buffer for the storage.
+
+ public:
   /**
    * Gets the number of components for the nth element.
    * \tparam I The index of the component to get the number of elements for.
@@ -69,11 +74,6 @@ class OwnedStorage : public StorageAccessor<OwnedStorage<Ts...>> {
   static constexpr size_t nth_element_components_v =
     element_components_v<nth_element_t<I, Ts...>>;
 
-  /*==--- [members] --------------------------------------------------------==*/
-
-  buffer_t _data[storage_byte_size_v] = {}; //!< Buffer for the storage.
-
- public:
   /*==--- [construction] ---------------------------------------------------==*/
 
   /**

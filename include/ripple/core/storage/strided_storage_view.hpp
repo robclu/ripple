@@ -1,7 +1,8 @@
-//==--- ripple/core/storage/strided_storage_view.hpp ------------ -*- C++ -*- ---==//
-//            
+//==--- ripple/core/storage/strided_storage_view.hpp ------------ -*- C++ -*-
+//---==//
+//
 //                                Ripple
-// 
+//
 //                      Copyright (c) 2019 Rob Clucas
 //
 //  This file is distributed under the MIT License. See LICENSE for details.
@@ -32,7 +33,7 @@ namespace ripple {
 template <typename... Ts>
 class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
   /// Defines the type of the pointer to the data.
-  using ptr_t     = void*;
+  using ptr_t = void*;
   /// Defines the type of the storage.
   using storage_t = StridedStorageView;
 
@@ -49,7 +50,7 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
   using nth_element_value_t = element_value_t<nth_element_t<I, Ts...>>;
 
   //==--- [constants] ------------------------------------------------------==//
-  
+
   /// Returns the number of different types.
   static constexpr auto num_types = sizeof...(Ts);
 
@@ -64,12 +65,6 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
     (storage_element_traits_t<Ts>::byte_size + ... + std::size_t{0});
 
   //==--- [size containers] ------------------------------------------------==//
-  
-  /// Gets the number of components for the nth element.
-  /// \tparam I The index of the component to get the number of elements for.
-  template <std::size_t I>
-  static constexpr auto nth_element_components_v =
-    element_components_v<nth_element_t<I, Ts...>>;
 
   /// Gets the number of bytes for the nth element.
   /// \tparam I The index of the component to get the number of bytes for.
@@ -86,16 +81,16 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
     /// Returns the scaling factor when offsetting in the y dimenion.
     /// \tparam I   The index of the component to get the scaling factor from.
     template <std::size_t I>
-    ripple_host_device static constexpr auto offset_scale(Num<I>, dimx_t) 
-    -> std::size_t {
+    ripple_host_device static constexpr auto
+    offset_scale(Num<I>, dimx_t) -> std::size_t {
       return 1;
     }
 
     /// Returns the scaling factor when offsetting in the y dimenion.
     /// \tparam I   The index of the component to get the scaling factor from.
     template <std::size_t I>
-    ripple_host_device static constexpr auto offset_scale(Num<I>, dimy_t) 
-    -> std::size_t {
+    ripple_host_device static constexpr auto
+    offset_scale(Num<I>, dimy_t) -> std::size_t {
       return nth_element_components_v<I>;
     }
 
@@ -103,19 +98,18 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
     /// \param  dim The dimension to base the scaling on.
     /// \tparam I   The index of the component to get the scaling factor from.
     template <std::size_t I>
-    ripple_host_device static constexpr auto offset_scale(Num<I>, dimz_t) 
-    -> std::size_t {
+    ripple_host_device static constexpr auto
+    offset_scale(Num<I>, dimz_t) -> std::size_t {
       return nth_element_components_v<I>;
     }
-  
+
     /// Returns the scaling factor when offsetting with a dimension which is a
     /// size type.
     /// \param  dim The dimension to base the scaling on.
     /// \tparam I   The index of the component to get the scaling factor from.
     template <std::size_t I>
-    ripple_host_device static constexpr auto offset_scale(
-      Num<I>, std::size_t dim
-    ) -> std::size_t {
+    ripple_host_device static constexpr auto
+    offset_scale(Num<I>, std::size_t dim) -> std::size_t {
       return dim == 0 ? 1 : nth_element_components_v<I>;
     }
 
@@ -124,9 +118,8 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
     /// of the types defined by Ts.
     ///
     /// \param elements The number of elements to allocate.
-    ripple_host_device static constexpr auto allocation_size(
-      std::size_t elements
-    ) -> std::size_t {
+    ripple_host_device static constexpr auto
+    allocation_size(std::size_t elements) -> std::size_t {
       return storage_byte_size_v * elements;
     }
 
@@ -154,24 +147,21 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
     /// \tparam SpaceImpl The implementation of the spatial interface.
     /// \tparam Indices   The types of the indices.
     template <
-      typename    SpaceImpl,
-      typename... Indices  ,
-      variadic_ge_enable_t<1, Indices...> = 0
-    >
+      typename SpaceImpl,
+      typename... Indices,
+      variadic_ge_enable_t<1, Indices...> = 0>
     ripple_host_device static auto offset(
       const storage_t&                storage,
       const MultidimSpace<SpaceImpl>& space,
-      Indices&&...                    is
-    ) -> storage_t {
+      Indices&&... is) -> storage_t {
       storage_t r;
       r._stride = storage._stride;
-      unrolled_for<num_types>([&] (auto i) {
+      unrolled_for<num_types>([&](auto i) {
         constexpr auto components_i = nth_element_components_v<std::size_t{i}>;
-        using type_t = nth_element_value_t<i>;
-        r._data[i]   = static_cast<void*>(
-          static_cast<type_t*>(storage._data[i]) + 
-          offset_to_soa(space, components_i, std::forward<Indices>(is)...)
-        );
+        using type_t                = nth_element_value_t<i>;
+        r._data[i]                  = static_cast<void*>(
+          static_cast<type_t*>(storage._data[i]) +
+          offset_to_soa(space, components_i, std::forward<Indices>(is)...));
       });
       return r;
     }
@@ -190,18 +180,16 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
     template <typename SpaceImpl, typename Dim, diff_enable_t<Dim, int> = 0>
     ripple_host_device static auto offset(
       const storage_t&                storage,
-      const MultidimSpace<SpaceImpl>& space  ,
-      Dim&&                           dim    ,
-      int                             amount
-    ) -> storage_t {
+      const MultidimSpace<SpaceImpl>& space,
+      Dim&&                           dim,
+      int                             amount) -> storage_t {
       storage_t r;
       r._stride = storage._stride;
-      unrolled_for<num_types>([&] (auto i) {
+      unrolled_for<num_types>([&](auto i) {
         using type_t = nth_element_value_t<i>;
         r._data[i]   = static_cast<void*>(
-          static_cast<type_t*>(storage._data[i]) + 
-          amount * space.step(dim) * offset_scale(i, dim)
-        );
+          static_cast<type_t*>(storage._data[i]) +
+          amount * space.step(dim) * offset_scale(i, dim));
       });
       return r;
     }
@@ -220,16 +208,14 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
     template <typename SpaceImpl, typename Dim>
     ripple_host_device static auto shift(
       storage_t&                      storage,
-      const MultidimSpace<SpaceImpl>& space  ,
-      Dim&&                           dim    ,
-      int                             amount
-    ) -> void {
-      unrolled_for<num_types>([&] (auto i) {
+      const MultidimSpace<SpaceImpl>& space,
+      Dim&&                           dim,
+      int                             amount) -> void {
+      unrolled_for<num_types>([&](auto i) {
         using type_t     = nth_element_value_t<i>;
         storage._data[i] = static_cast<void*>(
-          static_cast<type_t*>(storage._data[i]) + 
-          amount * space.step(dim) * offset_scale(i, dim)
-        );
+          static_cast<type_t*>(storage._data[i]) +
+          amount * space.step(dim) * offset_scale(i, dim));
       });
     }
 
@@ -246,15 +232,12 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
     /// \tparam SpaceImpl The implementation of the spatial interface.
     /// \tparam Indices   The types of the indices.
     template <
-      typename    SpaceImpl,
-      typename... Indices  ,
-      variadic_ge_enable_t<1, Indices...> = 0
-    >
-    ripple_host_device static auto create(
-      void*                           ptr    ,
-      const MultidimSpace<SpaceImpl>& space  ,
-      Indices&&...                    is
-    ) -> storage_t {
+      typename SpaceImpl,
+      typename... Indices,
+      variadic_ge_enable_t<1, Indices...> = 0>
+    ripple_host_device static auto
+    create(void* ptr, const MultidimSpace<SpaceImpl>& space, Indices&&... is)
+      -> storage_t {
       storage_t r = create(ptr, space);
       return offset(r, space, is...);
     }
@@ -267,23 +250,20 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
     /// \param  space     The multidimensional space which defines the domain.
     /// \tparam SpaceImpl The implementation of the spatial interface.
     template <typename SpaceImpl>
-    ripple_host_device static auto create(
-      void*                           ptr,
-      const MultidimSpace<SpaceImpl>& space
-    ) -> storage_t {
+    ripple_host_device static auto
+    create(void* ptr, const MultidimSpace<SpaceImpl>& space) -> storage_t {
       storage_t r;
-      r._stride       = space.size(dim_x);
-      r._data[0]      = ptr;
-      const auto size = space.size();
-      auto offset     = 0;
-      unrolled_for<num_types - 1>([&] (auto prev_index) {
+      r._stride         = space.size(dim_x);
+      r._data[0]        = ptr;
+      const auto size   = space.size();
+      auto       offset = 0;
+      unrolled_for<num_types - 1>([&](auto prev_index) {
         constexpr auto curr_index      = prev_index + 1;
         constexpr auto components_prev = nth_element_components_v<prev_index>;
-        constexpr auto bytes_prev      = nth_element_bytes_v<prev_index>; 
+        constexpr auto bytes_prev      = nth_element_bytes_v<prev_index>;
         offset += components_prev * size * bytes_prev;
-        r._data[curr_index] = static_cast<void*>(
-          static_cast<char*>(ptr) + offset
-        );
+        r._data[curr_index] =
+          static_cast<void*>(static_cast<char*>(ptr) + offset);
       });
       return r;
     }
@@ -291,11 +271,17 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
 
   //==--- [members] --------------------------------------------------------==//
 
-  ptr_t     _data[num_types]; //!< Pointers to the data.
-  uint32_t  _stride = 1;      //!< Stride between elements.
+  ptr_t    _data[num_types]; //!< Pointers to the data.
+  uint32_t _stride = 1;      //!< Stride between elements.
 
  public:
   //==--- [traits] ---------------------------------------------------------==//
+
+  /// Gets the number of components for the nth element.
+  /// \tparam I The index of the component to get the number of elements for.
+  template <std::size_t I>
+  static constexpr auto nth_element_components_v =
+    element_components_v<nth_element_t<I, Ts...>>;
 
   /// Defines the type of the allocator for creating StridedStorage.
   using allocator_t = Allocator;
@@ -310,11 +296,11 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
   /// \tparam Impl The implementation of the StorageAccessor.
   template <typename Impl>
   ripple_host_device StridedStorageView(const StorageAccessor<Impl>& from) {
-    unrolled_for<num_types>([&] (auto i) {
+    unrolled_for<num_types>([&](auto i) {
       constexpr std::size_t type_idx = i;
-      constexpr auto        values   = 
+      constexpr auto        values =
         element_components_v<nth_element_t<type_idx, Ts...>>;
-      
+
       copy_from_to<type_idx, values>(from, *this);
     });
   }
@@ -327,11 +313,11 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
   /// \param  from The accessor to copy the data from.
   /// \tparam Impl The implementation of the StorageAccessor.
   template <typename Impl>
-  ripple_host_device auto operator=(const StorageAccessor<Impl>& from)
-  -> storage_t& {
-    unrolled_for<num_types>([&] (auto i) {
+  ripple_host_device auto
+  operator=(const StorageAccessor<Impl>& from) -> storage_t& {
+    unrolled_for<num_types>([&](auto i) {
       constexpr std::size_t type_idx = i;
-      constexpr auto        values   = 
+      constexpr auto        values =
         element_components_v<nth_element_t<type_idx, Ts...>>;
 
       copy_from_to<type_idx, values>(from, *this);
@@ -346,9 +332,9 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
   /// \tparam Other The type of the other storage to copy from.
   template <typename Other>
   ripple_host_device auto copy(const Other& other) -> void {
-    unrolled_for<num_types>([&] (auto i) {
+    unrolled_for<num_types>([&](auto i) {
       constexpr std::size_t type_idx = i;
-      constexpr auto        values   = 
+      constexpr auto        values =
         element_components_v<nth_element_t<type_idx, Ts...>>;
 
       copy_from_to<type_idx, values>(other, *this);
@@ -370,9 +356,8 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
   /// \tparam T The type of the Ith element.
   template <
     std::size_t I,
-    typename    T = nth_element_t<I, Ts...>,
-    non_storage_element_enable_t<T> = 0
-  >
+    typename T                      = nth_element_t<I, Ts...>,
+    non_storage_element_enable_t<T> = 0>
   ripple_host_device auto get() -> element_value_t<T>& {
     return *static_cast<element_value_t<T>*>(_data[I]);
   }
@@ -383,11 +368,10 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
   /// \tparam T The type of the Ith element.
   template <
     std::size_t I,
-    typename    T = nth_element_t<I, Ts...>,
-    non_storage_element_enable_t<T> = 0
-  >
+    typename T                      = nth_element_t<I, Ts...>,
+    non_storage_element_enable_t<T> = 0>
   ripple_host_device auto get() const -> const element_value_t<T>& {
-    return *static_cast<const element_value_t<T>*>(_data[I]); 
+    return *static_cast<const element_value_t<T>*>(_data[I]);
   }
 
   /// Gets a reference to the Jth element of the Ith data type. This will only
@@ -399,13 +383,11 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
   template <
     std::size_t I,
     std::size_t J,
-    typename    T = nth_element_t<I, Ts...>,
-    storage_element_enable_t<T> = 0
-  >
+    typename T                  = nth_element_t<I, Ts...>,
+    storage_element_enable_t<T> = 0>
   ripple_host_device auto get() -> element_value_t<T>& {
     static_assert(
-      J < element_components_v<T>, "Out of range acess for storage element!"
-    );
+      J < element_components_v<T>, "Out of range acess for storage element!");
     return static_cast<element_value_t<T>*>(_data[I])[J * _stride];
   }
 
@@ -418,14 +400,12 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
   template <
     std::size_t I,
     std::size_t J,
-    typename    T = nth_element_t<I, Ts...>,
-    storage_element_enable_t<T> = 0
-  >
+    typename T                  = nth_element_t<I, Ts...>,
+    storage_element_enable_t<T> = 0>
   ripple_host_device auto get() const -> const element_value_t<T>& {
     static_assert(
-      J < element_components_v<T>, "Out of range acess for storage element!"
-    );
-    return static_cast<const element_value_t<T>*>(_data[I])[J * _stride]; 
+      J < element_components_v<T>, "Out of range acess for storage element!");
+    return static_cast<const element_value_t<T>*>(_data[I])[J * _stride];
   }
 
   /// Gets a reference to the jth element of the Ith data type. This will only
@@ -436,9 +416,8 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
   /// \tparam T The type of the Ith element.
   template <
     std::size_t I,
-    typename    T = nth_element_t<I, Ts...>,
-    storage_element_enable_t<T> = 0
-  >
+    typename T                  = nth_element_t<I, Ts...>,
+    storage_element_enable_t<T> = 0>
   ripple_host_device auto get(std::size_t j) -> element_value_t<T>& {
     return static_cast<element_value_t<T>*>(_data[I])[j * _stride];
   }
@@ -451,11 +430,10 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
   /// \tparam T The type of the Ith element.
   template <
     std::size_t I,
-    typename    T = nth_element_t<I, Ts...>,
-    storage_element_enable_t<T> = 0
-  >
-  ripple_host_device auto get(std::size_t j) const 
-  -> const element_value_t<T>& {
+    typename T                  = nth_element_t<I, Ts...>,
+    storage_element_enable_t<T> = 0>
+  ripple_host_device auto
+  get(std::size_t j) const -> const element_value_t<T>& {
     return static_cast<const element_value_t<T>*>(_data[I])[j * _stride];
   }
 };

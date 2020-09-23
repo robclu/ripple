@@ -67,14 +67,6 @@ class ContiguousStorageView
   static constexpr auto element_components_v =
     storage_element_traits_t<T>::num_elements;
 
-  /**
-   * Gets the number of components for the nth element.
-   * \tparam I The index of the component to get the number of elements for.
-   */
-  template <size_t I>
-  static constexpr auto nth_element_components_v =
-    element_components_v<nth_element_t<I, Ts...>>;
-
   /*==--- [allocator] ------------------------------------------------------==*/
 
   /**
@@ -253,6 +245,14 @@ class ContiguousStorageView
 
   /** Defines the type of the allocator for creating StridedStorage. */
   using allocator_t = Allocator;
+
+  /**
+   * Gets the number of components for the nth element.
+   * \tparam I The index of the component to get the number of elements for.
+   */
+  template <size_t I>
+  static constexpr auto nth_element_components_v =
+    element_components_v<nth_element_t<I, Ts...>>;
 
   /*==--- [construction] ---------------------------------------------------==*/
 
