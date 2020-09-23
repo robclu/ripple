@@ -1,8 +1,8 @@
-//==--- ripple/core/container/vec.hpp --------------------------- -*- C++ -*- ---==//
-//            
+//==--- ripple/core/container/vec.hpp ---------------------- -*- C++ -*- ---==//
+//
 //                                Ripple
-// 
-//                      Copyright (c) 2019 Ripple.
+//
+//                      Copyright (c) 2019, 2020 Rob Clucas
 //
 //  This file is distributed under the MIT License. See LICENSE for details.
 //
@@ -24,6 +24,7 @@
 #include <ripple/core/storage/storage_element_traits.hpp>
 #include <ripple/core/storage/storage_traits.hpp>
 #include <ripple/core/storage/stridable_layout.hpp>
+#include <ripple/core/storage/struct_accessor.hpp>
 #include <ripple/core/utility/portability.hpp>
 
 namespace ripple {
@@ -37,203 +38,324 @@ namespace ripple {
 /// \tparam Size   The size of the vetor.
 /// \tparam Layout The type of the storage layout for the vector.
 template <typename T, typename Size, typename Layout>
-struct VecImpl : 
-  public StridableLayout<VecImpl<T, Size, Layout>>,
-  public Array<VecImpl<T, Size, Layout>>  {
+struct VecImpl : public StridableLayout<VecImpl<T, Size, Layout>>,
+                 public Array<VecImpl<T, Size, Layout>> {
  private:
-  //==--- [constants] ------------------------------------------------------==//
+  /*==--- [constants] ------------------------------------------------------==*/
 
-  /// Defines the number of elements in the vector.
+  /** Defines the number of elements in the vector. */
   static constexpr auto elements = size_t{Size::value};
 
   //==--- [aliases] --------------------------------------------------------==//
-  
-  /// Defines the type of the descriptor for the storage.
+
+  // clang-format off
+  /** Defines the type of the descriptor for the storage. */
   using descriptor_t = StorageDescriptor<Layout, StorageElement<T, elements>>;
-  /// Defines the storage type for the array.
+  /** Defines the storage type for the array. */
   using storage_t    = typename descriptor_t::storage_t;
-  /// Defines the value type of the array data.
+  /** Defines the value type of the data in the vector. */
   using value_t      = std::decay_t<T>;
-  /// Defines the type of this vector.
+  /** Defines the type of this vector. */
   using self_t       = VecImpl<T, Size, Layout>;
 
-  /// Declares vectors with other storage layouts as friends for construction.
+  /** Alias for zeroth accessor */
+  using ZerothAccessor = StructAccessor<value_t, storage_t, 0>;
+  /** Alias for first accessor */
+  using FirstAccessor  = StructAccessor<value_t, storage_t, 1>;
+  /** Alias for second accessor */
+  using SecondAccessor = StructAccessor<value_t, storage_t, 2>;
+  /** Alias for third accessor */
+  using ThirdAccessor  = StructAccessor<value_t, storage_t, 3>;
+  // clang-format on
+
+  /**
+   * Declares vectors with other storage layouts as friends for construction.
+   * \tparam OtherType   The type of the other vector data.
+   * \tparam OtherSize   The size of the other vector.
+   * \tparam OtherLayout The layout of the other vector.
+   */
   template <typename OtherType, typename OtherSize, typename OtherLayout>
   friend struct VecImpl;
 
-  /// LayoutTraits is a friend so that it can see the descriptor.
+  /**
+   * LayoutTraits is a friend so that it can see the descriptor.
+   * \tparam Layable     If the type can be re laid out.
+   * \tparam IsStridable If the type is stridable.
+   */
   template <typename Layable, bool IsStridable>
   friend struct LayoutTraits;
 
  public:
-  //==--- [construction] ---------------------------------------------------==//
+  /*
+   * NOTE: Storage accessors are provided for xyzw, and rgba, for the first 4
+   *       elements of the vector. There are only valid if the vector has enough
+   *       components, and will assert at compile time if an invalid access is
+   *       requested (i.e, accessing w in a 3D vector).
+   */
+  union {
+    storage_t _storage; //!< The storage for the vector.
+    union {
+      ZerothAccessor x; //!< X component of vector.
+      ZerothAccessor r; //!< R component of the vector.
+    };
+    union {
+      FirstAccessor y; //!< Y component of vector.
+      FirstAccessor g; //!< G component of the vector.
+    };
+    union {
+      SecondAccessor z; //!< Z component of vector.
+      SecondAccessor b; //!< B component of the vector.
+    };
+    union {
+      ThirdAccessor w; //!< W component of vector.
+      ThirdAccessor a; //!< A component of the vector.
+    };
+  };
 
-  /// Default constructor for the vector.
-  ripple_host_device constexpr VecImpl() {};
+  /*==--- [construction] ---------------------------------------------------==*/
 
-  /// Constructor for the vector to set all elements to the value \p val.
-  /// \param val The value to set all elements to.
-  ripple_host_device constexpr VecImpl(T val) {
-    unrolled_for<elements>([&] (auto i) {
-      _storage.template get<0, i>() = val;
-    });
-  } 
+  /** Default constructor for the vector. */
+  ripple_host_device constexpr VecImpl() noexcept {}
 
-  /// Constructor to create the array from a list of values. This overload is
-  /// only enabled when the number of elements in the variadic parameter pack
-  /// matches the size of the array.
-  template <typename... Values, variadic_size_enable_t<elements, Values...> = 0>
-  ripple_host_device constexpr VecImpl(Values&&... values) {
-    const auto v = Tuple<Values...>{values...};
-    unrolled_for<elements>([&] (auto _i) {
-      constexpr auto i = size_t{_i};
-      _storage.template get<0, i>() = get<i>(v);
-    });
+  /**
+   * Sets all elements of the vector to the value \p val.
+   * \param val The value to set all elements to.
+   */
+  ripple_host_device constexpr VecImpl(T val) noexcept {
+    unrolled_for<elements>(
+      [&](auto i) { _storage.template get<0, i>() = val; });
   }
 
-  /// Constructor to set the vector from other \p storage.
-  /// \param other The other storage to use to set the vector.
-  ripple_host_device constexpr VecImpl(storage_t storage) : _storage{storage} {}
+  /**
+   * Constructor to create the vector from a list of values.
+   *
+   * \note This overload is only enabled when the number of elements in the
+   *       variadic parameter pack matches the number of elements in the vector.
+   *
+   * \note The types of the values must be convertible to T.
+   *
+   * \param  values The values to set the elements to.
+   * \tparam Values The types of the values for setting.
+   */
+  template <typename... Values, variadic_size_enable_t<elements, Values...> = 0>
+  ripple_host_device constexpr VecImpl(Values&&... values) noexcept {
+    const auto v = Tuple<Values...>{values...};
+    unrolled_for<elements>(
+      [&](auto i) { _storage.template get<0, i>() = get<i>(v); });
+  }
 
-  /// Coyp constructor to set the vector from another vector with a potentially
-  /// different storage layout.
-  /// \tparam OtherLayout The layout of the other storage.
-  ripple_host_device constexpr VecImpl(const VecImpl& other)
+  /**
+   * Constructor to set the vector from other \p storage.
+   * \param other The other storage to use to set the vector.
+   */
+  ripple_host_device constexpr VecImpl(storage_t storage) noexcept
+  : _storage{storage} {}
+
+  /**
+   * Copy constructor to set the vector from another vector.
+   * \param other The other vector to use to initialize this one.
+   */
+  ripple_host_device constexpr VecImpl(const VecImpl& other) noexcept
   : _storage{other._storage} {}
 
-  /// Move constructor to set the vector from another vector with a potentially
-  /// different storage layout.
-  /// \tparam OtherLayout The layout of the other storage.
-  ripple_host_device constexpr VecImpl(VecImpl&& other)
+  /**
+   * Move constructor to set the vector from another vector.
+   * \param other The other vector to use to initialize this one.
+   */
+  ripple_host_device constexpr VecImpl(VecImpl&& other) noexcept
   : _storage{std::move(other._storage)} {}
 
-  /// Coyp constructor to set the vector from another vector with a potentially
-  /// different storage layout.
-  /// \tparam OtherLayout The layout of the other storage.
+  /**
+   * Copy constructor to set the vector from another vector with a different
+   * storage layout.
+   * \param  other       The other vector to use to initialize this one.
+   * \tparam OtherLayout The layout of the other storage.
+   */
   template <typename OtherLayout>
   ripple_host_device constexpr VecImpl(
-    const VecImpl<T, Size, OtherLayout>& other
-  ) : _storage{other._storage} {}
+    const VecImpl<T, Size, OtherLayout>& other) noexcept
+  : _storage{other._storage} {}
 
-  /// Move constructor to set the vector from another vector with a potentially
-  /// different storage layout.
-  /// \tparam OtherLayout The layout of the other storage.
+  /**
+   * Move constructor to set the vector from another vector with a different
+   * storage layout.
+   * \param  other       The other vector to use to initialize this one.
+   * \tparam OtherLayout The layout of the other storage.
+   */
   template <typename OtherLayout>
   ripple_host_device constexpr VecImpl(VecImpl<T, Size, OtherLayout>&& other)
   : _storage{other._storage} {}
 
-  /// Constructor to create the vector from another array of the same type and
-  /// size.
-  /// \param  arr  The array to use to create this one.
-  /// \tparam Impl The implementation of the arrau interface.  
+  /**
+   * Constructor to create the vector from an array of the same type and
+   * size.
+   * \param  arr  The array to use to create this one.
+   * \tparam Impl The implementation of the array interface.
+   */
   template <typename Impl>
   ripple_host_device constexpr VecImpl(const Array<Impl>& arr) {
-    unrolled_for<elements>([&] (auto _i) {
-      constexpr auto i = size_t{_i};
-      _storage.template get<0, i>() = arr[i];
-    });
+    unrolled_for<elements>(
+      [&](auto i) { _storage.template get<0, i>() = arr[i]; });
   }
 
-  //==--- [operator overloads] ---------------------------------------------==//
-  
-  /// Overload of copy assignment overload to copy the elements from another
-  /// vector with potentially different storage layout to this vector.
-  /// \param  other The other vector to copy from.
-  ripple_host_device auto operator=(const VecImpl& other) -> self_t& {
+  /*==--- [operator overloads] ---------------------------------------------==*/
+
+  /**
+   * Overload of copy assignment overload to copy the elements from another
+   * vector to this vector.
+   * \param  other The other vector to copy from.
+   * \return A references to the modified vector.
+   */
+  ripple_host_device auto operator=(const VecImpl& other) noexcept -> VecImpl& {
     _storage = other._storage;
     return *this;
   }
 
-  /// Overload of move assignment overload to copy the elements from another
-  /// vector with potentially different storage layout to this vector.
-  /// \param  other The other vector to move.
-  ripple_host_device auto operator=(VecImpl&& other) -> self_t& {
+  /**
+   * Overload of move assignment overload to move the elements from another
+   * vector to this vector.
+   * \param  other The other vector to move.
+   * \return A references to the modified vector.
+   */
+  ripple_host_device auto operator=(VecImpl&& other) noexcept -> VecImpl& {
     _storage = std::move(other._storage);
     return *this;
-  } 
-  
-  /// Overload of copy assignment overload to copy the elements from another
-  /// vector with potentially different storage layout to this vector.
-  /// \param  other       The other vector to copy from.
-  /// \tparam OtherLayout The layout of the other vector.
+  }
+
+  /**
+   * Overload of copy assignment overload to copy the elements from another
+   * vector with a different storage layout to this vector.
+   * \param  other       The other vector to copy from.
+   * \tparam OtherLayout The layout of the other vector.
+   * \return A references to the modified vector.
+   */
   template <typename OtherLayout>
-  ripple_host_device auto operator=(const VecImpl<T, Size, OtherLayout>& other)
-  -> self_t& {
-    unrolled_for<elements>([&] (auto _i) {
-      constexpr auto i = size_t{_i};
-      _storage.template get<0, i>() = other[i];
-    });
+  ripple_host_device auto
+  operator=(const VecImpl<T, Size, OtherLayout>& other) noexcept -> VecImpl& {
+    unrolled_for<elements>(
+      [&](auto i) { _storage.template get<0, i>() = other[i]; });
     return *this;
   }
 
-  /// Overload of copy assignment overload to copy the elements from another
-  /// array into this vector.
-  /// \param  arr  The array to copy.
-  /// \tparam Impl The type of the array implementation.
+  /**
+   * Overload of copy assignment overload to copy the elements from an
+   * array into this vector.
+   * \param  arr  The array to copy.
+   * \tparam Impl The type of the array implementation.
+   * \return A references to the modified vector.
+   */
   template <typename Impl>
-  ripple_host_device auto operator=(const Array<Impl>& arr) -> self_t& {
-    unrolled_for<elements>([&] (auto _i) {
-      constexpr auto i = size_t{_i};
-      _storage.template get<0, i>() = arr[i];
-    });
+  ripple_host_device auto
+  operator=(const Array<Impl>& arr) noexcept -> VecImpl& {
+    unrolled_for<elements>(
+      [&](auto i) { _storage.template get<0, i>() = arr[i]; });
     return *this;
-  } 
+  }
 
-  /// Overload of move assignment overload to copy the elements from another
-  /// vector with potentially different storage layout to this vector.
-  /// \param  other       The other vector to move.
-  /// \tparam OtherLayout The layout of the other vector.
+  /**
+   * Overload of move assignment overload to copy the elements from another
+   * vector to this vector.
+   * \param  other       The other vector to move.
+   * \tparam OtherLayout The layout of the other vector.
+   * \return A references to the modified vector.
+   */
   template <typename OtherLayout>
-  ripple_host_device auto operator=(VecImpl<T, Size, OtherLayout>&& other)
-  -> self_t& {
+  ripple_host_device auto
+  operator=(VecImpl<T, Size, OtherLayout>&& other) noexcept -> VecImpl& {
     _storage = other._storage;
     return *this;
-  } 
- 
-  /// Returns a constant reference to the element at position i.
-  /// \param i The index of the element to get.  
-  ripple_host_device constexpr auto operator[](size_t i) const 
-  -> const value_t& {
+  }
+
+  /**
+   * Gets a constant reference to the element at position i.
+   * \param i The index of the element to get.
+   * \return A const reference to the element at position i.
+   */
+  ripple_host_device constexpr auto
+  operator[](size_t i) const noexcept -> const value_t& {
     return _storage.template get<0>(i);
   }
 
-  /// Returns a reference to the element at position i.
-  /// \param i The index of the element to get.  
-  ripple_host_device constexpr auto operator[](size_t i) -> value_t& {
+  /**
+   * Gets a reference to the element at position i.
+   * \param i The index of the element to get.
+   * \return A reference to the element at position i.
+   */
+  ripple_host_device constexpr auto operator[](size_t i) noexcept -> value_t& {
     return _storage.template get<0>(i);
   }
 
-  //==--- [interface] ------------------------------------------------------==//
-  
-  /// Gets the element at index I, where the offset to the element is computed
-  /// at compile time.
-  /// \tparam I The index of the element to get.
+  /*==--- [interface] ------------------------------------------------------==*/
+
+  /**
+   * Gets the element at index I, where the offset to the element is computed
+   * at compile time.
+   * \tparam I The index of the element to get.
+   * \return A const reference to the element at position I.
+   */
   template <size_t I>
-  ripple_host_device constexpr auto at() const -> const value_t& {
+  ripple_host_device constexpr auto at() const noexcept -> const value_t& {
     static_assert((I < elements), "Compile time index out of range!");
     return _storage.template get<0, I>();
   }
 
-  /// Gets the element at index I, where the offset to the element is computed
-  /// at compile time.
-  /// \tparam I The index of the element to get.
+  /**
+   * Gets the element at index I, where the offset to the element is computed
+   * at compile time.
+   * \tparam I The index of the element to get.
+   * \return A reference to the element at position I.
+   */
   template <size_t I>
-  ripple_host_device constexpr auto at() -> value_t& {
+  ripple_host_device constexpr auto at() noexcept -> value_t& {
     static_assert((I < elements), "Compile time index out of range!");
     return _storage.template get<0, I>();
   }
-   
-  /// Returns the number of elements in the vector. 
-  ripple_host_device constexpr auto size() const -> size_t {
+
+  /**
+   * Gets the element at \p index , where the offset to the element is computed
+   * at compile time if Index is a Dimension, and therefore the value is known
+   * at compile time, otherwise the offset is computed at runtime.
+   *
+   * \tparam I The index of the element to get.
+   * \return A reference to the element at position index.
+   */
+  template <typename Index>
+  ripple_host_device constexpr auto at(Index&& index) noexcept -> value_t& {
+    if constexpr (is_dimension_v<Index>) {
+      constexpr size_t i = std::decay_t<Index>::value;
+      return at<i>();
+    } else {
+      return this->operator[](index);
+    }
+  }
+
+  /**
+   * Gets the element at \p index , where the offset to the element is computed
+   * at compile time if Index is a Dimension, and therefore the value is known
+   * at compile time, otherwise the offset is computed at runtime.
+   * \tparam I The index of the element to get.
+   * \return A const reference to the element at position index.
+   */
+  template <typename Index>
+  ripple_host_device constexpr auto
+  at(Index&& index) const noexcept -> const value_t& {
+    if constexpr (is_dimension_v<Index>) {
+      constexpr size_t i = std::decay_t<Index>::value;
+      return at<i>();
+    } else {
+      return this->operator[](index);
+    }
+  }
+
+  /**
+   * Gets the number of elements in the vector.
+   * \return The number of elements in the vector.
+   */
+  ripple_host_device constexpr auto size() const noexcept -> size_t {
     return elements;
   }
-    
- private:
-  storage_t _storage;  //!< The storage for the vector.
 };
 
 } // namespace ripple
 
 #endif // namespace RIPPLE_CONTAINER_VEC_HPP
-
-
