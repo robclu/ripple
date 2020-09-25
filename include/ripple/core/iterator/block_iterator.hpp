@@ -82,20 +82,6 @@ class BlockIterator {
   using vec_t           = Vector<copy_t, dims, contiguous_owned_t>;
   // clang-format on
 
-  /**
-   * Defines a valid type if D is 2.
-   * \tparam D The number of dimensions to base the enable on.
-   */
-  template <size_t D>
-  using enable_2d_t = std::enable_if_t<D == 2, int>;
-
-  /**
-   * Defines a valid type if D is 3.
-   * \tparam D The number of dimensions to base the enable on.
-   */
-  template <size_t D>
-  using enable_3d_t = std::enable_if_t<D == 3, int>;
-
   /*==--- [constants] ------------------------------------------------------==*/
 
   /**
@@ -719,9 +705,32 @@ class BlockIterator {
    * \tparam DataType The type of the data for the resolution.
    * \return A value of the curvature.
    */
-  template <typename DataType, enable_2d_t<dims> = 0>
+  template <typename DataType>
   ripple_host_device constexpr auto
   curvature(DataType dh = 1) const noexcept -> DataType {
+    if constexpr (dims == 2) {
+      return curvature_2d(dh);
+    } else if (dims == 3) {
+      return curvature_3d(dh);
+    } else {
+      return DataType{1};
+    }
+  }
+
+  /**
+   * Computes the curvature for the iterator, which is defined as:
+   *
+   * \begin{equation}
+   *    \kappa = \nabla \cdot \eft( \frac{\nabla \phi}{|\nabla \phi|} \right)
+   * \end{equation}
+   *
+   * \param  dh       The resolution of the iteration domain.
+   * \tparam DataType The type of the data for the resolution.
+   * \return A value of the curvature.
+   */
+  template <typename DataType>
+  ripple_host_device constexpr auto
+  curvature_2d(DataType dh = 1) const noexcept -> DataType {
     const auto px      = grad_dim(dim_x, dh);
     const auto py      = grad_dim(dim_y, dh);
     const auto px2     = px * px;
@@ -732,7 +741,35 @@ class BlockIterator {
     const auto pyy     = second_diff(dim_y);
     const auto pxy     = second_partial_diff(dim_x, dim_y);
 
-    return dh2 * (pxx * py2 - 2 * py * px * pxy + pyy * px2) /
+    return dh2 * (pxx * py2 - DataType{2} * py * px * pxy + pyy * px2) /
+           math::sqrt(px2_py2 * px2_py2 * px2_py2);
+  }
+
+  /**
+   * Computes the curvature for the iterator, which is defined as:
+   *
+   * \begin{equation}
+   *    \kappa = \nabla \cdot \eft( \frac{\nabla \phi}{|\nabla \phi|} \right)
+   * \end{equation}
+   *
+   * \param  dh       The resolution of the iteration domain.
+   * \tparam DataType The type of the data for the resolution.
+   * \return A value of the curvature.
+   */
+  template <typename DataType>
+  ripple_host_device constexpr auto
+  curvature_3d(DataType dh = 1) const noexcept -> DataType {
+    const auto px      = grad_dim(dim_x, dh);
+    const auto py      = grad_dim(dim_y, dh);
+    const auto px2     = px * px;
+    const auto py2     = py * py;
+    const auto px2_py2 = px2 + py2;
+    const auto dh2     = DataType(1) / (dh * dh);
+    const auto pxx     = second_diff(dim_x);
+    const auto pyy     = second_diff(dim_y);
+    const auto pxy     = second_partial_diff(dim_x, dim_y);
+
+    return dh2 * (pxx * py2 - DataType{2} * py * px * pxy + pyy * px2) /
            math::sqrt(px2_py2 * px2_py2 * px2_py2);
   }
 
