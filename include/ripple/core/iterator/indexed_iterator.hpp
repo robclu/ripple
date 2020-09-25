@@ -49,6 +49,9 @@ namespace ripple {
  */
 template <typename T, typename Space>
 class IndexedIterator : public BlockIterator<T, Space> {
+  /** Defines the underlying type for the iterator. */
+  using value_t = typename layout_traits_t<T>::value_t;
+
  public:
   // clang-format off
   /** Defines the type of this iterator. */
@@ -59,10 +62,15 @@ class IndexedIterator : public BlockIterator<T, Space> {
   using index_t      = uint32_t;
   /** Defines the type of the contianer used to store the indices. */
   using indices_t    = Vec<index_t, block_iter_t::dims>;
-  // clang-format on
 
   /** The number of dimensions for the iterator. */
   static constexpr size_t dims = block_iter_t::dims;
+
+  /** Defines the type for the coordinates of the iterator. */
+  using Coord  = Vec<index_t, dims>;
+  /** Defines the type for the normalized coordinates of the iterator. */
+  using Coordf = Vec<float, dims>;
+  // clang-format on
 
   //==--- [consturction] ---------------------------------------------------==//
 
@@ -191,9 +199,50 @@ class IndexedIterator : public BlockIterator<T, Space> {
              _global_sizes[dim];
   }
 
+  /*==--- [coordinates] ----------------------------------------------------==*/
+
+  /**
+   * Gets the co-ordinates of the iterator in the global space.
+   * \return The co-ordinates of the iterator in the global space.
+   */
+  ripple_host_device auto coord() noexcept -> Coord {
+    return make_coord(std::make_index_sequence<dims>());
+  }
+
+  /**
+   * Gets the co-ordinates of the iterator in the global space normalized to the
+   * 0 -> 1 range.
+   * \return The co-ordinates of the iterator in the global space.
+   */
+  ripple_host_device auto norm_coord() noexcept -> Coordf {
+    return make_norm_coord(std::make_index_sequence<dims>());
+  }
+
  private:
   indices_t _block_start_indices{0}; //!<  Indices of the iterable block;
   indices_t _global_sizes{0};        //!< Global sizes of the space.
+
+  /**
+   * Makes the global coordinates for the iterator.
+   * \tparam I The indices of each dimension to get the coordinate for.
+   * \return The coordinates of the iterator.
+   */
+  template <size_t... I>
+  ripple_host_device auto
+  make_coord(std::index_sequence<I...>) const noexcept -> Coord {
+    return Coord{global_idx(Dimension<I>())...};
+  }
+
+  /**
+   * Makes the global normalized coordinates for the iterator.
+   * \tparam I The indices of each dimension to get the coordinate for.
+   * \return The coordinates of the iterator.
+   */
+  template <size_t... I>
+  ripple_host_device auto
+  make_norm_coord(std::index_sequence<I...>) const noexcept -> Coordf {
+    return Coordf{normalized_idx(Dimension<I>())...};
+  }
 };
 
 } // namespace ripple
