@@ -283,7 +283,7 @@ ripple_host_device auto div_then_ceil(T num, T denom) noexcept -> T {
  * \tparam T The type of the inputs.
  * \return The min of a and b.
  */
-template <typename T>
+template <typename T, non_array_enable_t<T> = 0>
 ripple_host_device constexpr auto min(const T& a, const T& b) noexcept -> T {
   return std::min(a, b);
 }
@@ -297,14 +297,16 @@ ripple_host_device constexpr auto min(const T& a, const T& b) noexcept -> T {
  * \return A new array with each element as the min of the corresponding
  *         elements.
  */
-template <typename ImplA, typename ImplB>
+template <typename ImplA, typename ImplB, array_enable_t<ImplA> = 0>
 ripple_host_device constexpr auto
 min(const Array<ImplA>& a, const Array<ImplB>& b) noexcept
   -> array_impl_t<ImplA, ImplB> {
   using Result = array_impl_t<ImplA, ImplB>;
   Result r;
-  unrolled_for_bounded<array_traits_t<ImplA>::size>(
-    [&](auto i) { r[i] = std::min(a[i], b[i]); });
+  unrolled_for_bounded<array_traits_t<ImplA>::size>([&](auto _i) {
+    constexpr size_t i = _i;
+    r[i]               = std::min(a[i], b[i]);
+  });
   return r;
 }
 
@@ -319,7 +321,7 @@ min(const Array<ImplA>& a, const Array<ImplB>& b) noexcept
  * \tparam T The type of the inputs.
  * \return The max of a and b.
  */
-template <typename T>
+template <typename T, non_array_enable_t<T> = 0>
 ripple_host_device constexpr auto max(const T& a, const T& b) noexcept -> T {
   return std::max(a, b);
 }
@@ -333,7 +335,7 @@ ripple_host_device constexpr auto max(const T& a, const T& b) noexcept -> T {
  * \return A new array with each element as the max of the corresponding
  *         elements.
  */
-template <typename ImplA, typename ImplB>
+template <typename ImplA, typename ImplB, array_enable_t<ImplA> = 0>
 ripple_host_device constexpr auto
 max(const Array<ImplA>& a, const Array<ImplB>& b) noexcept
   -> array_impl_t<ImplA, ImplB> {
