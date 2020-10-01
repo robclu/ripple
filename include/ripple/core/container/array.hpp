@@ -1,8 +1,8 @@
-//==--- ripple/core/core/container/array.hpp ------------------------- -*- C++ -*- ---==//
-//            
+//==--- ripple/core/core/container/array.hpp --------------- -*- C++ -*- ---==//
+//
 //                                Ripple
-// 
-//                      Copyright (c) 2019 Ripple.
+//
+//                      Copyright (c) 2019, 2020 Rob Clucas.
 //
 //  This file is distributed under the MIT License. See LICENSE for details.
 //
@@ -21,451 +21,760 @@
 
 namespace ripple {
 
-/// The Array class defines an interface to which all specialized
-/// implementations must conform. The implementation is provided by the template
-/// type Impl.
-/// \tparam Impl The implementation of the array interface.
+/**
+ * The Array class defines a static interface for array type classes. The
+ * implementation is provided by the template type Impl, and any derived types
+ * which don't define the necessary functions will fail at compile time when
+ * the requried function is called.
+ *
+ * \tparam Impl The implementation of the array interface.
+ */
 template <typename Impl>
 struct Array {
- private:
-  // Defines the type of the implementation.
-  using impl_t = Impl;
+  /** The number of elements in the array. */
+  static constexpr size_t elements = array_traits_t<Impl>::size;
 
  public:
-  /// Returns the value at position \p i in the array.
-  /// \param i The index of the element to return.
-  ripple_host_device constexpr auto operator[](size_t i) {
-    return impl()->operator[](i);  
+  /**
+   * Gets the value at position \p i in the array.
+   *
+   * \note This may return a reference or a value, depending on the
+   *       implementation.
+   *
+   * \param i The index of the element to return.
+   * \return The element at position i in the array.
+   */
+  ripple_host_device constexpr decltype(auto) operator[](size_t i) noexcept {
+    return impl()->operator[](i);
   }
 
-  /// Returns the value at position \p i in the array.
-  /// \param i The index of the element to return.
-  ripple_host_device constexpr auto operator[](size_t i) const {
-    return impl()->operator[](i);  
-  }
-    
-  /// Returns the number of elements in the array.
-  ripple_host_device constexpr auto size() const -> size_t {
-    return array_traits_t<impl_t>::size;
+  /**
+   * Gets the value at position \p i in the array.
+   *
+   * \note This may return a reference or a value, depending on the
+   *       implementation.
+   *
+   * \param i The index of the element to return.
+   */
+  ripple_host_device constexpr decltype(auto)
+  operator[](size_t i) const noexcept {
+    return impl()->operator[](i);
   }
 
-  //==--- [operator {+,+=} overloads] --------------------------------------==//
+  /**
+   * Gets the number of elements in the array.
+   * \return The number of elements in the array.
+   */
+  ripple_host_device constexpr auto size() const noexcept -> size_t {
+    return array_traits_t<Impl>::size;
+  }
 
-  /// Overload of operator+= to add each element of array \p a to each element
-  /// of this array. If the sizes of the arrays are different, this will cause a
-  /// compile time error.
-  /// \param  a     The array to add with.
-  /// \tparam ImplA The implementation type of the addition array.
-  template <typename ImplA>
-  ripple_host_device constexpr auto operator+=(const Array<ImplA>& a) 
-  -> impl_t& {
-    assert_size_match<ImplA>();
-    constexpr auto size = array_traits_t<impl_t>::size;
-    unrolled_for_bounded<size>([&] (auto i) {
-      impl()->operator[](i) += a[i];
-    });
+  /*==--- [comparison operators] -------------------------------------------==*/
+
+  /**
+   * Overload of equality operator to compare one array to another.
+   * \param  other     The other array to compare against this one.
+   * \tparam ImplOther The implementation type of the other array.
+   * \return true if all elements of both arrays are the same, false otherwise.
+   */
+  template <typename ImplOther>
+  ripple_host_device constexpr auto
+  operator==(const Array<ImplOther>& other) noexcept -> bool {
+    assert_size_match<ImplOther>();
+    for (size_t i = 0; i < elements; ++i) {
+      if (impl()->operator[](i) != other[i]) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Overload of equality operator to compare all elements of the array to
+   * the given value.
+   *
+   * \note This overload is only enabled if the type T is comparible to the type
+   *       stored in the array.
+   *
+   * \param  val The value to compare to.
+   * \tparam T   The type of the value.
+   * \return true if all array elements are equal to the value.
+   */
+  template <typename T, array_value_enable_t<T, Impl> = 0>
+  ripple_host_device constexpr auto operator==(T val) const noexcept -> bool {
+    for (size_t i = 0; i < elements; ++i) {
+      if (impl()->operator[](i) != val) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Overload of inequality operator to compare one array not equal to another.
+   * \param  other     The other array to compare against this one.
+   * \tparam ImplOther The implementation type of the other array.
+   * \return true if any element of the arrays are not equal, false otherwise.
+   */
+  template <typename ImplOther>
+  ripple_host_device constexpr auto
+  operator!=(const Array<ImplOther>& other) noexcept -> bool {
+    return !(*this == other);
+  }
+
+  /**
+   * Overload of inequality operator to compare if any elements of the array
+   * are not equal to the given value.
+   * \param  val The value to compare to.
+   * \tparam T   The type of the value.
+   * \return true if any elements of the array are not equal to the value.
+   */
+  template <typename T, array_value_enable_t<T, Impl> = 0>
+  ripple_host_device constexpr auto operator!=(T val) const noexcept -> bool {
+    for (size_t i = 0; i < elements; ++i) {
+      if (impl()->operator[](i) != val) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Overload of less than or equal operator to compare one array to another.
+   * \param  other     The other array to compare against this one.
+   * \tparam ImplOther The implementation type of the other array.
+   * \return true if _all_ elements of this array are <= to the corresponding
+   *         elements in the other array.
+   */
+  template <typename ImplOther>
+  ripple_host_device constexpr auto
+  operator<=(const Array<ImplOther>& other) noexcept -> bool {
+    for (size_t i = 0; i < elements; ++i) {
+      if (impl()->operator[](i) > other[i]) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Overload of comparison operator to compare if _all_ elements of the array
+   * are <= the given value.
+   * \param  val The value to compare to.
+   * \tparam T   The type of the value.
+   * \return true if all elements are less than or equal to the given value.
+   */
+  template <typename T, array_value_enable_t<T, Impl> = 0>
+  ripple_host_device constexpr auto operator<=(T val) const noexcept -> bool {
+    for (size_t i = 0; i < elements; ++i) {
+      if (impl()->operator[](i) > val) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Overload of greater than or equal operator to compare one array to
+   * another.
+   * \param  other     The other array to compare against this one.
+   * \tparam ImplOther The implementation type of the other array.
+   * \return true if _all_ elements of this array are >= the corresponding
+   *         elements in the other array.
+   */
+  template <typename ImplOther>
+  ripple_host_device constexpr auto
+  operator>=(const Array<ImplOther>& other) noexcept -> bool {
+    for (size_t i = 0; i < elements; ++i) {
+      if (impl()->operator[](i) < other[i]) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Overload of greater than or equal operator to compare if all elements of
+   * the array are greater than or equal to the given value.
+   * \param  val The value to compare to.
+   * \tparam T   The type of the value.
+   * \return true if all elements are greater than or equal to the given value.
+   */
+  template <typename T, array_value_enable_t<T, Impl> = 0>
+  ripple_host_device constexpr auto operator>=(T val) const noexcept -> bool {
+    for (size_t i = 0; i < elements; ++i) {
+      if (impl()->operator[](i) < val) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Overload of less than operator to compare one array to another.
+   * \param  other     The other array to compare against this one.
+   * \tparam ImplOther The implementation type of the other array.
+   * \return true if all elements of this array are less than the other array
+   *         elements.
+   */
+  template <typename ImplOther>
+  ripple_host_device constexpr auto
+  operator<(const Array<ImplOther>& other) const noexcept -> bool {
+    for (size_t i = 0; i < elements; ++i) {
+      if (impl()->operator[](i) >= other[i]) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Overload of less than operator to compare the array elements againt the
+   * given value.
+   * \param  val The value to compare to.
+   * \tparam T   The type of the value.
+   * \return true if all array elements are less than the given value.
+   */
+  template <typename T, array_value_enable_t<T, Impl> = 0>
+  ripple_host_device constexpr auto operator<(T val) const noexcept -> bool {
+    for (size_t i = 0; i < elements; ++i) {
+      if (impl()->operator[](i) >= val) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Overload of greater than operator to compare one array to another.
+   * \param  other     The other array to compare against this one.
+   * \tparam ImplOther The implementation type of the other array.
+   * \return true if all elements of this array are greater than the elements in
+   *         the other array.
+   */
+  template <typename ImplOther>
+  ripple_host_device constexpr auto
+  operator>(const Array<ImplOther>& a) const noexcept -> bool {
+    for (size_t i = 0; i < elements; ++i) {
+      if (impl()->operator[](i) <= a[i]) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Overload of greater than operator to compare the elements of the array to
+   * given value.
+   * \param  val The value to compare to.
+   * \tparam T   The type of the value.
+   * \return true if all elements in the array are greater than the given value.
+   */
+  template <typename T, array_value_enable_t<T, Impl> = 0>
+  ripple_host_device constexpr auto operator>(T val) const noexcept -> bool {
+    for (size_t i = 0; i < elements; ++i) {
+      if (impl()->operator[](i) <= val) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /*==--- [operator {+,+=} overloads] --------------------------------------==*/
+
+  /**
+   * Overload of operator+= to add each element of the other array to this
+   * array.
+   * \note If the sizes of the arrays are different, this will cause a
+   *       compile time error.
+   *
+   * \param  other     The array to add with.
+   * \tparam ImplOther The implementation type of the other array.
+   * \return A reference to the modified array.
+   */
+  template <typename ImplOther>
+  ripple_host_device constexpr auto
+  operator+=(const Array<ImplOther>& other) noexcept -> Impl& {
+    assert_size_match<ImplOther>();
+    unrolled_for_bounded<elements>(
+      [&](auto i) { impl()->operator[](i) += other[i]; });
     return *impl();
   }
 
-  /// Overload of operator+= to add the value \p val to each element of this
-  /// array. If the type T cannot be converted to the value type of the array
-  /// then this will cause a compile time error.
-  /// \param  val  The value to add to each element of the array.
-  /// \tparam T    The type of the value.
-  template <typename T, array_value_enable_t<T, impl_t> = 0>
-  ripple_host_device constexpr auto operator+=(T val) -> impl_t& { 
-    using value_t       = typename array_traits_t<impl_t>::value_t;
-    constexpr auto size = array_traits_t<impl_t>::size;
-    unrolled_for_bounded<size>([&] (auto i) {
-      impl()->operator[](i) += static_cast<value_t>(val);
-    });
+  /**
+   * Overload of operator+= to add the value to each element of this
+   * array.
+   *
+   * \note If the type T cannot be converted to the value type of the array
+   *       then this will cause a compile time error.
+   *
+   * \param  val  The value to add to each element of the array.
+   * \tparam T    The type of the value.
+   * \return A reference to the modified array.
+   */
+  template <typename T, array_value_enable_t<T, Impl> = 0>
+  ripple_host_device constexpr auto operator+=(T val) noexcept -> Impl& {
+    using Value = typename array_traits_t<Impl>::value_t;
+    unrolled_for_bounded<elements>(
+      [&](auto i) { impl()->operator[](i) += static_cast<Value>(val); });
     return *impl();
   }
 
-  /// Overload of operator+ to add each element of array \p a to each element
-  /// in this array, returning a new array with the same implementation as 
-  /// either this array (if copyable), the second array (if copyable), or the
-  /// fallback type.
-  /// \param  a     The array for the addition.
-  /// \tparam ImplA The implementation type of the other array.
-  template <typename ImplA>
-  ripple_host_device constexpr auto operator+(const Array<ImplA>& a) const
-  -> array_impl_t<impl_t, ImplA> {
-    using res_impl_t      = array_impl_t<impl_t, ImplA>;
-    auto           result = res_impl_t();
-    constexpr auto size   = array_traits_t<res_impl_t>::size;
-    unrolled_for_bounded<size>([&] (auto i) {
-      result[i] = impl()->operator[](i) + a[i];
+  /**
+   * Overload of operator+ to add each element of the other array to this array.
+   *
+   * \param  other     The array for the addition.
+   * \tparam ImplOther The implementation type of the other array.
+   * \return A new array with either this implementation type, or the
+   *         implemenation type of the other array, or the fallback type.
+   */
+  template <typename ImplOther, typename R = array_impl_t<Impl, ImplOther>>
+  ripple_host_device constexpr auto
+  operator+(const Array<ImplOther>& other) const noexcept -> R {
+    R result;
+    unrolled_for_bounded<elements>(
+      [&](auto i) { result[i] = impl()->operator[](i) + other[i]; });
+    return result;
+  }
+
+  /**
+   * Overload of operator+ to add the value val to each element of this
+   * array and return a new array.
+   *
+   * \note If the type T cannot be converted to the value type of the
+   *       array then this will cause a compile time error.
+   *
+   * \param  val  The value to add to each element of the array.
+   * \tparam T    The type of the value.
+   * \return A new array with either this implementation type, or the fallback
+   *         type.
+   */
+  template <
+    typename T,
+    typename R                    = array_impl_t<Impl, Impl>,
+    array_value_enable_t<T, Impl> = 0>
+  ripple_host_device constexpr auto operator+(T val) const noexcept -> R {
+    R result;
+    using Value = typename array_traits_t<Impl>::value_t;
+    unrolled_for_bounded<elements>([&](auto i) {
+      result[i] = impl()->operator[](i) + static_cast<Value>(val);
     });
     return result;
   }
 
-  /// Overload of operator+ to add the value \p val to each element of this
-  /// array, returning a new array with the same type as this array, or the
-  /// fallback type. If the type T cannot be converted to the value type of the
-  /// array then this will cause a compile time error.
-  /// \param  val  The value to add to each element of the array.
-  /// \tparam T    The type of the value.
-  template <typename T, array_value_enable_t<T, impl_t> = 0>
-  ripple_host_device constexpr auto operator+(T val) const
-  -> array_impl_t<impl_t, impl_t> { 
-    using res_impl_t    = array_impl_t<impl_t, impl_t>;
-    using value_t       = typename array_traits_t<impl_t>::value_t;
-    constexpr auto size = array_traits_t<res_impl_t>::size;
-    auto result         = res_impl_t();
-    unrolled_for_bounded<size>([&] (auto i) {
-      result[i] = impl()->operator[](i) + static_cast<value_t>(val);
-    });
-    return result;
-  }
+  /*==--- [operator {-,-=} overloads] --------------------------------------==*/
 
-  //==--- [operator {-,-=} overloads] --------------------------------------==//
-
-  /// Overload of operator-= to subtract each element of array \p a from each
-  /// element of this array. If the sizes of the arrays are different, this will
-  /// cause a compile time error.
-  /// \param  a     The array to subtract with.
-  /// \tparam ImplA The implementation type of the subtraction array.
-  template <typename ImplA>
-  ripple_host_device constexpr auto operator-=(const Array<ImplA>& a) 
-  -> impl_t& {
-    assert_size_match<ImplA>();
-    constexpr auto size = array_traits_t<impl_t>::size;
-    unrolled_for_bounded<size>([&] (auto i) {
-      impl()->operator[](i) -= a[i];
-    });
+  /**
+   * Overload of operator-= to subtract each element of the other array from
+   * this array.
+   *
+   * \note If the sizes of the arrays are different, this will cause a compile
+   *       time error.
+   *
+   * \param  other     The array to subtract with.
+   * \tparam ImplOther The implementation type of the subtraction array.
+   * \return A reference to the modified array.
+   */
+  template <typename ImplOther>
+  ripple_host_device constexpr auto
+  operator-=(const Array<ImplOther>& other) noexcept -> Impl& {
+    assert_size_match<ImplOther>();
+    unrolled_for_bounded<elements>(
+      [&](auto i) { impl()->operator[](i) -= other[i]; });
     return *impl();
   }
 
-  /// Overload of operator-= to subtract the value \p val from each element of
-  /// this array. If the type T cannot be converted to the value type of the
-  /// array then this will cause a compile time error.
-  /// \param  val  The value to subtract from each element of the array.
-  /// \tparam T    The type of the value.
-  template <typename T, array_value_enable_t<T, impl_t> = 0>
-  ripple_host_device constexpr auto operator-=(T val) -> impl_t& { 
-    using value_t       = typename array_traits_t<impl_t>::value_t;
-    constexpr auto size = array_traits_t<impl_t>::size;
-    unrolled_for_bounded<size>([&] (auto i) {
-      impl()->operator[](i) -= static_cast<value_t>(val);
-    });
+  /**
+   * Overload of operator-= to subtract the value from each element of this
+   * array.
+   *
+   * \note If the type T cannot be converted to the value type of the array
+   *       then this will cause a compile time error.
+   *
+   * \param  val  The value to subtract from each element of the array.
+   * \tparam T    The type of the value.
+   * \return A reference to the modified array.
+   */
+  template <typename T, array_value_enable_t<T, Impl> = 0>
+  ripple_host_device constexpr auto operator-=(T val) noexcept -> Impl& {
+    using Value = typename array_traits_t<Impl>::value_t;
+    unrolled_for_bounded<elements>(
+      [&](auto i) { impl()->operator[](i) -= static_cast<Value>(val); });
     return *impl();
   }
 
-  /// Overload of operator- to subtract each element of array \p a from each
-  /// element in this array, returning a new array with the same implementation
-  /// type as the this array (if copyable), the second array (if copyable), or
-  /// th fallback type.
-  /// \param  a     The array for the subtraction.
-  /// \tparam ImplA The implementation type of the subtraction array.
-  template <typename ImplA>
-  ripple_host_device constexpr auto operator-(const Array<ImplA>& a) const
-  -> array_impl_t<impl_t, ImplA> {
-    using res_impl_t      = array_impl_t<impl_t, ImplA>;
-    auto           result = res_impl_t();
-    constexpr auto size   = array_traits_t<res_impl_t>::size;
-    unrolled_for_bounded<size>([&] (auto i) {
-      result[i] = impl()->operator[](i) - a[i];
+  /**
+   * Overload of operator- to subtract each element of the other array from each
+   * element in this array, returning a new array.
+   *
+   *
+   * \param  other     The array for the subtraction.
+   * \tparam ImplOther The implementation type of the subtraction array.
+   * \return A new array with either this implementation type, or the
+   *         implemenation type of the other array, or the fallback type.
+   */
+  template <typename ImplOther, typename R = array_impl_t<Impl, ImplOther>>
+  ripple_host_device constexpr auto
+  operator-(const Array<ImplOther>& other) const noexcept -> R {
+    R result;
+    unrolled_for_bounded<elements>(
+      [&](auto i) { result[i] = impl()->operator[](i) - other[i]; });
+    return result;
+  }
+
+  /**
+   * Overload of operator- to subtract the value from each element of this
+   * array, returning a new array.
+   *
+   * \note If the type T cannot be converted to the value type of the array
+   *       then this will cause a compile time error.
+   *
+   * \param  val  The value to subtract from each element of the array.
+   * \tparam T    The type of the value.
+   * \return A new array with either this implementation type, or the fallback
+   *         type.
+   */
+  template <
+    typename T,
+    typename R                    = array_impl_t<Impl, Impl>,
+    array_value_enable_t<T, Impl> = 0>
+  ripple_host_device constexpr auto operator-(T val) const noexcept -> R {
+    R result;
+    using Value = typename array_traits_t<Impl>::value_t;
+    unrolled_for_bounded<elements>([&](auto i) {
+      result[i] = impl()->operator[](i) - static_cast<Value>(val);
     });
     return result;
   }
 
-  /// Overload of operator- to subtract the value \p val from each element of
-  /// this array, returning a new array with the same type as this array, or the
-  /// fallback type. If the type T cannot be converted to the value type of the
-  /// array then this will cause a compile time error.
-  /// \param  val  The value to subtract from each element of the array.
-  /// \tparam T    The type of the value.
-  template <typename T, array_value_enable_t<T, impl_t> = 0>
-  ripple_host_device constexpr auto operator-(T val) const
-  -> array_impl_t<impl_t, impl_t> { 
-    using res_impl_t    = array_impl_t<impl_t, impl_t>;
-    using value_t       = typename array_traits_t<impl_t>::value_t;
-    constexpr auto size = array_traits_t<res_impl_t>::size;
-    auto result         = res_impl_t();
-    unrolled_for_bounded<size>([&] (auto i) {
-      result[i] = impl()->operator[](i) - static_cast<value_t>(val);
-    });
-    return result;
-  }
+  /*==--- [operator {*,*=} overloads] --------------------------------------==*/
 
-  //==--- [operator {*,*=} overloads] --------------------------------------==//
-
-  /// Overload of operator*= to multiply each element of array \p a with each
-  /// element of this array. If the sizes of the arrays are different, this will
-  /// cause a compile time error.
-  /// \param  a     The array to multiply with.
-  /// \tparam ImplA The implementation type of the multiplication array.
-  template <typename ImplA>
-  ripple_host_device constexpr auto operator*=(const Array<ImplA>& a) 
-  -> impl_t& {
-    assert_size_match<ImplA>();
-    constexpr auto size = array_traits_t<impl_t>::size;
-    unrolled_for_bounded<size>([&] (auto i) {
-      impl()->operator[](i) *= a[i];
-    });
+  /**
+   * Overload of operator*= to multiply each element of the other array with
+   * this one.
+   *
+   * \note If the sizes of the arrays are different, this will cause a compile
+   *       time error.
+   *
+   * \param  other     The array to multiply with.
+   * \tparam ImplOther The implementation type of the multiplication array.
+   * \return A reference to the modified array.
+   */
+  template <typename ImplOther>
+  ripple_host_device constexpr auto
+  operator*=(const Array<ImplOther>& other) noexcept -> Impl& {
+    assert_size_match<ImplOther>();
+    unrolled_for_bounded<elements>(
+      [&](auto i) { impl()->operator[](i) *= other[i]; });
     return *impl();
   }
 
-  /// Overload of operator*= to multiply the value \p val with each element of
-  /// this array. If the type T cannot be converted to the value type of the
-  /// array then this will cause a compile time error.
-  /// \param  val  The value to multiply with each element of the array.
-  /// \tparam T    The type of the value.
-  template <typename T, array_value_enable_t<T, impl_t> = 0>
-  ripple_host_device constexpr auto operator*=(T val) -> impl_t& { 
-    using value_t       = typename array_traits_t<impl_t>::value_t;
-    constexpr auto size = array_traits_t<impl_t>::size;
-    unrolled_for_bounded<size>([&] (auto i) {
-      impl()->operator[](i) *= static_cast<value_t>(val);
-    });
-    return *impl();
-  } 
-
-  /// Overload of operator* to multiply each element of array \p a with each
-  /// element in this array, returning a new array with the same implementation
-  /// type as this array (if copyable), the second array (if copyable), or the 
-  /// fallback type.
-  /// \param  a     The array to multiply with.
-  /// \tparam ImplA The implementation type of the multiplication array.
-  template <typename ImplA>
-  ripple_host_device constexpr auto operator*(const Array<ImplA>& a) const
-  -> array_impl_t<impl_t, ImplA> {
-    using res_impl_t      = array_impl_t<impl_t, ImplA>;
-    auto           result = res_impl_t();
-    constexpr auto size   = array_traits_t<res_impl_t>::size;
-    unrolled_for_bounded<size>([&] (auto i) {
-      result[i] = impl()->operator[](i) * a[i];
-    });
-    return result;
-  }
-
-  /// Overload of operator* to multiply the value \p val with each element of
-  /// this array, returning a new array with the same type as this array, or the
-  /// fallback type. If the type T cannot be converted to the value type of the
-  /// array then this will cause a compile time error.
-  /// \param  val  The value to multiply with each element of the array.
-  /// \tparam T    The type of the value.
-  template <typename T, array_value_enable_t<T, impl_t> = 0>
-  ripple_host_device constexpr auto operator*(T val) const
-  -> array_impl_t<impl_t, impl_t> { 
-    using res_impl_t    = array_impl_t<impl_t, impl_t>;
-    using value_t       = typename array_traits_t<impl_t>::value_t;
-    constexpr auto size = array_traits_t<res_impl_t>::size;
-    auto result         = res_impl_t();
-
-    unrolled_for_bounded<size>([&] (auto i) {
-      result[i] = impl()->operator[](i) * static_cast<value_t>(val);
-    });
-    return result;
-  }
-
-  //==--- [operator {/,/=} overloads] --------------------------------------==//
-
-  /// Overload of operator*= to multiply each element of array \p a with each
-  /// element of this array. If the sizes of the arrays are different, this will
-  /// cause a compile time error.
-  /// \param  a     The array to multiply with.
-  /// \tparam ImplA The implementation type of the multiplication array.
-  template <typename ImplA>
-  ripple_host_device constexpr auto operator/=(const Array<ImplA>& a) 
-  -> impl_t& {
-    assert_size_match<ImplA>();
-    constexpr auto size = array_traits_t<impl_t>::size;
-    unrolled_for_bounded<size>([&] (auto i) {
-      impl()->operator[](i) /= a[i];
-    });
+  /**
+   * Overload of operator*= to multiply the each element of the array with the
+   * value.
+   *
+   * \note If the type T cannot be converted to the value type of the array then
+   *       this will cause a compile time error.
+   *
+   * \param  val  The value to multiply with each element of the array.
+   * \tparam T    The type of the value.
+   * \return A reference to the modified array.
+   */
+  template <typename T, array_value_enable_t<T, Impl> = 0>
+  ripple_host_device constexpr auto operator*=(T val) noexcept -> Impl& {
+    using Value = typename array_traits_t<Impl>::value_t;
+    unrolled_for_bounded<elements>(
+      [&](auto i) { impl()->operator[](i) *= static_cast<Value>(val); });
     return *impl();
   }
 
-  /// Overload of operator/= to divide the value \p val with each element of
-  /// this array. If the type T cannot be converted to the value type of the
-  /// array then this will cause a compile time error.
-  /// \param  val  The value to divide each element of the array by.
-  /// \tparam T    The type of the value.
-  template <typename T, array_value_enable_t<T, impl_t> = 0>
-  ripple_host_device constexpr auto operator/=(T val) -> impl_t& { 
-    using value_t       = typename array_traits_t<impl_t>::value_t;
-    constexpr auto size = array_traits_t<impl_t>::size;
-    unrolled_for_bounded<size>([&] (auto i) {
-      impl()->operator[](i) /= static_cast<value_t>(val);
+  /**
+   * Overload of operator* to multiply each element of the array with the other
+   * array, returning a new array.
+   *
+   *
+   * \param  other     The array to multiply with.
+   * \tparam ImplOther The implementation type of the multiplication array.
+   * \return A new array with either this implementation type, or the
+   *         implemenation type of the other array, or the fallback type.
+   */
+  template <typename ImplOther, typename R = array_impl_t<Impl, ImplOther>>
+  ripple_host_device constexpr auto
+  operator*(const Array<ImplOther>& other) const noexcept -> R {
+    R result;
+    unrolled_for_bounded<elements>(
+      [&](auto i) { result[i] = impl()->operator[](i) * other[i]; });
+    return result;
+  }
+
+  /**
+   * Overload of operator* to multiply the value with each element of this
+   * array, returning a new array.
+   *
+   *
+   * \note If the type T cannot be converted to the value type of the array
+   *       then this will cause a compile time error.
+   *
+   * \param  val  The value to multiply with each element of the array.
+   * \tparam T    The type of the value.
+   * \return A new array with either this implementation type, or the fallback
+   *         type.
+   */
+  template <
+    typename T,
+    typename R                    = array_impl_t<Impl, Impl>,
+    array_value_enable_t<T, Impl> = 0>
+  ripple_host_device constexpr auto operator*(T val) const noexcept -> R {
+    R result;
+    using Value = typename array_traits_t<Impl>::value_t;
+    unrolled_for_bounded<elements>([&](auto i) {
+      result[i] = impl()->operator[](i) * static_cast<Value>(val);
     });
+    return result;
+  }
+
+  /*==--- [operator {/,/=} overloads] --------------------------------------==*/
+
+  /**
+   * Overload of operator/= to divide each element of the array with each
+   * element of the other array.
+   *
+   * \note If the sizes of the arrays are different, this will cause a compile
+   *       time error.
+   *
+   * \param  other     The array to divide by.
+   * \tparam ImplOther The implementation type of the other array.
+   * \return A reference to the modified array.
+   */
+  template <typename ImplOther>
+  ripple_host_device constexpr auto
+  operator/=(const Array<ImplOther>& other) noexcept -> Impl& {
+    assert_size_match<ImplOther>();
+    unrolled_for_bounded<elements>(
+      [&](auto i) { impl()->operator[](i) /= other[i]; });
     return *impl();
-  } 
+  }
 
-  /// Overload of operator/ to divide each element of array \p a with each
-  /// element in this array, returning a new array with the same implementation
-  /// type as this array (if copyable), the second array (if copyable), or the 
-  /// fallback type.
-  /// \param  a     The array to divide by.
-  /// \tparam ImplA The implementation type of the division array.
-  template <typename ImplA>
-  ripple_host_device constexpr auto operator/(const Array<ImplA>& a) const
-  -> array_impl_t<impl_t, ImplA> {
-    using res_impl_t      = array_impl_t<impl_t, ImplA>;
-    auto           result = res_impl_t();
-    constexpr auto size   = array_traits_t<res_impl_t>::size;
-    unrolled_for_bounded<size>([&] (auto i) {
-      result[i] = impl()->operator[](i) / a[i];
+  /**
+   * Overload of operator/= to divide each element in the array by the value.
+   *
+   * \note If the type T cannot be converted to the value type of the array
+   *       then this will cause a compile time error.
+   *
+   * \param  val  The value to divide each element of the array by.
+   * \tparam T    The type of the value.
+   * \return A reference to the modified array.
+   */
+  template <typename T, array_value_enable_t<T, Impl> = 0>
+  ripple_host_device constexpr auto operator/=(T val) noexcept -> Impl& {
+    using Value = typename array_traits_t<Impl>::value_t;
+    unrolled_for_bounded<elements>(
+      [&](auto i) { impl()->operator[](i) /= static_cast<Value>(val); });
+    return *impl();
+  }
+
+  /**
+   * Overload of operator/ to divide each element of the array with each
+   * element of the other array, returning a new array.
+   *
+   * \note If the sizes of the arrays are different, this will cause a compile
+   *       time error.
+   *
+   * \param  other     The array to divide by.
+   * \tparam ImplOther The implementation type of the division array.
+   * \return A new array with either this implementation type, or the
+   *         implemenation type of the other array, or the fallback type.
+   */
+  template <typename ImplOther, typename R = array_impl_t<Impl, ImplOther>>
+  ripple_host_device constexpr auto
+  operator/(const Array<ImplOther>& other) const noexcept -> R {
+    R result;
+    unrolled_for_bounded<elements>(
+      [&](auto i) { result[i] = impl()->operator[](i) / other[i]; });
+    return result;
+  }
+
+  /**
+   * Overload of operator/ to divide each element of this array by the value.
+   *
+   * \note If the type T cannot be converted to the value type of the array then
+   *       this will cause a compile time error.
+   *
+   * \param  val  The value to multiply with each element of the array.
+   * \tparam T    The type of the value.
+   * \return A new array with either this implementation type, or the fallback
+   *         type.
+   */
+  template <
+    typename T,
+    typename R                    = array_impl_t<Impl, Impl>,
+    array_value_enable_t<T, Impl> = 0>
+  ripple_host_device constexpr auto operator/(T val) const noexcept -> R {
+    R result;
+    using Value = typename array_traits_t<Impl>::value_t;
+    unrolled_for_bounded<elements>([&](auto i) {
+      result[i] = impl()->operator[](i) / static_cast<Value>(val);
     });
     return result;
   }
 
-  /// Overload of operator/ to divide each element of this array by the value
-  /// \p val, returning a new array with the same type as this array, or the
-  /// fallback type. If the type T cannot be converted to the value type of the
-  /// array then this will cause a compile time error.
-  /// \param  val  The value to multiply with each element of the array.
-  /// \tparam T    The type of the value.
-  template <typename T, array_value_enable_t<T, impl_t> = 0>
-  ripple_host_device constexpr auto operator/(T val) const
-  -> array_impl_t<impl_t, impl_t> { 
-    using res_impl_t    = array_impl_t<impl_t, impl_t>;
-    using value_t       = typename array_traits_t<impl_t>::value_t;
-    constexpr auto size = array_traits_t<res_impl_t>::size;
-    auto result         = res_impl_t();
-    unrolled_for_bounded<size>([&] (auto i) {
-      result[i] = impl()->operator[](i) / static_cast<value_t>(val);
-    });
-    return result;
-  }
-    
  private:
-  /// Returns a pointer to the implementation of the interface.
-  ripple_host_device constexpr auto impl() -> impl_t* {
-    return static_cast<impl_t*>(this);
-  }
-    
-  /// Returns a pointer to constant implementation of the interface.
-  ripple_host_device constexpr auto impl() const -> const impl_t* {
-    return static_cast<const impl_t*>(this);
+  /**
+   * Gets a pointer to the implementation of the interface.
+   * \return A pointer to the implementation type.
+   */
+  ripple_host_device constexpr auto impl() noexcept -> Impl* {
+    return static_cast<Impl*>(this);
   }
 
-  /// Performs a compile assertation to check that the size of the array
-  /// implemented by ImplA has the same nunber of elements that this array does.
-  /// \tparam ImplA The implementation type of the array to check.
-  template <typename ImplA>
-  ripple_host_device constexpr auto assert_size_match() const -> void {
-    constexpr auto size   = array_traits_t<Impl>::size;
-    constexpr auto size_a = array_traits_t<ImplA>::size;
+  /**
+   * Gets a pointer to constant implementation of the interface.
+   * \return A pointer to a const implementation type.
+   */
+  ripple_host_device constexpr auto impl() const noexcept -> const Impl* {
+    return static_cast<const Impl*>(this);
+  }
+
+  /**
+   * Performs a compile-time check that the size of the other array type
+   * has the same number of elements that this array does.
+   * \tparam ImplOther The implementation type of the array to check.
+   */
+  template <typename ImplOther>
+  ripple_host_device constexpr auto assert_size_match() const noexcept -> void {
+    constexpr size_t size_other = array_traits_t<ImplOther>::size;
     static_assert(
-      size == size_a, 
-      "Cannot perform operations on arrays with different number of elements!"    
-    );
+      size_other == elements, "Arrays have different number of elements");
   }
 };
 
-//==--- [operator overloads] -----------------------------------------------==//
+/*==--- [operator overloads] -----------------------------------------------==*/
 
-/// Overload of operator+ to add the scalar value \p val with each element of
-/// the array \p a, returning a new array with an implementation type of \p a if
-/// copyable, or the fallback type.
-/// \param  val   The value to add with each element of the array.
-/// \param  a     The array to add with the value.
-/// \tparam T     The type of the scalar.
-/// \tparam Impl  The implementation type of the array.
-template <typename T, typename Impl, array_value_enable_t<T, Impl> = 0>
-ripple_host_device constexpr auto operator+(T val, const Array<Impl>& a)
--> array_impl_t<Impl, Impl> {
-  using impl_t = array_impl_t<Impl, Impl>;
-  using value_t = typename array_traits_t<impl_t>::value_t;
-  using type_t  = std::decay_t<T>;
+/**
+ * Overload of operator+ to add the scalar value to each element in the array,
+ * returning a new array.
+ *
+ * \param  val   The value to add with each element of the array.
+ * \param  a     The array to add with the value.
+ * \tparam T     The type of the scalar.
+ * \tparam Impl  The implementation type of the array.
+ * \return A new array with either this implementation type, or the fallback
+ *         type.
+ */
+template <
+  typename T,
+  typename Impl,
+  typename R                    = array_impl_t<Impl, Impl>,
+  array_value_enable_t<T, Impl> = 0>
+ripple_host_device constexpr auto
+operator+(T val, const Array<Impl>& a) noexcept -> R {
+  using Value = typename array_traits_t<Impl>::value_t;
+  using Type  = std::decay_t<T>;
 
   static_assert(
-    std::is_same_v<type_t, value_t> || std::is_convertible_v<type_t, value_t>,
+    std::is_same_v<Type, Value> || std::is_convertible_v<Type, Value>,
     "Cannot perform operations on an array with a type which is not the "
-    "value type, or convertible to the value type!"
-  );
+    "value type, or convertible to the value type!");
 
-  auto           result = impl_t();
-  constexpr auto size   = array_traits_t<impl_t>::size;
-  unrolled_for_bounded<size>([&] (auto i) {
-    result[i] = static_cast<value_t>(val) + a[i];
-  });
+  R result;
+  unrolled_for_bounded<array_traits_t<Impl>::size>(
+    [&](auto i) { result[i] = static_cast<Value>(val) + a[i]; });
   return result;
 }
 
-/// Overload of operator- to subtract each element of the array \p a from the
-/// scalar value \p val, returning a new array with an implementation type of
-/// \p a if copyable, or the fallback type.
-/// \param  val   The value to subtract from.
-/// \param  a     The array to subtract with.
-/// \tparam T     The type of the scalar.
-/// \tparam Impl  The implementation type of the array.
-template <typename T, typename Impl, array_value_enable_t<T, Impl> = 0>
-ripple_host_device constexpr auto operator-(T val, const Array<Impl>& a)
--> array_impl_t<Impl, Impl> {
-  using impl_t = array_impl_t<Impl, Impl>;
-  using value_t = typename array_traits_t<impl_t>::value_t;
-  using type_t  = std::decay_t<T>;
+/**
+ * Overload of operator- to subtract each element of the array from the scalar
+ * value, returning a new array.
+ *
+ * \param  val   The value to subtract from.
+ * \param  a     The array to subtract with.
+ * \tparam T     The type of the scalar.
+ * \tparam Impl  The implementation type of the array.
+ * \return A new array with either this implementation type, or the fallback
+ *         type.
+ */
+template <
+  typename T,
+  typename Impl,
+  typename R                    = array_impl_t<Impl, Impl>,
+  array_value_enable_t<T, Impl> = 0>
+ripple_host_device constexpr auto
+operator-(T val, const Array<Impl>& a) noexcept -> R {
+  using Value = typename array_traits_t<Impl>::value_t;
+  using Type  = std::decay_t<T>;
 
   static_assert(
-    std::is_same_v<type_t, value_t> || std::is_convertible_v<type_t, value_t>,
+    std::is_same_v<Type, Value> || std::is_convertible_v<Type, Value>,
     "Cannot perform operations on an array with a type which is not the "
-    "value type, or convertible to the value type!"
-  );
+    "value type, or convertible to the value type!");
 
-  auto           result = impl_t();
-  constexpr auto size   = array_traits_t<impl_t>::size;
-  unrolled_for_bounded<size>([&] (auto i) {
-    result[i] = static_cast<value_t>(val) - a[i];
-  });
+  R result;
+  unrolled_for_bounded<array_traits_t<Impl>::size>(
+    [&](auto i) { result[i] = static_cast<Value>(val) - a[i]; });
   return result;
 }
 
-/// Overload of operator* to multiply each element of the array \p a with the
-/// scalar value \p val, returning a new array with an implementation type of
-/// \p a if copyable, or the fallback type.
-/// \param  val   The value to multiply with the arry..
-/// \param  a     The array to multiply with the scalar.
-/// \tparam T     The type of the scalar.
-/// \tparam Impl  The implementation type of the array.
-template <typename T, typename Impl, array_value_enable_t<T, Impl> = 0>
-ripple_host_device constexpr auto operator*(T val, const Array<Impl>& a)
--> array_impl_t<Impl, Impl> {
-  using impl_t = array_impl_t<Impl, Impl>;
-  using value_t = typename array_traits_t<impl_t>::value_t;
-  using type_t  = std::decay_t<T>;
+/**
+ * Overload of operator* to multiply each element of the array with the value,
+ * returning a new array.
+ *
+ * \param  val   The value to multiply with the arry..
+ * \param  a     The array to multiply with the scalar.
+ * \tparam T     The type of the scalar.
+ * \tparam Impl  The implementation type of the array.
+ * \return A new array with either this implementation type, or the fallback
+ *         type.
+ */
+template <
+  typename T,
+  typename Impl,
+  typename R                    = array_impl_t<Impl, Impl>,
+  array_value_enable_t<T, Impl> = 0>
+ripple_host_device constexpr auto
+operator*(T val, const Array<Impl>& a) noexcept -> R {
+  using Value = typename array_traits_t<Impl>::value_t;
+  using Type  = std::decay_t<T>;
 
   static_assert(
-    std::is_same_v<type_t, value_t> || std::is_convertible_v<type_t, value_t>,
+    std::is_same_v<Type, Value> || std::is_convertible_v<Type, Value>,
     "Cannot perform operations on an array with a type which is not the "
-    "value type, or convertible to the value type!"
-  );
+    "value type, or convertible to the value type!");
 
-  auto           result = impl_t();
-  constexpr auto size   = array_traits_t<impl_t>::size;
-  unrolled_for_bounded<size>([&] (auto i) {
-    result[i] = static_cast<value_t>(val) * a[i];
-  });
+  R result;
+  unrolled_for_bounded<array_traits_t<Impl>::size>(
+    [&](auto i) { result[i] = static_cast<Value>(val) * a[i]; });
   return result;
 }
 
-/// Overload of operator/ to divide the scalar value \p val by each element of
-/// the array \p a, returning a new array with an implementation type of \p a
-/// if copyable, or the fallback type.
-/// \param  val   The value to divide.
-/// \param  a     The array to divide by.
-/// \tparam T     The type of the scalar.
-/// \tparam Impl  The implementation type of the array.
-template <typename T, typename Impl, array_value_enable_t<T, Impl> = 0>
-ripple_host_device constexpr auto operator/(T val, const Array<Impl>& a)
--> array_impl_t<Impl, Impl> {
-  using impl_t = array_impl_t<Impl, Impl>;
-  using value_t = typename array_traits_t<impl_t>::value_t;
-  using type_t  = std::decay_t<T>;
+/**
+ * Overload of operator/ to divide the scalar value by each element of the
+ * array, returning a new array.
+ *
+ * \param  val   The value to divide.
+ * \param  a     The array to divide by.
+ * \tparam T     The type of the scalar.
+ * \tparam Impl  The implementation type of the array.
+ * \return A new array with either this implementation type, or the fallback
+ *         type.
+ */
+template <
+  typename T,
+  typename Impl,
+  typename R                    = array_impl_t<Impl, Impl>,
+  array_value_enable_t<T, Impl> = 0>
+ripple_host_device constexpr auto
+operator/(T val, const Array<Impl>& a) noexcept -> R {
+  using Value = typename array_traits_t<Impl>::value_t;
+  using Type  = std::decay_t<T>;
 
   static_assert(
-    std::is_same_v<type_t, value_t> || std::is_convertible_v<type_t, value_t>,
+    std::is_same_v<Type, Value> || std::is_convertible_v<Type, Value>,
     "Cannot perform operations on an array with a type which is not the "
-    "value type, or convertible to the value type!"
-  );
+    "value type, or convertible to the value type!");
 
-  auto           result = impl_t();
-  constexpr auto size   = array_traits_t<impl_t>::size;
-  unrolled_for_bounded<size>([&] (auto i) {
-    result[i] = static_cast<value_t>(val) / a[i];
-  });
+  R result;
+  unrolled_for_bounded<array_traits_t<Impl>::size>(
+    [&](auto i) { result[i] = static_cast<Value>(val) / a[i]; });
   return result;
 }
 
