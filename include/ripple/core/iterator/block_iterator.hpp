@@ -752,6 +752,10 @@ class BlockIterator {
    *    \kappa = \nabla \cdot \eft( \frac{\nabla \phi}{|\nabla \phi|} \right)
    * \end{equation}
    *
+   * \note This computes the *mean curvature*, which for a sphere is equal to
+   *       $-\frac{1}{R}$, rather than the *Gaussian curvature$ which would be
+   *       equal to $-\frac{1}{R^2}$.
+   *
    * \param  dh       The resolution of the iteration domain.
    * \tparam DataType The type of the data for the resolution.
    * \return A value of the curvature.
@@ -759,18 +763,30 @@ class BlockIterator {
   template <typename DataType>
   ripple_host_device constexpr auto
   curvature_3d(DataType dh = 1) const noexcept -> DataType {
-    const auto px      = grad_dim(dim_x, dh);
-    const auto py      = grad_dim(dim_y, dh);
-    const auto px2     = px * px;
-    const auto py2     = py * py;
-    const auto px2_py2 = px2 + py2;
-    const auto dh2     = DataType(1) / (dh * dh);
-    const auto pxx     = second_diff(dim_x);
-    const auto pyy     = second_diff(dim_y);
-    const auto pxy     = second_partial_diff(dim_x, dim_y);
+    const auto px    = grad_dim(dim_x, dh);
+    const auto py    = grad_dim(dim_y, dh);
+    const auto pz    = grad_dim(dim_z, dh);
+    const auto px2   = px * px;
+    const auto py2   = py * py;
+    const auto pz2   = pz * pz;
+    const auto pxyz2 = px2 + py2 + pz2;
 
-    return dh2 * (pxx * py2 - DataType{2} * py * px * pxy + pyy * px2) /
-           math::sqrt(px2_py2 * px2_py2 * px2_py2);
+    const auto dh2 = DataType(1) / (dh * dh);
+    const auto pxx = second_diff(dim_x);
+    const auto pyy = second_diff(dim_y);
+    const auto pzz = second_diff(dim_z);
+    const auto pxy = second_partial_diff(dim_x, dim_y);
+    const auto pxz = second_partial_diff(dim_x, dim_z);
+    const auto pyz = second_partial_diff(dim_y, dim_z);
+
+    // clang-format off
+    return dh2 * (
+      (pyy + pzz) * px2 + 
+      (pxx + pzz) * py2 + 
+      (pxx + pyy) * pz2 - 
+      DataType{2} * (px * py * pxy + px * pz * pxz + py * pz * pyz)) /
+      math::sqrt(pxyz2 * pxyz2 * pxyz2);
+    // clang-format on
   }
 
   /*==--- [size] -----------------------------------------------------------==*/
