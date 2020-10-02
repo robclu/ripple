@@ -1,8 +1,8 @@
-//==--- ripple/core/container/array_traits.hpp ------------------ -*- C++ -*- ---==//
-//            
+//==--- ripple/core/container/array_traits.hpp ------------- -*- C++ -*- ---==//
+//
 //                                Ripple
-// 
-//                      Copyright (c) 2019 Ripple.
+//
+//                      Copyright (c) 2019, 2020 Rob Clucas.
 //
 //  This file is distributed under the MIT License. See LICENSE for details.
 //
@@ -22,185 +22,243 @@
 
 namespace ripple {
 
-//==--- [forward declarations] ---------------------------------------------==//
+/*==--- [forward declarations] ---------------------------------------------==*/
 
-/// The Array class defines an interface to which all specialized
-/// implementations must conform. The implementation is provided by
-/// the template type Impl.
-/// \tparam Impl The implementation of the array interface.
-template <typename Impl> struct Array;
+/**
+ * The Array class defines a static interface for array types -- essentially
+ * types which have contiguous storage and can be accessed with the index
+ * operator.
+ *
+ * The implementation is provided by the template type Impl.
+ * \tparam Impl The implementation of the array interface.
+ */
+template <typename Impl>
+struct Array;
 
-/// The Vec class implements the Array interface to store data in AoS format.
-/// \tparam T      The type of the data for the vector.
-/// \tparam Size   The size of the vector.
-/// \tparam Layout The storage layout of the vector.
+/**
+ * This is an implementation class for a statically sized vector class with a
+ * flexible storage layout.
+ *
+ * \note This is an implementation class, there are aliases for vectors,
+ *       \sa Vector, \sa Vec.
+ *
+ * \tparam T      The type of the data for the vector.
+ * \tparam Size   The size of the vector.
+ * \tparam Layout The storage layout of the vector.
+ */
 template <typename T, typename Size, typename Layout = contiguous_owned_t>
 struct VecImpl;
 
-//==--- [traits] -----------------------------------------------------------==//
+/*==--- [traits] -----------------------------------------------------------==*/
 
-/// The ArrayTraits structs defines traits that all classes which implement the
-/// Array interface must implement. This is the default implementation, and
-/// defines traits for a type T which does not implement the Array interface.
+/**
+ * This structs defines traits for arrays. This implementation is the default
+ * implementation and is for a type which is not an array. It needs to be
+ * specialzied for any type which does implement the interface.
+ *
+ * \tparam T The type to get the array traits for.
+ */
 template <typename T>
 struct ArrayTraits {
-  /// The value type for the array.
+  // clang-format off
+  /** The value type for the array. */
   using value_t  = std::decay_t<T>;
-  /// Defines the type of the layout for the array.
+  /** Defines the type of the layout for the array. */
   using layout_t = contiguous_owned_t;
-  /// Defines the type of the array.
-  using array_t = VecImpl<value_t, Num<1>, layout_t>;
+  /**  Defines the type for an array of type T */
+  using array_t  = VecImpl<value_t, Num<1>, layout_t>;
 
-  /// Returns the number of elements in the array.  
+  /** Returns the number of elements in the array.   */
   static constexpr auto size = 1;
+  // clang-format on
 };
 
-/// Specialization of the ArrayTraits class for the Vec class.
-/// \tparam T      The type of the data for the vec.
-/// \tparam Size   The size  of the vector.
-/// \tparam Layout The storage layout of the vector.
+/**
+ * Specialization of the ArrayTraits class for the VecImpl class.
+ *
+ * \tparam T      The type of the data for the vec.
+ * \tparam Size   The size  of the vector.
+ * \tparam Layout The storage layout of the vector.
+ */
 template <typename T, typename Size, typename Layout>
 struct ArrayTraits<VecImpl<T, Size, Layout>> {
- public:
-  /// The value type stored in the vector.
+  // clang-format off
+  /** The value type stored in the array. */
   using value_t  = std::decay_t<T>;
-  /// The array type.
-  using array_t  = VecImpl<T, Size, Layout>;
-  /// Defines the type of the layout for the array.
+  /** Defines the type of the layout for the array. */
   using layout_t = Layout;
+  /** Defines the type of an array of the value type. */
+  using array_t  = VecImpl<value_t, Size, Layout>;
 
-  /// Returns the number of elements in the array.  
+  /** Returns the number of elements in the array.  */
   static constexpr auto size = Size::value;
+  // clang-format on
 };
 
-/// Specialization of the ArrayTraits class for the case that it's celled using
-/// the interface, in which case the implementation is used to redefine the
-/// traits.
-/// \tparam Impl The implementation to get the traits
+/**
+ * Specialization of the ArrayTraits class for the any class which implements
+ * the array interface.
+ *
+ * \tparam Impl The implementation type of the array interface.
+ */
 template <typename Impl>
 struct ArrayTraits<Array<Impl>> {
-private:
-  /// Defines the type of the implementation traits.
-  using impl_traits_t = ArrayTraits<Impl>;
-public:
-  /// Defines the value type of the array.
-  using value_t  = typename impl_traits_t::value_t;
-  /// The array type.
-  using array_t  = typename impl_traits_t::array_t;
-  /// Defines the type of the layout for the implementation.
-  using layout_t = typename impl_traits_t::layout_t;
+ private:
+  /** Defines the type of the implementation traits. */
+  using Traits = ArrayTraits<Impl>;
 
-  /// Returns the number of elements in the array.  
-  static constexpr auto size = impl_traits_t::size;
+ public:
+  // clang-format off
+  /** Defines the value type of the array. */
+  using value_t  = typename Traits::value_t;
+  /** Defines the type of the layout for the array. */
+  using layout_t = typename Traits::layout_t;
+  /** Defines the type of an array of the value type. */
+  using array_t  = typename Traits::array_t;
+
+  /** Returns the number of elements in the array. */
+  static constexpr auto size = Traits::size;
+  // clang-format on
 };
 
-//==--- [aliases & constants] ----------------------------------------------==//
+/*==--- [aliases & constants] ----------------------------------------------==*/
 
-/// Alias for a vector to store data of type T with Size elements.
-/// \tparam T     The type to store in the vector.
-/// \tparam Size  The size of the vector.
+/**
+ * Alias for a vector to store data of type T with Size elements.
+ *
+ * \note This uses the default layout type for the vector.
+ *
+ * \tparam T     The type to store in the vector.
+ * \tparam Size  The size of the vector.
+ */
 template <typename T, size_t Size>
 using Vec = VecImpl<T, Num<Size>>;
 
-/// Alias for a vector to store data of type T with Size elements with the given
-/// Layout.
-/// \tparam T      The type to store in the vector.
-/// \tparam Size   The size of the vector.
-/// \tparam Layout The layout to store the vector data.
+/**
+ * Alias for a vector to store data of type T with Size elements with the given
+ * Layout.
+ *
+ * \tparam T      The type to store in the vector.
+ * \tparam Size   The size of the vector.
+ * \tparam Layout The layout to store the vector data.
+ */
 template <typename T, size_t Size, typename Layout>
 using Vector = VecImpl<T, Num<Size>, Layout>;
 
-/// Defines an alias to create a contiguous 1D vector of type T.
-/// \tparam T The type of the data for the vector.
+/**
+ * Defines an alias to create a contiguous 1D vector of type T.
+ * \tparam T The type of the data for the vector.
+ */
 template <typename T>
-using vec_1d_t = VecImpl<T, Num<1>>;
+using Vec1d = VecImpl<T, Num<1>>;
 
-/// Defines an alias to create a contiguous 2D vector of type T.
-/// \tparam T The type of the data for the vector.
+/**
+ * Defines an alias to create a contiguous 2D vector of type T.
+ * \tparam T The type of the data for the vector.
+ */
 template <typename T>
-using vec_2d_t = VecImpl<T, Num<2>>;
+using Vec2d = VecImpl<T, Num<2>>;
 
-/// Defines an alias to create a contiguous 3D vector of type T.
-/// \tparam T The type of the data for the vector.
+/**
+ * Defines an alias to create a contiguous 3D vector of type T.
+ * \tparam T The type of the data for the vector.
+ */
 template <typename T>
-using vec_3d_t = VecImpl<T, Num<3>>;
+using Vec3d = VecImpl<T, Num<3>>;
 
-/// Gets the array traits for the type T.
-/// \tparam T The type to get the array traits for.
+/**
+ * Gets the array traits for the type T.
+ * \tparam T The type to get the array traits for.
+ */
 template <typename T>
 using array_traits_t = ArrayTraits<std::decay_t<T>>;
 
-/// Returns true if the template parameter is an Array.
-/// \tparam T The type to determine if is an array.
+/**
+ * Returns true if the template parameter is an Array.
+ * \tparam T The type to determine if is an array.
+ */
 template <typename T>
 static constexpr bool is_array_v =
   std::is_base_of_v<Array<std::decay_t<T>>, std::decay_t<T>>;
 
-/// Returns an implementation type which is copyable and trivially constructable
-/// between implementations ImplA and ImplB. This will first check the valididy
-/// of ImplA, and then of ImplB.
-///
-/// An implementation is valid if the storage type of the implementation is
-/// **not** a pointer (since the data for the pointer will then need to be
-/// allocaed) and **is** trivially constructible.
-///
-/// If neither ImplA nor ImplB are valid, then this will default to using the
-/// Vec type with a value type of ImplA and a the size of ImplA.
-///
-/// \tparam ImplA The type of the first array implementation.
-/// \tparam ImplB The type of the second array implementation.
+/**
+ * Defines a fallback vector type based on the type T.
+ * \tparam T The type to base the fallback on.
+ */
+template <typename T, typename Traits = array_traits_t<T>>
+using VecFallback =
+  VecImpl<typename Traits::value_t, Num<Traits::size>, contiguous_owned_t>;
+
+/**
+ * Returns an implementation type which is copyable and trivially constructable
+ * between implementations ImplA and ImplB. This will first check the valididy
+ * of ImplA, and then of ImplB.
+ *
+ *  An implementation is valid if the storage type of the implementation is
+ * **not** a pointer (since the data for the pointer will then need to be
+ * allocaed) and **is** trivially constructible.
+ *
+ * If neither ImplA nor ImplB are valid, then this will default to using the
+ * Vec type with a value type of ImplA and a the size of ImplA.
+ *
+ * \tparam ImplA The type of the first array implementation.
+ * \tparam ImplB The type of the second array implementation.
+ */
 template <
   typename ImplA,
   typename ImplB,
-  typename LayoutA   = typename array_traits_t<ImplA>::layout_t,
-  typename LayoutB   = typename array_traits_t<ImplB>::layout_t,
-  bool     ValidityA = std::is_same_v<LayoutA, contiguous_owned_t>,
-  bool     ValidityB = std::is_same_v<LayoutB, contiguous_owned_t>,
-  typename Fallback  = VecImpl<
-    typename array_traits_t<ImplA>::value_t, 
-    Num<array_traits_t<ImplA>::size>,
-    contiguous_owned_t
-  >
->
+  typename LayoutA  = typename array_traits_t<ImplA>::layout_t,
+  typename LayoutB  = typename array_traits_t<ImplB>::layout_t,
+  bool ValidityA    = std::is_same_v<LayoutA, contiguous_owned_t>,
+  bool ValidityB    = std::is_same_v<LayoutB, contiguous_owned_t>,
+  typename Fallback = VecFallback<ImplA>>
 using array_impl_t = std::conditional_t<
-  ValidityA, ImplA, std::conditional_t<ValidityB, ImplB, Fallback>   
->;
+  ValidityA,
+  ImplA,
+  std::conditional_t<ValidityB, ImplB, Fallback>>;
 
-//==--- [enables] ----------------------------------------------------------==//
+/*==--- [enables] ----------------------------------------------------------==*/
 
-/// Defines a valid type if the type T is either the same as the value type of
-/// the array implementation Impl, or convertible to the value type.
-/// \tparam T    The type to base the enable on.
-/// \tparam Impl The array implementation to get the value type from.
+/**
+ * Defines a valid type if the type T is either the same as the value type of
+ * the array implementation Impl, or convertible to the value type.
+ *
+ * \tparam T    The type to base the enable on.
+ * \tparam Impl The array implementation to get the value type from.
+ */
 template <
   typename T,
   typename Impl,
   typename Type  = std::decay_t<T>,
-  typename Value = typename ArrayTraits<Impl>::value_t
->
+  typename Value = typename ArrayTraits<Impl>::value_t>
 using array_value_enable_t = std::enable_if_t<
-  (std::is_same_v<Type, Value> || std::is_convertible_v<Type, Value>)
-  && !is_array_v<Type>, int
->;
+  (std::is_same_v<Type, Value> ||
+   std::is_convertible_v<Type, Value>)&&!is_array_v<Type>,
+  int>;
 
-/// Defines a valid type if the type T is an array.
-/// \tparam T The type to base the enable on.
+/**
+ * Defines a valid type if the type T is an array.
+ * \tparam T The type to base the enable on.
+ */
 template <typename T>
 using array_enable_t = std::enable_if_t<is_array_v<T>, int>;
 
-/// Defines a valid type if the type T is _not_ an array.
-/// \tparam T The type to base the enable on.
+/**
+ * Defines a valid type if the type T is _not_ an array.
+ * \tparam T The type to base the enable on.
+ */
 template <typename T>
 using non_array_enable_t = std::enable_if_t<!is_array_v<T>, int>;
 
-/// Defines a valid type if the type T is an array and the size of the array is
-/// Size.
-/// \tparam T     The type to check if is an array.
-/// \tparam Size  The size the array must have.
+/**
+ * Defines a valid type if the type T is an array and the size of the array is
+ * Size.
+ * \tparam T     The type to check if is an array.
+ * \tparam Size  The size the array must have.
+ */
 template <typename T, size_t Size>
-using array_size_enable_t = std::enable_if_t<
-  is_array_v<T> && (array_traits_t<T>::size == Size), int
->;
+using array_size_enable_t =
+  std::enable_if_t<is_array_v<T> && (array_traits_t<T>::size == Size), int>;
 
 } // namespace ripple
 
