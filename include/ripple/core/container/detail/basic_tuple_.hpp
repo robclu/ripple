@@ -1,8 +1,8 @@
-//==--- ripple/core/container/detail/basic_tuple_.hpp ----------- -*- C++ -*- ---==//
-//            
+//==--- ripple/core/container/detail/basic_tuple_.hpp ------ -*- C++ -*- ---==//
+//
 //                                Ripple
-// 
-//                      Copyright (c) 2020 Ripple.
+//
+//                      Copyright (c) 2019, 2020 Rob Clucas.
 //
 //  This file is distributed under the MIT License. See LICENSE for details.
 //
@@ -22,184 +22,224 @@
 
 namespace ripple::detail {
 
-//==--- [element] ----------------------------------------------------------==//
+/*==--- [element] ----------------------------------------------------------==*/
 
-/// Defines a struct to hold an element at a specific index in a container.
-/// \tparam Index The index of the element being held.
-/// \tparam T     The type of the element.
+/**
+ * Defines a struct to hold an element at a specific index in a container.
+ * \tparam Index The index of the element being held.
+ * \tparam T     The type of the element.
+ */
 template <size_t Index, typename T>
 struct Element {
-  /// Default constructor which just initializes the stored type.
+  /**
+   * Default constructor which just initializes the stored type.
+   */
   ripple_host_device constexpr Element() = default;
 
-  /// Constructor to set the value of the element to that of the \p element.
-  /// \param  element The element to use to set this Element's data.
-  /// \tparam E       The type of the element.
+  /**
+   * Constructor to set the value of the element.
+   * \param  element The element to use to set this Element's data.
+   * \tparam E       The type of the element.
+   */
   template <typename E>
   ripple_host_device constexpr Element(E&& element) noexcept
-  : value(std::forward<T>(element)) {}
+  : value{static_cast<T&&>(element)} {}
 
-  T value;  //!< The value of the element.
+  T value; //!< The value of the element.
 };
 
-//==--- [get implementation] -----------------------------------------------==//
+/*==--- [get implementation] -----------------------------------------------==*/
 
-/// Helper function which can be decltype'd to get the type of the
-/// element at the index I in a tuple. It should never actually be called.
-/// \param  element The element to get the type of.
-/// \tparam I       The index of the element in the tuple.
-/// \tparam T       The type to extract from the element.
+/**
+ *  Helper function which can be decltype'd to get the type of the
+ * element at the index I in a tuple.
+ *
+ * \note It should never actually be called.
+ * \param  element The element to get the type of.
+ * \tparam I       The index of the element in the tuple.
+ * \tparam T       The type to extract from the element.
+ */
 template <size_t I, typename T>
-ripple_host_device constexpr inline auto type_extractor(Element<I, T> e) -> T {
-  return T{}; 
+ripple_host_device constexpr inline auto
+type_extractor(Element<I, T> e) noexcept -> T {
+  return T{};
 }
 
-/// Gets a constant rvalue-reference to an Element.
-/// \param  e The element to get the reference to.
-/// \tparam I The index of the element in the tuple.
-/// \tparam T The type to extract from the element./
+/**
+ * Gets a constant rvalue-reference to an Element.
+ * \param  e The element to get the reference to.
+ * \tparam I The index of the element in the tuple.
+ * \tparam T The type to extract from the element.
+ * \return A const rvalue reference to the element.
+ */
 template <size_t I, typename T>
-ripple_host_device constexpr inline auto get_impl(
-  const Element<I, T>&& e
-) -> const T&& {
+ripple_host_device constexpr inline auto
+get_impl(const Element<I, T>&& e) noexcept -> const T&& {
   return e.value;
 }
 
-/// Gets a constant lvalue-reference to an Element.
-/// \param  e The element to get the reference to.
-/// \tparam I The index of the element in the tuple.
-/// \tparam T The type to extract from the element./
+/**
+ * Gets a constant lvalue-reference to an Element.
+ * \param  e The element to get the reference to.
+ * \tparam I The index of the element in the tuple.
+ * \tparam T The type to extract from the element./
+ * \return A const reference to the element.
+ */
 template <size_t I, typename T>
-ripple_host_device constexpr inline auto get_impl(
-  const Element<I, T>& e
-) -> const T& {
+ripple_host_device constexpr inline auto
+get_impl(const Element<I, T>& e) noexcept -> const T& {
   return e.value;
 }
 
-/// Gets an lvalue-reference to an Element.
-/// \param  e The element to get the reference to.
-/// \tparam I The index of the element in the tuple.
-/// \tparam T The type to extract from the element./
+/**
+ * Gets an lvalue-reference to an Element.
+ * \param  e The element to get the reference to.
+ * \tparam I The index of the element in the tuple.
+ * \tparam T The type to extract from the element.
+ * \return A reference to the element.
+ */
 template <size_t I, typename T>
-ripple_host_device constexpr inline auto get_impl(
-  Element<I, T>& e
-) -> std::remove_reference_t<T>& {
+ripple_host_device constexpr inline auto
+get_impl(Element<I, T>& e) noexcept -> std::remove_reference_t<T>& {
   return e.value;
 }
 
-/// Gets an rvalue-reference to an Element.
-/// \param  e The element to get the reference to.
-/// \tparam I The index of the element in the tuple.
-/// \tparam T The type to extract from the element./
+/**
+ * Gets an rvalue-reference to an Element.
+ * \param  e The element to get the reference to.
+ * \tparam I The index of the element in the tuple.
+ * \tparam T The type to extract from the element./
+ * \return An rvalue reference to the element.
+ */
 template <size_t I, typename T>
-ripple_host_device constexpr inline auto get_impl(
-  Element<I, T>&& e
-) -> std::remove_reference_t<T>&& {
-  return std::move(e.value);
+ripple_host_device constexpr inline auto
+get_impl(Element<I, T>&& e) noexcept -> std::remove_reference_t<T>&& {
+  using DataType = decltype(e.value);
+  return static_cast<std::remove_reference_t<DataType>&&>(e.value);
 }
 
-//==--- [tuple storage] ----------------------------------------------------==//
+/*==--- [tuple storage] ----------------------------------------------------==*/
 
-/// Defines the implementation of the storage for Tuple types. The elements
-/// which are stored are laid out in memory in the order in which they are
-/// present in the parameter pack. For example:
-///
-/// \code{.cpp}
-///   TupleStorage<Indices, float, int, double> ...
-///
-///   // Laid out as follows:
-///   float   // 4 bytes
-///   int     // 4 bytes
-///   double  // 8 bytes
-/// \endcode
-///
-/// \tparam Is The indices of the tuple elements.
-/// \tparam Ts   The types of the tuple elements.
-template <typename Is, typename... Ts> struct TupleStorage;
+/**
+ *  Implementation of the storage for a tuple.
+ *
+ * The elements which are stored are laid out in memory in the same order in
+ * which they appear in the variadic pack:
+ *
+ * ~~~{.cpp}
+ *  TupleStorage<Indices, float, int, double> ...
+ *
+ * // Laid out as follows:
+ * float   // 4 bytes
+ * int     // 4 bytes
+ * double  // 8 bytes
+ * ~~~
+ *
+ * \tparam Is The indices of the tuple elements.
+ * \tparam Ts   The types of the tuple elements.
+ */
+template <typename Is, typename... Ts>
+struct TupleStorage;
 
-/// Specialization for the implementation of the TupleStorage.
-/// \tparam Is The indices for the locations of the elements.
-/// \tparam Ts The types of the elements.
+/**
+ * Specializatiion of the tuple storage implementation.
+ *
+ * \tparam Is The indices for the locations of the elements.
+ * \tparam Ts The types of the elements.
+ */
 template <size_t... Is, typename... Ts>
 struct TupleStorage<std::index_sequence<Is...>, Ts...> : Element<Is, Ts>... {
-  //==--- [constants] ------------------------------------------------------==//
-  
-  /// Defines the size (number of elements) of the tuple storage.
+  /** Defines the size (number of elements) of the tuple storage. */
   static constexpr size_t elements = sizeof...(Ts);
 
-  /// Default constructor.
+  /**
+   * Default constructor.
+   */
   ripple_host_device constexpr TupleStorage() = default;
 
-  /// Constructor which sets the elements of the tuple. This overload is 
-  /// selected when the elements are forwarding reference types.
-  /// \param  elements  The elements to use to set the tuple.
-  /// \tparam Types     The types of the elements.  
+  /**
+   *  Constructor to set the elements of the tuple storage.
+   *
+   * \note This overload is selected when the elements are forwarding reference
+   *       types.
+   *
+   * \param  elements  The elements to use to set the tuple.
+   * \tparam Types     The types of the elements.
+   */
   template <typename... Types>
-  ripple_host_device constexpr TupleStorage(Types&&... elements)
-  : Element<Is, Ts>(std::forward<Ts>(elements))... {}
+  ripple_host_device constexpr TupleStorage(Types&&... elements) noexcept
+  : Element<Is, Ts>{static_cast<Ts&&>(elements)}... {}
 
-  /// Constructor which sets the elements of the tuple. This overload is
-  /// selected when the elements are const lvalue references, in which case they
-  /// need to be copied.
-  /// \param  elements The elements to use to set the tuple.
-  /// \tparam Types    The types of the elements.  
+  /**
+   * Constructor to set the elements of the tuple storage.
+   *
+   * \note This overload is selected when the elements are const lvalue
+   *       references, and copies the elements.
+   *
+   * \param  elements The elements to use to set the tuple.
+   * \tparam Types    The types of the elements.
+   */
   template <typename... Types>
-  ripple_host_device TupleStorage(const Types&... elements)
-  : Element<Is, Ts>(std::forward<Ts>(elements))... {}
+  ripple_host_device TupleStorage(const Types&... elements) noexcept
+  : Element<Is, Ts>{static_cast<const Ts&>(elements)}... {}
 };
 
-//==--- [basic tuple] ------------------------------------------------------==//
+/*==--- [basic tuple] ------------------------------------------------------==*/
 
-/// Defines a basic tuple class, which is essentially just a cleaner interface 
-/// for TupleStorage. The types are laid out in memory in the same order in
-/// which they appear in the parameter pack. For example:
-///
-/// ~~~cpp
-///   BasicTuple<double, int, float> tuple(2.7, 4, 3.14f);
-///
-///   // Laid out as follows:
-///   double  : 2.7    // 8 bytes
-///   int     : 4      // 4 bytes
-///   float   : 3.14   // 4 bytes
-/// ~~~
-///
-/// \tparam Ts The types of the tuple elements.
+/**
+ * A basic tuple class, which is essentially just a cleaner interface
+ * for TupleStorage.
+ *
+ * The types are laid out in memory in the same order in which they are present
+ * in the varaidic parameter pack, \sa TupleStorage.
+ *
+ * \tparam Ts The types of the tuple elements.
+ */
 template <typename... Ts>
-struct BasicTuple : 
-  TupleStorage<std::make_index_sequence<sizeof...(Ts)>, Ts...> {
-  //==--- [alises] ---------------------------------------------------------==//
+struct BasicTuple
+: TupleStorage<std::make_index_sequence<sizeof...(Ts)>, Ts...> {
+  // clang-format off
+  /** Alias for the index sequence. */
+  using IndexSeq = std::make_index_sequence<sizeof...(Ts)>;
+  /** Alias for the base type of the Tuple. */
+  using Base     = TupleStorage<IndexSeq, Ts...>;
+  // clang-format on
 
-  /// Alias for the index sequence.
-  using index_seq_t = std::make_index_sequence<sizeof...(Ts)>;
-  /// Alias for the base type of the Tuple.
-  using base_t      = TupleStorage<index_seq_t, Ts...>;
+  /** Defines the number of elements in the tuple. */
+  static constexpr size_t elements = Base::elements;
 
-  //==--- [constants] -------------------------------------------------------==//
-  
-  /// Defines the size (number of elements) of the BasicTuple.
-  static constexpr size_t elements = base_t::elements;
-
-  //==--- [construction] ---------------------------------------------------==//
-  
-  /// Default constructor to create an uninitialized tuple.
+  /**
+   * Default constructor to create an uninitialized tuple.
+   */
   ripple_host_device constexpr BasicTuple() = default;
 
-  /// Creates a BasicTuple from a variadic list of elements. This overload is
-  /// called if the the \p elements are forwarding reference types.
-  /// \param  elements  The elements for the tuple.
-  /// \tparam Types     The types of the elements for the tuple.
+  /**
+   * Creates a BasicTuple from a variadic list of elements.
+   *
+   * \note This overload is called if the the elements are forwarding reference
+   *       types.
+   *
+   * \param  elements  The elements for the tuple.
+   * \tparam Types     The types of the elements for the tuple.
+   */
   template <typename... Types>
-  ripple_host_device explicit constexpr BasicTuple(Types&&... elements)
-  : base_t(std::forward<Ts>(elements)...) {}
+  ripple_host_device explicit constexpr BasicTuple(Types&&... elements) noexcept
+  : Base{static_cast<Ts&&>(elements)...} {}
 
-  /// Creates a BasicTuple from a variadic list of elements. This overload is
-  /// called if the the \p elements are constant lvalue reference types.
-  /// \param[in] elements The elements for the BasicTuple.
-  /// \tparam    Types    The types of the elements for the BasicTuple.  
+  /**
+   * Creates a BasicTuple from a variadic list of elements.
+   *
+   * \note This overload is called if the the elements are constant lvalue
+   *       reference types.
+   *
+   * \param  elements The elements for the BasicTuple.
+   * \tparam Types    The types of the elements for the BasicTuple.
+   */
   template <typename... Types>
-  ripple_host_device constexpr explicit BasicTuple(const Types&... elements)
-  : base_t(std::forward<Ts>(elements)...) {}
-};  
+  ripple_host_device constexpr explicit BasicTuple(
+    const Types&... elements) noexcept
+  : Base{static_cast<const Ts&>(elements)...} {}
+};
 
 } // namespace ripple::detail
 
