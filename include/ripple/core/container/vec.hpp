@@ -50,22 +50,20 @@ struct VecImpl : public StridableLayout<VecImpl<T, Size, Layout>>,
 
   // clang-format off
   /** Defines the type of the descriptor for the storage. */
-  using descriptor_t = StorageDescriptor<Layout, StorageElement<T, elements>>;
+  using Descriptor = StorageDescriptor<Layout, StorageElement<T, elements>>;
   /** Defines the storage type for the array. */
-  using storage_t    = typename descriptor_t::storage_t;
+  using Storage    = typename Descriptor::Storage;
   /** Defines the value type of the data in the vector. */
-  using value_t      = std::decay_t<T>;
-  /** Defines the type of this vector. */
-  using self_t       = VecImpl<T, Size, Layout>;
+  using Value      = std::decay_t<T>;
 
   /** Alias for zeroth accessor */
-  using ZerothAccessor = StructAccessor<value_t, storage_t, 0>;
+  using ZerothAccessor = StructAccessor<Value, Storage, 0>;
   /** Alias for first accessor */
-  using FirstAccessor  = StructAccessor<value_t, storage_t, 1>;
+  using FirstAccessor  = StructAccessor<Value, Storage, 1>;
   /** Alias for second accessor */
-  using SecondAccessor = StructAccessor<value_t, storage_t, 2>;
+  using SecondAccessor = StructAccessor<Value, Storage, 2>;
   /** Alias for third accessor */
-  using ThirdAccessor  = StructAccessor<value_t, storage_t, 3>;
+  using ThirdAccessor  = StructAccessor<Value, Storage, 3>;
   // clang-format on
 
   /**
@@ -93,23 +91,11 @@ struct VecImpl : public StridableLayout<VecImpl<T, Size, Layout>>,
    *       requested (i.e, accessing w in a 3D vector).
    */
   union {
-    storage_t _storage; //!< The storage for the vector.
-    union {
-      ZerothAccessor x; //!< X component of vector.
-      ZerothAccessor r; //!< R component of the vector.
-    };
-    union {
-      FirstAccessor y; //!< Y component of vector.
-      FirstAccessor g; //!< G component of the vector.
-    };
-    union {
-      SecondAccessor z; //!< Z component of vector.
-      SecondAccessor b; //!< B component of the vector.
-    };
-    union {
-      ThirdAccessor w; //!< W component of vector.
-      ThirdAccessor a; //!< A component of the vector.
-    };
+    Storage        storage_; //!< The storage for the vector.
+    ZerothAccessor x;        //!< X component of vector.
+    FirstAccessor  y;        //!< Y component of vector.
+    SecondAccessor z;        //!< Z component of vector.
+    ThirdAccessor  w;        //!< W component of vector.
   };
 
   /*==--- [construction] ---------------------------------------------------==*/
@@ -123,7 +109,7 @@ struct VecImpl : public StridableLayout<VecImpl<T, Size, Layout>>,
    */
   ripple_host_device constexpr VecImpl(T val) noexcept {
     unrolled_for<elements>(
-      [&](auto i) { _storage.template get<0, i>() = val; });
+      [&](auto i) { storage_.template get<0, i>() = val; });
   }
 
   /**
@@ -141,29 +127,29 @@ struct VecImpl : public StridableLayout<VecImpl<T, Size, Layout>>,
   ripple_host_device constexpr VecImpl(Values&&... values) noexcept {
     const auto v = Tuple<Values...>{values...};
     unrolled_for<elements>(
-      [&](auto i) { _storage.template get<0, i>() = get<i>(v); });
+      [&](auto i) { storage_.template get<0, i>() = get<i>(v); });
   }
 
   /**
    * Constructor to set the vector from other \p storage.
    * \param other The other storage to use to set the vector.
    */
-  ripple_host_device constexpr VecImpl(storage_t storage) noexcept
-  : _storage{storage} {}
+  ripple_host_device constexpr VecImpl(Storage storage) noexcept
+  : storage_{storage} {}
 
   /**
    * Copy constructor to set the vector from another vector.
    * \param other The other vector to use to initialize this one.
    */
   ripple_host_device constexpr VecImpl(const VecImpl& other) noexcept
-  : _storage{other._storage} {}
+  : storage_{other.storage_} {}
 
   /**
    * Move constructor to set the vector from another vector.
    * \param other The other vector to use to initialize this one.
    */
   ripple_host_device constexpr VecImpl(VecImpl&& other) noexcept
-  : _storage{std::move(other._storage)} {}
+  : storage_{std::move(other.storage_)} {}
 
   /**
    * Copy constructor to set the vector from another vector with a different
@@ -174,7 +160,7 @@ struct VecImpl : public StridableLayout<VecImpl<T, Size, Layout>>,
   template <typename OtherLayout>
   ripple_host_device constexpr VecImpl(
     const VecImpl<T, Size, OtherLayout>& other) noexcept
-  : _storage{other._storage} {}
+  : storage_{other.storage_} {}
 
   /**
    * Move constructor to set the vector from another vector with a different
@@ -184,7 +170,7 @@ struct VecImpl : public StridableLayout<VecImpl<T, Size, Layout>>,
    */
   template <typename OtherLayout>
   ripple_host_device constexpr VecImpl(VecImpl<T, Size, OtherLayout>&& other)
-  : _storage{other._storage} {}
+  : storage_{other.storage_} {}
 
   /**
    * Constructor to create the vector from an array of the same type and
@@ -195,7 +181,7 @@ struct VecImpl : public StridableLayout<VecImpl<T, Size, Layout>>,
   template <typename Impl>
   ripple_host_device constexpr VecImpl(const Array<Impl>& arr) {
     unrolled_for<elements>(
-      [&](auto i) { _storage.template get<0, i>() = arr[i]; });
+      [&](auto i) { storage_.template get<0, i>() = arr[i]; });
   }
 
   /*==--- [operator overloads] ---------------------------------------------==*/
@@ -207,7 +193,7 @@ struct VecImpl : public StridableLayout<VecImpl<T, Size, Layout>>,
    * \return A references to the modified vector.
    */
   ripple_host_device auto operator=(const VecImpl& other) noexcept -> VecImpl& {
-    _storage = other._storage;
+    storage_ = other.storage_;
     return *this;
   }
 
@@ -218,7 +204,7 @@ struct VecImpl : public StridableLayout<VecImpl<T, Size, Layout>>,
    * \return A references to the modified vector.
    */
   ripple_host_device auto operator=(VecImpl&& other) noexcept -> VecImpl& {
-    _storage = std::move(other._storage);
+    storage_ = std::move(other.storage_);
     return *this;
   }
 
@@ -233,7 +219,7 @@ struct VecImpl : public StridableLayout<VecImpl<T, Size, Layout>>,
   ripple_host_device auto
   operator=(const VecImpl<T, Size, OtherLayout>& other) noexcept -> VecImpl& {
     unrolled_for<elements>(
-      [&](auto i) { _storage.template get<0, i>() = other[i]; });
+      [&](auto i) { storage_.template get<0, i>() = other[i]; });
     return *this;
   }
 
@@ -248,7 +234,7 @@ struct VecImpl : public StridableLayout<VecImpl<T, Size, Layout>>,
   ripple_host_device auto
   operator=(const Array<Impl>& arr) noexcept -> VecImpl& {
     unrolled_for<elements>(
-      [&](auto i) { _storage.template get<0, i>() = arr[i]; });
+      [&](auto i) { storage_.template get<0, i>() = arr[i]; });
     return *this;
   }
 
@@ -262,7 +248,7 @@ struct VecImpl : public StridableLayout<VecImpl<T, Size, Layout>>,
   template <typename OtherLayout>
   ripple_host_device auto
   operator=(VecImpl<T, Size, OtherLayout>&& other) noexcept -> VecImpl& {
-    _storage = other._storage;
+    storage_ = other.storage_;
     return *this;
   }
 
@@ -272,8 +258,8 @@ struct VecImpl : public StridableLayout<VecImpl<T, Size, Layout>>,
    * \return A const reference to the element at position i.
    */
   ripple_host_device constexpr auto
-  operator[](size_t i) const noexcept -> const value_t& {
-    return _storage.template get<0>(i);
+  operator[](size_t i) const noexcept -> const Value& {
+    return storage_.template get<0>(i);
   }
 
   /**
@@ -281,8 +267,8 @@ struct VecImpl : public StridableLayout<VecImpl<T, Size, Layout>>,
    * \param i The index of the element to get.
    * \return A reference to the element at position i.
    */
-  ripple_host_device constexpr auto operator[](size_t i) noexcept -> value_t& {
-    return _storage.template get<0>(i);
+  ripple_host_device constexpr auto operator[](size_t i) noexcept -> Value& {
+    return storage_.template get<0>(i);
   }
 
   /*==--- [interface] ------------------------------------------------------==*/
@@ -294,9 +280,9 @@ struct VecImpl : public StridableLayout<VecImpl<T, Size, Layout>>,
    * \return A const reference to the element at position I.
    */
   template <size_t I>
-  ripple_host_device constexpr auto at() const noexcept -> const value_t& {
+  ripple_host_device constexpr auto at() const noexcept -> const Value& {
     static_assert((I < elements), "Compile time index out of range!");
-    return _storage.template get<0, I>();
+    return storage_.template get<0, I>();
   }
 
   /**
@@ -306,9 +292,9 @@ struct VecImpl : public StridableLayout<VecImpl<T, Size, Layout>>,
    * \return A reference to the element at position I.
    */
   template <size_t I>
-  ripple_host_device constexpr auto at() noexcept -> value_t& {
+  ripple_host_device constexpr auto at() noexcept -> Value& {
     static_assert((I < elements), "Compile time index out of range!");
-    return _storage.template get<0, I>();
+    return storage_.template get<0, I>();
   }
 
   /**
@@ -320,7 +306,7 @@ struct VecImpl : public StridableLayout<VecImpl<T, Size, Layout>>,
    * \return A reference to the element at position index.
    */
   template <typename Index>
-  ripple_host_device constexpr auto at(Index&& index) noexcept -> value_t& {
+  ripple_host_device constexpr auto at(Index&& index) noexcept -> Value& {
     if constexpr (is_dimension_v<Index>) {
       constexpr size_t i = std::decay_t<Index>::value;
       return at<i>();
@@ -338,7 +324,7 @@ struct VecImpl : public StridableLayout<VecImpl<T, Size, Layout>>,
    */
   template <typename Index>
   ripple_host_device constexpr auto
-  at(Index&& index) const noexcept -> const value_t& {
+  at(Index&& index) const noexcept -> const Value& {
     if constexpr (is_dimension_v<Index>) {
       constexpr size_t i = std::decay_t<Index>::value;
       return at<i>();
