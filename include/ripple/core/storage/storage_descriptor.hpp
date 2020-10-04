@@ -1,7 +1,8 @@
-//==--- ripple/core/storage/storage_descriptor.hpp -------------- -*- C++ -*- ---==//
-//            
+//==--- ripple/core/storage/storage_descriptor.hpp -------------- -*- C++ -*-
+//---==//
+//
 //                                Ripple
-// 
+//
 //                      Copyright (c) 2019 Rob Clucas.
 //
 //  This file is distributed under the MIT License. See LICENSE for details.
@@ -25,33 +26,35 @@
 
 namespace ripple {
 
-/// The StorageDescriptor class can be used to define the types to store. This
-/// is an empty struct, and is just used to wrap the layout kind and types so
-/// that it can bbe specialized for specific traits.
-/// \tparam Layout The layout for the data.
-/// \tparam Ts     The types to store.
+/**
+ * The StorageDescriptor class can be used to define the types to store. This
+ * is an empty struct, and is just used to wrap the layout kind and types so
+ * that it can be specialized for specific traits.
+ *
+ * \tparam Layout The layout for the data.
+ * \tparam Ts     The types to store.
+ */
 template <typename Layout, typename... Ts>
 struct StorageDescriptor {
-  /// Defines the type of the layout for the descriptor.
-  static constexpr auto layout = Layout::value;
+  // clang-format off
+  /** Defines the type of the layout for the descriptor. */
+  static constexpr LayoutKind layout  = Layout::value;
+  /** Defines if the storage is strided. */
+  static constexpr bool is_strided    = (layout == LayoutKind::strided_view);
+  /** Defines if the storage is contiguous. */
+  static constexpr bool is_contiguous = (layout == LayoutKind::contiguous_view);
 
-  /// Defines the type of contigous view storage.
-  using contig_view_storage_t  = ContiguousStorageView<Ts...>;
-  /// Defines the type of strided view storage.
-  using strided_view_storage_t = StridedStorageView<Ts...>;
-  /// Defines the type of owned storage.
-  using owned_storage_t        = OwnedStorage<Ts...>;
+  /** Defines the type of contigous view storage. */
+  using ContigView  = ContiguousStorageView<Ts...>;
+  /** Defines the type of strided view storage. */
+  using StridedView = StridedStorageView<Ts...>;
+  /** Defines the type of owned storage. */
+  using Owned       = OwnedStorage<Ts...>;
 
-  /// Defines which type of storage to use, based on the type of the layout.
-  using storage_t = std::conditional_t<
-    layout == LayoutKind::contiguous_view,
-    contig_view_storage_t, 
-    std::conditional_t<
-      layout == LayoutKind::strided_view,
-      strided_view_storage_t,
-      owned_storage_t
-    >
-  >;
+  /** Defines which type of storage to use, based on the type of the layout. */
+  using Storage = std::conditional_t<is_contiguous,
+    ContigView, std::conditional_t<is_strided, StridedView, Owned>>;
+  // clang-format on
 };
 
 } // namespace ripple
