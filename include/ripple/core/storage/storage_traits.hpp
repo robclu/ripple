@@ -253,7 +253,7 @@ template <typename T>
 using layout_traits_t = LayoutTraits<
   std::decay_t<T>,
   is_stridable_layout_v<std::decay_t<T>> &&
-    !storage_layout_kind_is_v<T, contiguous_owned_t>>;
+    !storage_layout_kind_is_v<T, ContiguousOwned>>;
 
 /**
  * Defines the type T as a contiguous owned type, if it is not already. If the
@@ -263,7 +263,7 @@ using layout_traits_t = LayoutTraits<
  */
 template <typename T>
 using as_contiguous_owned_t =
-  typename detail::StorageAs<contiguous_owned_t, std::decay_t<T>>::type;
+  typename detail::StorageAs<ContiguousOwned, std::decay_t<T>>::type;
 
 /**
  * Defines the type T as a contiguous view type, if it is not already. If the
@@ -273,7 +273,7 @@ using as_contiguous_owned_t =
  */
 template <typename T>
 using as_contiguous_view_t =
-  typename detail::StorageAs<contiguous_view_t, std::decay_t<T>>::type;
+  typename detail::StorageAs<ContiguousView, std::decay_t<T>>::type;
 
 /**
  * Defines the type T as a strided view type, if it is not already. If the
@@ -283,7 +283,7 @@ using as_contiguous_view_t =
  */
 template <typename T>
 using as_strided_view_t =
-  typename detail::StorageAs<strided_view_t, std::decay_t<T>>::type;
+  typename detail::StorageAs<StridedView, std::decay_t<T>>::type;
 
 /*==--- [enables] ----------------------------------------------------------==*/
 
@@ -314,10 +314,12 @@ using non_storage_element_enable_t =
 template <bool IsStridable>
 struct StridableOverloader {};
 
+// clang-format off
 /** Defines an alias for an overload type for stridable types. */
-using stridable_overload_t = StridableOverloader<true>;
+using StridableOverload    = StridableOverloader<true>;
 /** Defines an alias for an overload type for non stridable types. */
-using non_stridable_overload_t = StridableOverloader<false>;
+using NonStridableOverload = StridableOverloader<false>;
+// clang-format off
 
 } // namespace ripple
 
