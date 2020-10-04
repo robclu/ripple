@@ -314,7 +314,7 @@ struct Array {
    */
   template <typename T, array_value_enable_t<T, Impl> = 0>
   ripple_host_device constexpr auto operator+=(T val) noexcept -> Impl& {
-    using Value = typename array_traits_t<Impl>::value_t;
+    using Value = typename array_traits_t<Impl>::Value;
     unrolled_for_bounded<elements>(
       [&](auto i) { impl()->operator[](i) += static_cast<Value>(val); });
     return *impl();
@@ -355,7 +355,7 @@ struct Array {
     array_value_enable_t<T, Impl> = 0>
   ripple_host_device constexpr auto operator+(T val) const noexcept -> R {
     R result;
-    using Value = typename array_traits_t<Impl>::value_t;
+    using Value = typename array_traits_t<Impl>::Value;
     unrolled_for_bounded<elements>([&](auto i) {
       result[i] = impl()->operator[](i) + static_cast<Value>(val);
     });
@@ -397,7 +397,7 @@ struct Array {
    */
   template <typename T, array_value_enable_t<T, Impl> = 0>
   ripple_host_device constexpr auto operator-=(T val) noexcept -> Impl& {
-    using Value = typename array_traits_t<Impl>::value_t;
+    using Value = typename array_traits_t<Impl>::Value;
     unrolled_for_bounded<elements>(
       [&](auto i) { impl()->operator[](i) -= static_cast<Value>(val); });
     return *impl();
@@ -440,7 +440,7 @@ struct Array {
     array_value_enable_t<T, Impl> = 0>
   ripple_host_device constexpr auto operator-(T val) const noexcept -> R {
     R result;
-    using Value = typename array_traits_t<Impl>::value_t;
+    using Value = typename array_traits_t<Impl>::Value;
     unrolled_for_bounded<elements>([&](auto i) {
       result[i] = impl()->operator[](i) - static_cast<Value>(val);
     });
@@ -482,7 +482,7 @@ struct Array {
    */
   template <typename T, array_value_enable_t<T, Impl> = 0>
   ripple_host_device constexpr auto operator*=(T val) noexcept -> Impl& {
-    using Value = typename array_traits_t<Impl>::value_t;
+    using Value = typename array_traits_t<Impl>::Value;
     unrolled_for_bounded<elements>(
       [&](auto i) { impl()->operator[](i) *= static_cast<Value>(val); });
     return *impl();
@@ -526,7 +526,7 @@ struct Array {
     array_value_enable_t<T, Impl> = 0>
   ripple_host_device constexpr auto operator*(T val) const noexcept -> R {
     R result;
-    using Value = typename array_traits_t<Impl>::value_t;
+    using Value = typename array_traits_t<Impl>::Value;
     unrolled_for_bounded<elements>([&](auto i) {
       result[i] = impl()->operator[](i) * static_cast<Value>(val);
     });
@@ -567,7 +567,7 @@ struct Array {
    */
   template <typename T, array_value_enable_t<T, Impl> = 0>
   ripple_host_device constexpr auto operator/=(T val) noexcept -> Impl& {
-    using Value = typename array_traits_t<Impl>::value_t;
+    using Value = typename array_traits_t<Impl>::Value;
     unrolled_for_bounded<elements>(
       [&](auto i) { impl()->operator[](i) /= static_cast<Value>(val); });
     return *impl();
@@ -611,7 +611,7 @@ struct Array {
     array_value_enable_t<T, Impl> = 0>
   ripple_host_device constexpr auto operator/(T val) const noexcept -> R {
     R result;
-    using Value = typename array_traits_t<Impl>::value_t;
+    using Value = typename array_traits_t<Impl>::Value;
     unrolled_for_bounded<elements>([&](auto i) {
       result[i] = impl()->operator[](i) / static_cast<Value>(val);
     });
@@ -668,7 +668,7 @@ template <
   array_value_enable_t<T, Impl> = 0>
 ripple_host_device constexpr auto
 operator+(T val, const Array<Impl>& a) noexcept -> R {
-  using Value = typename array_traits_t<Impl>::value_t;
+  using Value = typename array_traits_t<Impl>::Value;
   using Type  = std::decay_t<T>;
 
   static_assert(
@@ -700,7 +700,7 @@ template <
   array_value_enable_t<T, Impl> = 0>
 ripple_host_device constexpr auto
 operator-(T val, const Array<Impl>& a) noexcept -> R {
-  using Value = typename array_traits_t<Impl>::value_t;
+  using Value = typename array_traits_t<Impl>::Value;
   using Type  = std::decay_t<T>;
 
   static_assert(
@@ -732,7 +732,7 @@ template <
   array_value_enable_t<T, Impl> = 0>
 ripple_host_device constexpr auto
 operator*(T val, const Array<Impl>& a) noexcept -> R {
-  using Value = typename array_traits_t<Impl>::value_t;
+  using Value = typename array_traits_t<Impl>::Value;
   using Type  = std::decay_t<T>;
 
   static_assert(
@@ -764,7 +764,7 @@ template <
   array_value_enable_t<T, Impl> = 0>
 ripple_host_device constexpr auto
 operator/(T val, const Array<Impl>& a) noexcept -> R {
-  using Value = typename array_traits_t<Impl>::value_t;
+  using Value = typename array_traits_t<Impl>::Value;
   using Type  = std::decay_t<T>;
 
   static_assert(

@@ -46,7 +46,7 @@ struct Array;
  * \tparam Size   The size of the vector.
  * \tparam Layout The storage layout of the vector.
  */
-template <typename T, typename Size, typename Layout = contiguous_owned_t>
+template <typename T, typename Size, typename Layout = ContiguousOwned>
 struct VecImpl;
 
 /*==--- [traits] -----------------------------------------------------------==*/
@@ -62,11 +62,11 @@ template <typename T>
 struct ArrayTraits {
   // clang-format off
   /** The value type for the array. */
-  using value_t  = std::decay_t<T>;
+  using Value  = std::decay_t<T>;
   /** Defines the type of the layout for the array. */
-  using layout_t = contiguous_owned_t;
+  using Layout = ContiguousOwned;
   /**  Defines the type for an array of type T */
-  using array_t  = VecImpl<value_t, Num<1>, layout_t>;
+  using Array  = VecImpl<Value, Num<1>, Layout>;
 
   /** Returns the number of elements in the array.   */
   static constexpr auto size = 1;
@@ -80,15 +80,15 @@ struct ArrayTraits {
  * \tparam Size   The size  of the vector.
  * \tparam Layout The storage layout of the vector.
  */
-template <typename T, typename Size, typename Layout>
-struct ArrayTraits<VecImpl<T, Size, Layout>> {
+template <typename T, typename Size, typename LayoutType>
+struct ArrayTraits<VecImpl<T, Size, LayoutType>> {
   // clang-format off
   /** The value type stored in the array. */
-  using value_t  = std::decay_t<T>;
+  using Value  = std::decay_t<T>;
   /** Defines the type of the layout for the array. */
-  using layout_t = Layout;
+  using Layout = LayoutType;
   /** Defines the type of an array of the value type. */
-  using array_t  = VecImpl<value_t, Size, Layout>;
+  using Array  = VecImpl<Value, Size, Layout>;
 
   /** Returns the number of elements in the array.  */
   static constexpr auto size = Size::value;
@@ -110,11 +110,11 @@ struct ArrayTraits<Array<Impl>> {
  public:
   // clang-format off
   /** Defines the value type of the array. */
-  using value_t  = typename Traits::value_t;
+  using Value  = typename Traits::Value;
   /** Defines the type of the layout for the array. */
-  using layout_t = typename Traits::layout_t;
+  using Layout = typename Traits::Layout;
   /** Defines the type of an array of the value type. */
-  using array_t  = typename Traits::array_t;
+  using Array  = typename Traits::Array;
 
   /** Returns the number of elements in the array. */
   static constexpr auto size = Traits::size;
@@ -187,7 +187,7 @@ static constexpr bool is_array_v =
  */
 template <typename T, typename Traits = array_traits_t<T>>
 using VecFallback =
-  VecImpl<typename Traits::value_t, Num<Traits::size>, contiguous_owned_t>;
+  VecImpl<typename Traits::Value, Num<Traits::size>, ContiguousOwned>;
 
 /**
  * Returns an implementation type which is copyable and trivially constructable
@@ -207,10 +207,10 @@ using VecFallback =
 template <
   typename ImplA,
   typename ImplB,
-  typename LayoutA  = typename array_traits_t<ImplA>::layout_t,
-  typename LayoutB  = typename array_traits_t<ImplB>::layout_t,
-  bool ValidityA    = std::is_same_v<LayoutA, contiguous_owned_t>,
-  bool ValidityB    = std::is_same_v<LayoutB, contiguous_owned_t>,
+  typename LayoutA  = typename array_traits_t<ImplA>::Layout,
+  typename LayoutB  = typename array_traits_t<ImplB>::Layout,
+  bool ValidityA    = std::is_same_v<LayoutA, ContiguousOwned>,
+  bool ValidityB    = std::is_same_v<LayoutB, ContiguousOwned>,
   typename Fallback = VecFallback<ImplA>>
 using array_impl_t = std::conditional_t<
   ValidityA,
@@ -230,7 +230,7 @@ template <
   typename T,
   typename Impl,
   typename Type  = std::decay_t<T>,
-  typename Value = typename ArrayTraits<Impl>::value_t>
+  typename Value = typename ArrayTraits<Impl>::Value>
 using array_value_enable_t = std::enable_if_t<
   (std::is_same_v<Type, Value> ||
    std::is_convertible_v<Type, Value>)&&!is_array_v<Type>,
