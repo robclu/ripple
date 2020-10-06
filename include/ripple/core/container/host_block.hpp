@@ -34,351 +34,481 @@ namespace ripple {
 ///
 /// \tparam T          The type of the data stored in the tensor.
 /// \tparam Dimensions The number of dimensions in the tensor.
-template <typename T, std::size_t Dimensions>
+template <typename T, size_t Dimensions>
 class HostBlock {
   //==--- [traits] ---------------------------------------------------------==//
   // clang-format off
-  /// Defines the type of this tensor.
-  using self_t        = HostBlock<T, Dimensions>;
-  /// Defines the type of the traits for the block.
-  using traits_t      = BlockTraits<self_t>;
-  /// Defines the type of allocator for the tensor.
-  using allocator_t   = typename traits_t::allocator_t;
-  /// Defines the the of the dimension information for the tensor.
-  using space_t       = typename traits_t::space_t;
-  /// Defines the type of the pointer to the data.
-  using ptr_t         = void*;
-  /// Defines the type for a reference to an element.
-  using value_t       = typename traits_t::value_t;
-  /// Defines the type of the iterator for the tensor.
-  using iter_t        = typename traits_t::iter_t;
-  /// Defines the type of a contant iterator.
-  using const_iter_t  = const iter_t;
-  /// Defines the type of a host block with the same parameters.
-  using device_block_t = DeviceBlock<T, Dimensions>;
+  /** Defines the type of the traits for the block. */
+  using Traits      = BlockTraits<DeviceBlock<T, Dimensions>>;
+  /** Defines the type of allocator for the tensor. */
+  using Allocator   = typename Traits::Allocator;
+  /** Defines the the of the dimension information for the tensor. */
+  using Space       = typename Traits::Space;
+  /** Defines the type of the pointer to the data. */
+  using Ptr         = void*;
+  /** Defines the type for a reference to an element. */
+  using Value       = typename Traits::Value;
+  /** Defines the type of the iterator for the tensor.  */
+  using Iter        = typename Traits::Iter;
+  /** Defines the type of a constant iterator. */
+  using ConstIter   = const Iter;
+  /** Defines the type of a host block with the same parameters. */
+  using DeviceBlock = DeviceBlock<T, Dimensions>;
+  /** Defines the type of the stream for the block. */
+  using Stream      = cudaStream_t;
   // clang-format on
 
-  /// Declare device blocks to be friends, so that we can create host blocks
-  /// from device blocks.
-  friend device_block_t;
-  /// Declare Block a friend to allow it to allow it to set padding data.
-  template <typename TT, size_t DD>
+  /**
+   * Declare device blocks to be friends so for copy construction.
+   */
+  friend DeviceBlock;
+
+  /**
+   * Declare Block a friend to allow it to allow it to set properties of the
+   * host block.
+   */
+  template <typename Type, size_t Dims>
   friend class Block;
 
  public:
-  /// Defines the type of the padding.
-  using padding_t = typename space_t::padding_t;
+  /** Defines the type of the padding. */
+  using Padding = typename Space::Padding;
 
-  /// Swaps the blocks \p lhs and \p rhs.
-  /// \param lhs The left tensor to swap.
-  /// \param rhs The right tensor to swap.
+  /**
+   * Swaps the blocks lhs and rhs blocks.
+   * \param lhs The left block to swap.
+   * \param rhs The right block to swap.
+   */
   friend auto swap(HostBlock& lhs, HostBlock& rhs) noexcept -> void {
     using std::swap;
-    // TODO: Check that
-    swap(lhs._data, rhs._data);
+    swap(lhs.data_, rhs.data_);
   }
 
-  //==--- [construction] ---------------------------------------------------==//
+  /*==--- [construction] ---------------------------------------------------==*/
 
-  /// Default constructor which just initializes the storage. This constructor
-  /// is available so that an unsized tensor can be instanciated and then
-  /// resized at runtime.
+  /**
+   * Default constructor.This constructor is available so that an unsized block
+   * can be instanciated and then resized at runtime.
+   */
   HostBlock() = default;
 
-  /// Destructor to clean up the tensor resources.
-  ~HostBlock() {
+  /**
+   * Destructor for the block, which cleans up the block resources.
+   */
+  ~HostBlock() noexcept {
     cleanup();
   }
 
   //==--- [synchronous constuction] -----------------------------------------=//
 
-  /// Initializes the size of each of the dimensions of the tensor, as well as
-  /// the padding for the tensor. This is only enabled when the number of
-  /// size arguments matches the dimensionality of the tensor, and the sizes
-  /// are numeric types.
-  ///
-  /// \param  padding The amount of padding for the tensor.
-  /// \param  sizes   The sizes of the dimensions for the tensor.
-  /// \tparam Sizes   The types of other dimension sizes.
+  /**
+   * Initializes the size of each of the dimensions of the block.
+   *
+   * \note This is only enabled when the number of arguments matches the
+   *       dimensionality of the block and the sizes are arithmetic types.
+   *
+   * \note This also allocated the data for the block.
+   *
+   * \param  sizes The sizes of the dimensions for the block.
+   * \tparam Sizes The types of other dimension sizes.
+   */
   template <
     typename... Sizes,
     all_arithmetic_size_enable_t<Dimensions, Sizes...> = 0>
-  HostBlock(padding_t padding, Sizes&&... sizes)
-  : _space{padding, std::forward<Sizes>(sizes)...} {
+  HostBlock(Sizes&&... sizes) noexcept
+  : space_{static_cast<Sizes&&>(sizes)...} {
     allocate();
   }
 
-  /// Initializes the size of each of the dimensions of the tensor. This is only
-  /// enabled when the number of arguments matches the dimensionality of the
-  /// tensor, and the sizes are numeric types.
-  ///
-  /// \param sizes  The sizes of the each of the dimensions of the block.
-  /// \tparam Sizes The types of the dimension sizes.
+  /**
+   * Initializes the size of each of the dimensions of the block, as well as
+   * the padding for the block.
+   *
+   * \note This is only enabled when the number of size arguments matches the
+   *       dimensionality of the block and the sizes are arithmetic types.
+   *
+   * \note This also allocates data for the block.
+   *
+   * \note The amount of padding specified adds the given amount to each side
+   *       of each dimension.
+   *
+   * \param  padding The amount of padding for the block.
+   * \param  sizes   The sizes of the dimensions for the block.
+   * \tparam Sizes   The types of other dimension sizes.
+   */
   template <
     typename... Sizes,
     all_arithmetic_size_enable_t<Dimensions, Sizes...> = 0>
-  HostBlock(Sizes&&... sizes) : _space{std::forward<Sizes>(sizes)...} {
+  HostBlock(Padding padding, Sizes&&... sizes)
+  : space_{padding, static_cast<Sizes&&>(sizes)...} {
     allocate();
   }
 
-  /// Constructor to create the block from another block.
-  /// \param other The other block to create this block from.
-  HostBlock(const self_t& other) : _space{other._space} {
-    const auto bytes = allocator_t::allocation_size(_space.size());
-    std::memcpy(_data, other._data, bytes);
+  /**
+   * Copy constructor to create the block from another block.
+   * \param other The other block to create this block from.
+   */
+  HostBlock(const HostBlock& other) : space_{other.space_} {
+    const auto bytes = Allocator::allocation_size(space_.size());
+    mem_props_       = other.mem_props_;
+    std::memcpy(data_, other.data_, bytes);
   }
 
-  /// Constructor to move the \p other block into this one. The \p other will no
-  /// longer have valid data, and it's size is meaningless.
-  /// \param other The other block to move to this one.
-  HostBlock(self_t&& other) : _space{other._space} {
-    _data       = other._data;
-    other._data = nullptr;
+  /**
+   * Constructor to move the other block into this one.
+   * The other block will no longer have valid data, and it's size is
+   * meaningless.
+   * \param other The other block to move to this one.
+   */
+  HostBlock(HostBlock&& other) noexcept : space_{other.space_} {
+    data_       = other.data_;
+    other.data_ = nullptr;
+    mem_props_  = other.mem_props_;
+    other.mem_props_.reset();
   }
 
-  /// Constructor to create the block from a device block.
-  /// \param other The other block to create this block from.
-  HostBlock(const device_block_t& other) : _space{other._space} {
+  /**
+   * Constructor to create the block from a device block.
+   * \param other The other block to create this block from.
+   */
+  HostBlock(const DeviceBlock& other) : space_{other.space_} {
     reallocate();
     copy_from_device(other);
   }
 
-  //==--- [asynchrnous construction] ---------------------------------------==//
+  /*==--- [asynchrnous construction] ---------------------------------------==*/
 
-  /// Initializes the size of each of the dimensions of the tensor, as well as
-  /// the padding for the tensor, as well as providing an option to enable
-  /// asynchronous functionality for the block. This is only enabled when the
-  /// number of size arguments matches the dimensionality of the tensor, and the
-  /// sizes are numeric types.
-  ///
-  /// \param  async   If the block must enable asynchronous functionality.
-  /// \param  padding The amount of padding for the tensor.
-  /// \param  sizes   The sizes of the dimensions for the tensor.
-  /// \tparam Sizes   The types of other dimension sizes.
-  template <
-    typename... Sizes,
-    all_arithmetic_size_enable_t<Dimensions, Sizes...> = 0>
-  HostBlock(BlockOpKind op_kind, std::size_t padding, Sizes&&... sizes)
-  : _space{padding, std::forward<Sizes>(sizes)...} {
-    set_op_kind(op_kind);
-    allocate();
-  }
-
-  /// Initializes the size of each of the dimensions of the tensor, as well as
-  /// providing an option to enable asynchronous functionality for the block.
-  /// This is only enabled when the number of size arguments matches the
-  /// dimensionality of the tensor, and the sizes are numeric types.
-  ///
-  /// \param  async   If the block must enable asynchronous functionality.
-  /// \param  sizes   The sizes of the dimensions for the tensor.
-  /// \tparam Sizes   The types of other dimension sizes.
+  /**
+   * Initializes the size of each of the dimensions of the block, as well as
+   * providing an option to enable asynchronous functionality for the block.
+   *
+   * \note This is only enabled when the number of size arguments matches the
+   *       dimensionality of the tensor, and the sizes are arithmetic types.
+   *
+   *
+   * \param  op_kind The kind of operation for the block.
+   * \param  sizes   The sizes of the dimensions for the tensor.
+   * \tparam Sizes   The types of other dimension sizes.
+   */
   template <
     typename... Sizes,
     all_arithmetic_size_enable_t<Dimensions, Sizes...> = 0>
   HostBlock(BlockOpKind op_kind, Sizes&&... sizes)
-  : _space{std::forward<Sizes>(sizes)...} {
+  : space_{static_cast<Sizes&&>(sizes)...} {
     set_op_kind(op_kind);
     allocate();
   }
 
-  //==--- [operator overloading] -------------------------------------------==//
+  /**
+   * Initializes the size of each of the dimensions of the block, the padding
+   * for the block, and provides an option to enable asynchronous functionality
+   * for the block.
+   *
+   * \note This is only enabled when the number of size arguments matches the
+   *       dimensionality of the block, and the izes are arithmetic types.
+   *
+   * \param  op_kind The operation kind for the block.
+   * \param  padding The amount of padding for the tensor.
+   * \param  sizes   The sizes of the dimensions for the tensor.
+   * \tparam Sizes   The types of other dimension sizes.
+   */
+  template <
+    typename... Sizes,
+    all_arithmetic_size_enable_t<Dimensions, Sizes...> = 0>
+  HostBlock(BlockOpKind op_kind, size_t padding, Sizes&&... sizes)
+  : space_{padding, static_cast<Sizes&&>(sizes)...} {
+    set_op_kind(op_kind);
+    allocate();
+  }
 
-  /// Overload of assignment operator to copy a block.
-  /// \param[in] other The other block to create this block from.
-  auto operator=(const self_t& other) -> self_t& {
-    _space = other._space;
+  /*==--- [operator overloads] ---------------------------------------------==*/
+
+  /**
+   * Overload of copy assignment operator to create this block from another.
+   * \param other The other block to create this block from.
+   * \return A reference to the created block.
+   */
+  auto operator=(const HostBlock& other) -> HostBlock& {
+    space_ = other.space_;
     reallocate();
-    const auto bytes = allocator_t::allocation_size(_space.size());
-    std::memcpy(_data, other._data, bytes);
+    const auto bytes = Allocator::allocation_size(space_.size());
+    std::memcpy(data_, other.data_, bytes);
     return *this;
   }
 
-  /// Overload of assignment operator to copy a block.
-  /// \param[in] other The other block to create this block from.
-  auto operator=(self_t&& other) -> self_t& {
-    _space      = other._space;
-    _data       = other._data;
-    other._data = nullptr;
+  /**
+   * Overload of move assignment operator to move another block into this block.
+   * \param other The other block to create this block from.
+   * \return A reference to the created block.
+   */
+  auto operator=(HostBlock&& other) noexcept -> HostBlock& {
+    space_      = other.space_;
+    data_       = other.data_;
+    other.data_ = nullptr;
+    mem_props_  = other.mem_props_;
+    other.mem_props_.reset();
     return *this;
   }
 
-  /// Overload of assignment operator to copy a block.
-  /// \param[in] other The other block to create this block from.
-  auto operator=(const device_block_t& other) -> self_t& {
-    _space = other._space;
+  /**
+   * Overload of copy assignment operator to create this block from the other
+   * block.
+   * \param other The other block to create this block from.
+   * \return A reference to the created block.
+   */
+  auto operator=(const DeviceBlock& other) -> HostBlock& {
+    space_ = other.space_;
     reallocate();
     copy_from_device(other);
     return *this;
   }
 
-  //==--- [device blocks] --------------------------------------------------==//
-
-  /// Returns the host block as a device block.
-  auto as_device() const -> device_block_t {
-    return device_block_t{*this};
+  /**
+   * Overload of operator() to get an iterator to the element at the location
+   * specified by the indices.
+   *
+   * \param  is      The indices to get the element at.
+   * \tparam Indices The types of the indices.
+   * \return An iterator pointing to the element defined by the indices.
+   */
+  template <typename... Indices>
+  auto operator()(Indices&&... is) noexcept -> Iter {
+    return Iter{Allocator::create(
+                  data_, space_, static_cast<Indices&&>(is) + padding()...),
+                space_};
   }
 
-  //==--- [copying data] ---------------------------------------------------==//
+  /**
+   * Overload of operator() to get a constant iterator to the element at the
+   * location specified by the indices.
+   *
+   * \param  is      The indices to get the element at.
+   * \tparam Indices The types of the indices.
+   * \return A const iterator pointing to the element defined by the indices.
+   */
+  template <typename... Indices>
+  auto operator()(Indices&&... is) const noexcept -> ConstIter {
+    return ConstIter{
+      Allocator::create(
+        data_, space_, static_cast<Indices&&>(is) + padding()...),
+      space_};
+  }
 
-  /// Copies the data from the \p other block into this block.
-  /// \param other The other block to copy the data from.
-  auto copy_data(const device_block_t& other) -> void {
+  /*==--- [interface] ------------------------------------------------------==*/
+
+  /**
+   * Creates a device block with the data from this host block.
+   * \return A device block with the data and properties of this block.
+   */
+  auto as_device() const -> DeviceBlock {
+    return DeviceBlock{*this};
+  }
+
+  /**
+   * Copies the data from the device block into this block.
+   * \param other The other block to copy the data from.
+   */
+  auto copy_data(const DeviceBlock& other) noexcept -> void {
     copy_from_device(other);
   }
 
-  //==--- [access] ---------------------------------------------------------==//
-
-  /// Gets an iterator to the beginning of the block.
-  auto begin() -> iter_t {
-    auto it = iter_t{allocator_t::create(_data, _space), _space};
+  /**
+   * Gets an iterator to the beginning of the block.
+   *
+   * \note The returned iterator points to the first valid cell (i.e is is
+   *       offset over the padding).
+   *
+   * \return An iterator to the first element in the block.
+   */
+  auto begin() noexcept -> Iter {
+    auto it = Iter{Allocator::create(data_, space_), space_};
     shift_iterator(it);
     return it;
   }
 
-  /// Gets a constant iterator to the beginning of the block.
-  auto begin() const -> const_iter_t {
-    auto it = const_iter_t{allocator_t::create(_data, _space), _space};
+  /**
+   * Gets a constant iterator to the beginning of the block.
+   *
+   * \note The returned iterator points to the first valid cell (i.e is is
+   *       offset over the padding).
+   *
+   * \return A constant iterator to the first element in the block.
+   */
+  auto begin() const -> ConstIter {
+    auto it = ConstIter{Allocator::create(data_, space_), space_};
     shift_iterator(it);
     return it;
   }
 
-  /// Overload of operator() to get an iterator to the element at the location
-  /// specified by the \p is indices.
-  /// \param  is      The indices to get the element at.
-  /// \tparam Indices The types of the indices.
-  template <typename... Indices>
-  auto operator()(Indices&&... is) -> iter_t {
-    return iter_t{allocator_t::create(
-                    _data, _space, std::forward<Indices>(is) + padding()...),
-                  _space};
-  }
-
-  /// Overload of operator() to get a constant iterator to the element at the
-  /// location specified by the \p is indices.
-  /// \param  is      The indices to get the element at.
-  /// \tparam Indices The types of the indices.
-  template <typename... Indices>
-  auto operator()(Indices&&... is) const -> const_iter_t {
-    return const_iter_t{
-      allocator_t::create(
-        _data, _space, std::forward<Indices>(is) + padding()...),
-      _space};
-  }
-
-  //==--- [interface] ------------------------------------------------------==//
-
-  /// Reallocates the data.
+  /**
+   * Reallocates the data for the block.
+   */
   auto reallocate() -> void {
     cleanup();
     allocate();
   }
 
-  /// Reallocates the data and initializes the data using the \p args for the
-  /// construction of the elements.
-  /// \param  args The arguments for the constructor.
-  /// \tparam Args The type of the arguments.
+  /**
+   * Reallocates the data and initializes the data using the givenargs for the
+   * construction of the elements.
+   * \param  args The arguments for the constructor.
+   * \tparam Args The type of the arguments.
+   */
   template <typename... Args>
   auto reallocate_and_init(Args&&... args) -> void {
     cleanup();
-    allocate_and_init(std::forward<Args>(args)...);
+    allocate_and_init(static_cast<Args&&>(args)...);
   }
 
-  /// Resizes the \p dim dimension to \p dim_size.
-  ///
-  /// \note This __does not__ reallocate, since multiple resizings would then
-  ///       then make multiple allocations. Call reallocate to reallocate after
-  ///       resizing.
-  ///
-  /// \param dim  The dimension to resize.
-  /// \param size The size to resize the dimension to.
-  /// \tparm Dim  The type of the dimension specifier.
+  /**
+   * Resizes the dimension to the given size.
+   *
+   * \note This *does not* reallocate, since multiple resizings would then
+   *       then make multiple allocations. Call reallocate to reallocate after
+   *       resizing.
+   *
+   * \note The resize *does not* include padding, padding for the dimension is
+   *       *in addition to* this size.
+   *
+   * \param dim  The dimension to resize.
+   * \param size The size to resize the dimension to.
+   * \tparm Dim  The type of the dimension specifier.
+   */
   template <typename Dim>
-  auto resize_dim(Dim&& dim, std::size_t size) -> void {
-    _space[dim] = size;
+  auto resize_dim(Dim&& dim, size_t size) noexcept -> void {
+    space_[dim] = size;
   }
 
-  /// Resizes each of the dimensions specified by the \p sizes, reallocating the
-  /// data after the resizing. If less sizes are provided than there are
-  /// dimensions in the block, the the first sizeof...(Sizes) dimensions will
-  /// be resized.
-  /// \param  sizes The sizes to resize the dimensions to.
-  /// \tparam Sizes The type of the sizes.
+  /**
+   * Resizes each of the dimensions specified to the given size.
+   *
+   * \note This *does* reallocate the data after the resize, since it is assumed
+   *       that no further resizing is necessary since all dimension sizes are
+   *       specified in this call.
+   *
+   * \note If less sizes are provided than there are dimensions in the block,
+   *       the the first sizeof...(Sizes) dimensions will be resized.
+   *
+   * \param  sizes The sizes to resize the dimensions to.
+   * \tparam Sizes The type of the sizes.
+   */
   template <typename... Sizes>
   auto resize(Sizes&&... sizes) -> void {
-    _space.resize(std::forward<Sizes>(sizes)...);
+    space_.resize(static_cast<Sizes&&>(sizes)...);
     reallocate();
   }
 
-  /// Returns the total number of elements in the block.
-  auto size() const -> std::size_t {
-    return _space.internal_size();
+  /**
+   * Gets the total number of * valid* elements in the block, therefore this
+   * size *excludes* padding elements.
+   *
+   * \sa pitch
+   *
+   * \return The total number of valid elements in the block.
+   */
+  auto size() const noexcept -> size_t {
+    return space_.internal_size();
   }
 
-  /// Returns the total number of elements in dimension \p dim.
-  /// \param dim The dimension to get the size of.
-  /// \param Dim The type of the dimension specifier.
+  /**
+   * Gets the total number of *valid* elements in the dimension, therefore this
+   * *excludes* the padding elements for the dimension.
+   *
+   * \sa pitch
+   *
+   * \param dim The dimension to get the size of.
+   * \param Dim The type of the dimension specifier.
+   * \return The number of valid elements in the dimension.
+   */
   template <typename Dim>
-  auto size(Dim&& dim) const -> std::size_t {
-    return _space.internal_size(std::forward<Dim>(dim));
+  auto size(Dim&& dim) const noexcept -> size_t {
+    return space_.internal_size(static_cast<Dim&&>(dim));
   }
 
-  /// Returns the pitch of the block in the \p dim dimension, which is the
-  /// total number of elements in the dimension, including padding.
-  /// \param  dim The dimension to get the pitch for.
-  /// \tparam Dim The type of the dimension specifier.
+  /**
+   * Gets the pitch of the block in the given dimension, which is the
+   * total number of elements in the dimension *including* padding.
+   *
+   * \param  dim The dimension to get the pitch for.
+   * \tparam Dim The type of the dimension specifier.
+   * \return The total number of elements for the dimension *including* padding
+   *         elements.
+   */
   template <typename Dim>
   constexpr auto pitch(Dim&& dim) const noexcept -> size_t {
-    return _space.size(std::forward<Dim>(dim));
+    return space_.size(static_cast<Dim&&>(dim));
   }
 
-  /// Returns the number of dimensions for the block.
+  /**
+   * Gets the number of dimensions for the block.
+   * \return The number of dimensions for the block.
+   */
   constexpr auto dimensions() const noexcept -> size_t {
     return Dimensions;
   }
 
-  /// Sets the operation kind of the block.
-  /// \param op_kind The type of operation for the block.
+  /**
+   * Sets the operation kind of the block to either synchronous or asynchronous.
+   * \param op_kind The type of operation for the block.
+   */
   auto set_op_kind(BlockOpKind op_kind) -> void {
     if (op_kind == BlockOpKind::asynchronous) {
-      _mem_props.pinned     = true;
-      _mem_props.async_copy = true;
-    } else {
-      _mem_props.pinned     = false;
-      _mem_props.async_copy = false;
+      mem_props_.pinned     = true;
+      mem_props_.async_copy = true;
+      return;
     }
+    mem_props_.pinned     = false;
+    mem_props_.async_copy = false;
   }
 
-  /// Sets the amount of padding for the block. This does not reallocate the
-  /// memory for the block, so a call to `reallocate()` should be made if the
-  /// block owns the memory.
-  /// \param padding The amount of padding for the block.
-  auto set_padding(padding_t padding) -> void {
-    _space.padding() = padding;
+  /**
+   * Sets the amount of padding for a single side of a single dimension for the
+   * block. This padding amount will be applied to all sides of all dimensions.
+   *
+   * \note This does not reallocate the memory for the block, so a call to
+   *       reallocate should be made when the data should be reallocated.
+   *
+   * \param padding The amount of padding.
+   */
+  auto set_padding(Padding padding) noexcept -> void {
+    space_.padding() = padding;
   }
 
-  /// Returns the amount of padding for the block.
-  auto padding() const -> padding_t {
-    return _space.padding();
+  /**
+   * Gets the amount of padding for the block.
+   *
+   * \note This padding amount is for a single side of a single dimension of
+   *       the block.
+   *
+   * \return The amount of padding for the block.
+   */
+  auto padding() const noexcept -> Padding {
+    return space_.padding();
   }
 
-  /// Returns the number of bytes required to allocate the internal data for the
-  /// block as well as the padding data.
-  auto mem_requirement() const -> size_t {
-    return allocator_t::allocation_size(_space.size());
+  /**
+   * Gets the number of bytes required to allocate memory to hold all data
+   * for the block.
+   * \return The number of bytes required for the block.
+   */
+  auto mem_requirement() const noexcept -> size_t {
+    return Allocator::allocation_size(space_.size());
   }
 
-  //==--- [stream] ---------------------------------------------------------==//
-
-  /// Returns the stream used by the block.
+  /**
+   * Returns the stream used by the block.
+   * \return The stream for the block.
+   */
   auto stream() const -> cudaStream_t {
     return 0;
   }
 
-  //==--- [copy type] ------------------------------------------------------==//
-
-  /// Returns the copy type required to copy from this block into a another
-  /// block of type Block.
-  /// \tparam Block The block to determine the copy type from.
+  /**
+   * Returns the copy type required to copy from this block to another block
+   * with type Block.
+   * \tparam Block The block to determine the copy type from.
+   * \return The type of the copy required to copy from this block.
+   */
   template <typename Block>
   constexpr auto get_copy_type() const -> cudaMemcpyKind {
     return is_host_block_v<Block> ? cudaMemcpyHostToHost
@@ -386,67 +516,76 @@ class HostBlock {
   }
 
  private:
-  ptr_t            _data = nullptr; //!< Storage for the tensor.
-  space_t          _space;          //!< Spatial information for the tensor.
-  BlockMemoryProps _mem_props;      //!< Memory properties for the block.
+  Ptr              data_ = nullptr; //!< Storage for the tensor.
+  Space            space_;          //!< Spatial information for the tensor.
+  BlockMemoryProps mem_props_;      //!< Memory properties for the block.
 
-  /// Allocates data for the block, when the block only requires synchronous
-  /// functionality.
+  /**
+   * Allocates data for the block.
+   */
   auto allocate() -> void {
-    if (_data == nullptr && !_mem_props.allocated) {
-      if (_mem_props.pinned) {
+    if (data_ == nullptr && !mem_props_.allocated) {
+      if (mem_props_.pinned) {
         cuda::allocate_host_pinned(
-          reinterpret_cast<void**>(&_data), mem_requirement());
+          reinterpret_cast<void**>(&data_), mem_requirement());
       } else {
-        _data = malloc(mem_requirement());
+        data_ = malloc(mem_requirement());
       }
-      _mem_props.must_free = true;
-      _mem_props.allocated = true;
+      mem_props_.must_free = true;
+      mem_props_.allocated = true;
     }
   }
 
-  /// Allocates data for the block, and then initializes the elements by
-  /// forwarding the \p args to the constructor.
-  /// \param  args The args for the constructor.
-  /// \tparam Args The types of the args.
+  /**
+   * Allocates data for the block, and then initializes the elements by
+   * forwarding the args to the constructor.
+   * \param  args The args for the constructor.
+   * \tparam Args The types of the args.
+   */
   template <typename... Args>
   auto allocate_and_init(Args&&... args) -> void {
     allocate();
     invoke(
       *this,
       [](auto&& it, auto&&... as) {
-        using type_t = std::decay_t<decltype(*it)>;
-        new (&(*it)) type_t(std::forward<decltype(as)>(as)...);
+        using ItType = std::decay_t<decltype(*it)>;
+        new (&(*it)) ItType{static_cast<decltype(as)&&>(as)...};
       },
-      std::forward<Args>(args)...);
+      static_cast<Args&&>(args)...);
   }
 
-  /// Cleans up the data for the tensor.
+  /**
+   * Cleans up the data for the block.
+   */
   auto cleanup() -> void {
-    if (_data != nullptr && _mem_props.must_free && _mem_props.allocated) {
-      if (_mem_props.pinned) {
-        cuda::free_host_pinned(_data);
+    if (data_ != nullptr && mem_props_.must_free && mem_props_.allocated) {
+      if (mem_props_.pinned) {
+        cuda::free_host_pinned(data_);
       } else {
-        free(_data);
+        free(data_);
       }
-      _data                = nullptr;
-      _mem_props.allocated = false;
-      _mem_props.must_free = false;
+      data_                = nullptr;
+      mem_props_.allocated = false;
+      mem_props_.must_free = false;
     }
   }
 
-  /// Copies data from the device block \p other into this block.
-  /// \p other The other block to copy data from.
-  auto copy_from_device(const device_block_t& other) {
-    const auto alloc_size = allocator_t::allocation_size(_space.size());
+  /**
+   * Copies data from the device block into this one.
+   * \param other The other block to copy data from.
+   */
+  auto copy_from_device(const DeviceBlock& other) noexcept -> void {
+    const auto alloc_size = Allocator::allocation_size(space_.size());
     cuda::memcpy_device_to_host_async(
-      _data, other._data, alloc_size, other.stream());
+      data_, other.data_, alloc_size, other.stream());
   }
 
-  // Shifts an iterator by the padding in each direction.
-  auto shift_iterator(iter_t& it) const -> void {
+  /**
+   * Shifts an iterator by the padding in each direction.
+   */
+  auto shift_iterator(Iter& it) const noexcept -> void {
     unrolled_for<Dimensions>(
-      [&](auto dim) { it.shift(dim, _space.padding()); });
+      [&](auto dim) { it.shift(dim, space_.padding()); });
   }
 };
 
