@@ -1,9 +1,8 @@
-//==--- ripple/core/storage/storage_element_traits.hpp ---------- -*- C++ -*-
-//---==//
+//==--- ripple/core/storage/storage_element_traits.hpp ----- -*- C++ -*- ---==//
 //
 //                                Ripple
 //
-//                      Copyright (c) 2019 Rob Clucas.
+//                      Copyright (c) 2019, 2020 Rob Clucas.
 //
 //  This file is distributed under the MIT License. See LICENSE for details.
 //
@@ -19,23 +18,9 @@
 
 #include "storage_layout.hpp"
 #include <ripple/core/utility/portability.hpp>
+#include <utility>
 
 namespace ripple {
-
-/// The StorageElement class defines a class which can specify a type to store,
-/// and the number of those type to store. Its intended use is to define a
-/// description of the data for a class, which can then be used by multiple
-/// storage mechanisms to store the data with differnt layouts.
-/// \tparam T      The type of the data for the element.
-/// \tparam Values The number of value of type T to store.
-template <typename T, std::size_t Values>
-class StorageElement {
- public:
-  /// Returns the number of elements to store.
-  ripple_host_device constexpr auto size() -> std::size_t {
-    return Values;
-  }
-};
 
 /// The StorageElementTraits struct defines traits for elements which can be
 /// stored. This is the default case which is used to define the storage traits
@@ -44,65 +29,58 @@ class StorageElement {
 template <typename T>
 struct StorageElementTraits {
   /// Defines the value type of the element, which is the type to store.
-  using value_t = T;
+  using Value = T;
   /// Defines the number of values of the element to store.
   static constexpr auto num_elements = 1;
   /// Defines the byte size required to allocate the element.
-  static constexpr auto byte_size = sizeof(value_t);
+  static constexpr auto byte_size = sizeof(Value);
   /// Defines the alignment size required for the type.
-  static constexpr auto align_size = alignof(value_t);
+  static constexpr auto align_size = alignof(Value);
+  /** Defines that the type is not a storage element. */
+  static constexpr bool is_storage_element = false;
 };
 
-/// Specialization for a StorageElement.
-template <typename T, std::size_t Values>
-struct StorageElementTraits<StorageElement<T, Values>> {
-  /// Defines the value type of the element, which is the type to store.
-  using value_t = T;
-  /// Defines the number of values of the element to store.
-  static constexpr auto num_elements = Values;
-  /// Defines the byte size required to allocate the element.
-  static constexpr auto byte_size = sizeof(value_t) * num_elements;
-  /// Defines the alignment requirement for the storage.
-  static constexpr auto align_size = alignof(value_t);
+/// Specialization for a vector implementation.
+template <typename T, size_t Values>
+struct StorageElementTraits<Vector<T, Values>> {
+  /** Defines the value type of the element, which is the type to store. */
+  using Value = T;
+
+  // clang-format off
+  /** Defines the number of values of the element to store. */
+  static constexpr auto num_elements   = Values;
+  /** Defines the byte size required to allocate the element. */
+  static constexpr auto byte_size      = sizeof(Value) * num_elements;
+  /** Defines the alignment requirement for the storage. */
+  static constexpr auto align_size     = alignof(Value);
+  /** Defines that the type is a vector element. */
+  static constexpr bool is_vec_element = true;
+  // clang-format on
 };
 
 //==--- [is storage element] -----------------------------------------------==//
 
 namespace detail {
 
-/// Defines a class to determine of the type T is a layout type.
-/// \tparam T The type to determine if is a storage layout type.
+/**
+ * Defines a class to determine of the type T is a layout type.
+ * \tparam T The type to determine if is a storage layout type.
+ */
 template <typename T>
 struct IsStorageLayout : std::false_type {
-  /// Defines that the type is not a storage layout type.
-  static constexpr auto value = false;
+  /** Defines that the type is not a storage layout type. */
+  static constexpr bool value = false;
 };
 
-/// Specialization for the case of the IsStorageLayout struct for the case the
-/// type to check is a StorageLayout.
-/// \tparam Layout The kind of the layout for the storage.
+/**
+ * Specialization for the case of the IsStorageLayout struct for the case the
+ * type to check is a StorageLayout.
+ * \tparam Layout The kind of the layout for the storage.
+ */
 template <LayoutKind Layout>
 struct IsStorageLayout<StorageLayout<Layout>> : std::true_type {
-  /// Defines that the type is a storage layout type.
-  static constexpr auto value = true;
-};
-
-/// Defines a class to determine of the type T is a storage element type.
-/// \tparam T The type to determine if is a storage element type.
-template <typename T>
-struct IsStorageElement : std::false_type {
-  /// Defines that the type is not a storage element type.
-  static constexpr auto value = false;
-};
-
-/// Specialization for the case of the IsStorageElement struct for the case the
-/// type to check is a StorageElement.
-/// \tparam T     The type for the element.
-/// \tparam Value The number of values for the type.
-template <typename T, std::size_t Values>
-struct IsStorageElement<StorageElement<T, Values>> : std::true_type {
-  /// Defines that the type is a storage element type.
-  static constexpr auto value = true;
+  /** Defines that the type is a storage layout type. */
+  static constexpr bool value = true;
 };
 
 /// Defines a struct to determine if the type T has a storage layout type
@@ -125,34 +103,41 @@ struct HasStorageLayout<T<Ts...>> {
 
 } // namespace detail
 
-/// Returns true if the type T is a StorageElement type, otherwise returns
-/// false.
-/// \tparam T The type to determine if is a StoageElement type.
+/**
+ * Returns true if the type T is a vector storage element, otherwise returns
+ * false.
+ * \tparam T The type to determine if is a Vector storage element type.
+ */
 template <typename T>
-static constexpr auto is_storage_element_v =
-  detail::IsStorageElement<std::decay_t<T>>::value;
+static constexpr auto is_vec_element_v =
+  StorageElementTraits<std::decay_t<T>>::is_vec_element;
 
-//==-- [aliases] -----------------------------------------------------------==//
+/*==-- [aliases] -----------------------------------------------------------==*/
 
-/// Alias for storage element traits.
-/// \tparam T The type to get the traits for.
+/**
+ * Alias for storage element traits.
+ * tparam T The type to get the traits for.
+ */
 template <typename T>
 using storage_element_traits_t = StorageElementTraits<std::decay_t<T>>;
 
-//==--- [enables] ----------------------------------------------------------==//
+/*==--- [enables] ----------------------------------------------------------==*/
 
-/// Define a valid type if the type T is a StorageElement, otherwise does not
-/// define a valid type.
-/// \tparam T The type to base the enable on.
+/**
+ * Define a valid type if the type T is a vector storage element, otherwise does
+ * not define a valid type.
+ * \tparam T The type to base the enable on.
+ */
 template <typename T>
-using storage_element_enable_t = std::enable_if_t<is_storage_element_v<T>, int>;
+using vec_element_enable_t = std::enable_if_t<is_vec_element_v<T>, int>;
 
-/// Define a valid type if the type T is not a StorageElement, otherwise does
-/// not define a valid type.
-/// \tparam T The type to base the enable on.
+/**
+ * Define a valid type if the type T is *not* a vector storage element,
+ * otherwise does not define a valid type.
+ * \tparam T The type to base the enable on.
+ */
 template <typename T>
-using non_storage_element_enable_t =
-  std::enable_if_t<!is_storage_element_v<T>, int>;
+using non_vec_element_enable_t = std::enable_if_t<!is_vec_element_v<T>, int>;
 
 namespace detail {
 
@@ -171,6 +156,8 @@ struct ContigStorageHelper {
   struct Vec {
     /**
      * Constructor to set the values of the vector elements.
+     * \param  as The values for the vector.
+     * \tparam As The type of the elements.
      */
     template <typename... As>
     constexpr Vec(As&&... as) noexcept : data{static_cast<size_t>(as)...} {}

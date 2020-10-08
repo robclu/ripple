@@ -30,18 +30,18 @@ namespace ripple {
  * \note This should be used as layout_traits_t<T>, since that aliases the
  *       correct specializtion.
  *
- * \tparam T                         The type to get the layout traits for.
- * \tparam StridableAndNonOwningData Condition for specialization.
+ * \tparam T                   The type to get the layout traits for.
+ * \tparam PolyAndNonOwningData Condition for specialization.
  */
-template <typename T, bool StridableAndNonOwningData>
+template <typename T, bool PolyAndNonOwningData>
 struct LayoutTraits {
   // clang-format off
-  /** Defines if the type T is a StridableLayout type. */
-  static constexpr bool is_stridable_layout = false;
+  /** Defines if the type T is a PolymorphicLayout type. */
+  static constexpr bool is_polymorphic_layout = false;
   /** Defines the type of the layout for T. */
-  static constexpr auto layout_kind         = LayoutKind::none;
+  static constexpr auto layout_kind           = LayoutKind::none;
   /** True if the Layout is a strided view layout kind. */
-  static constexpr auto is_strided_view     = false;
+  static constexpr auto is_strided_view       = false;
 
   /** Defines the value type of T. */
   using Value        = std::decay_t<T>;
@@ -68,7 +68,7 @@ struct LayoutTraits {
 
 /**
  * Specialization of the layout traits for caset that the template type T
- * implements the StridableLayout interface, and when the layout kind for the
+ * implements the PolymorphicLayout interface, and when the layout kind for the
  * type is a view type, which means that it *does not* own the data, and the
  * data is therefore allocated somewhere else the the storage points to it.
  *
@@ -93,8 +93,8 @@ struct LayoutTraits<T, true> {
  public:
   /*==--- [constants] ------------------------------------------------------==*/
 
-  /** Defines if the type T is a StridableLayout type. */
-  static constexpr bool is_stridable_layout = true;
+  /** Defines if the type T is a PolymorphicLayout type. */
+  static constexpr bool is_polymorphic_layout = true;
 
   /** Defines the type of the layout for T. */
   static constexpr auto layout_kind = detail::StorageLayoutKind<T>::value;
@@ -112,13 +112,13 @@ struct LayoutTraits<T, true> {
     is_strided_view, StridedView, ContigView>;
 
   /** Defines the type of the allocator for type T. */
-  using Allocator     = typename IterStorage::Allocator;
+  using Allocator    = typename IterStorage::Allocator;
   /** Defines the value type for the layout. */
-  using Value         = std::decay_t<T>;
+  using Value        = std::decay_t<T>;
   /** Defines the type T with owned storage for copying. */
-  using IterCopy      = typename AsContigOwned::type;
+  using IterCopy     = typename AsContigOwned::type;
   /** Defines the type when referencing from an iterator. */
-  using IterRef       = Value;
+  using IterRef      = Value;
   /** Defines the type of a const reference for an iterator. */
   using IterConstRef = const Value;
   /** Defines the type of a pointer for an iterator. */

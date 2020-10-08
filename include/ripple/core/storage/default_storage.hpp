@@ -30,6 +30,10 @@ class DefaultStorage {
   /** The type of the storage. */
   using Storage = T*;
 
+  /** LayoutTraits is a friend to allow allocator access. */
+  template <typename Type, bool B>
+  friend class LayoutTraits;
+
   /**
    * Allocator for default storage. This can be used to determine the memory
    * requirement for the storage for different spatial configurations, as well

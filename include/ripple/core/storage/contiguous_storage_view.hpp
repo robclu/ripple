@@ -18,6 +18,7 @@
 #define RIPPLE_STORAGE_CONTIGUOUS_STORAGE_VIEW_HPP
 
 #include "owned_storage.hpp"
+#include "storage_element_traits.hpp"
 #include "storage_traits.hpp"
 #include "storage_accessor.hpp"
 
@@ -32,31 +33,35 @@ class ContiguousStorageView
 : public StorageAccessor<ContiguousStorageView<Ts...>> {
   // clang-format off
   /** Defines the data type for the buffer. */
-  using ptr_t           = void*;
+  using Ptr          = void*;
   /** Defines the type of the storage. */
-  using storage_t       = ContiguousStorageView<Ts...>;
+  using Storage      = ContiguousStorageView;
   /** Defines the type of owned storage. */
-  using owned_storage_t = OwnedStorage<Ts...>;
+  using OwnedStorage = OwnedStorage<Ts...>;
   /** The type of the helper traits class. */
-  using helper_t        = detail::ContigStorageHelper<Ts...>;
+  using Helper       = detail::ContigStorageHelper<Ts...>;
   // clang-format on
+
+  /** LayoutTraits is a friend to allow allocator access. */
+  template <typename T, bool B>
+  friend class LayoutTraits;
 
   /**
    * Gets the value type of the storage element traits for a type.
    * \tparam T The type to get the storage element traits for.
    */
   template <typename T>
-  using element_value_t = typename storage_element_traits_t<T>::value_t;
+  using element_value_t = typename storage_element_traits_t<T>::Value;
 
   /*==--- [constants] ------------------------------------------------------==*/
 
   // clang-format off
   /** Defines the number of different types. */
-  static constexpr auto num_types = sizeof...(Ts);
+  static constexpr auto   num_types         = sizeof...(Ts);
   /** Defines the offset to each of the I types.*/
-  static constexpr auto   offsets             = helper_t::offsets();
+  static constexpr auto   offsets           = Helper::offsets();
   /** Defines the effective byte size of all elements in the storage. */
-  static constexpr size_t storage_byte_size_v = helper_t::storage_byte_size();
+  static constexpr size_t storage_byte_size = Helper::storage_byte_size();
   // clang-format on
 
   /**
@@ -64,7 +69,7 @@ class ContiguousStorageView
    * \tparam T The type to get the size of.
    */
   template <typename T>
-  static constexpr auto element_components_v =
+  static constexpr auto element_components =
     storage_element_traits_t<T>::num_elements;
 
   /*==--- [allocator] ------------------------------------------------------==*/
@@ -85,7 +90,7 @@ class ContiguousStorageView
      */
     ripple_host_device static constexpr auto
     allocation_size(size_t elements) noexcept -> size_t {
-      return storage_byte_size_v * elements;
+      return storage_byte_size * elements;
     }
 
     /**
@@ -100,7 +105,7 @@ class ContiguousStorageView
     template <size_t Elements>
     ripple_host_device static constexpr auto
     allocation_size() noexcept -> size_t {
-      return storage_byte_size_v * Elements;
+      return storage_byte_size * Elements;
     }
 
     // clang-format off
@@ -121,13 +126,13 @@ class ContiguousStorageView
     template <
       typename SpaceImpl, typename... Is, variadic_ge_enable_t<1, Is...> = 0>
     ripple_host_device static auto offset(
-      const storage_t&                storage,
+      const Storage&                storage,
       const MultidimSpace<SpaceImpl>& space,
-      Is&&...                         is) noexcept -> storage_t {
-      storage_t r;
-      r._data = static_cast<void*>(
-        static_cast<char*>(storage._data) +
-        offset_to_aos(space, storage_byte_size_v, std::forward<Is>(is)...));
+      Is&&...                         is) noexcept -> Storage {
+      Storage r;
+      r.data_ = static_cast<void*>(
+        static_cast<char*>(storage.data_) +
+        offset_to_aos(space, storage_byte_size, static_cast<Is&&>(is)...));
       return r;
     }
     // clang-format on
@@ -148,14 +153,14 @@ class ContiguousStorageView
      */
     template <typename SpaceImpl, typename Dim, diff_enable_t<Dim, int> = 0>
     ripple_host_device static auto offset(
-      const storage_t&                storage,
+      const Storage&                  storage,
       const MultidimSpace<SpaceImpl>& space,
       Dim&&                           dim,
-      int                             amount) noexcept -> storage_t {
-      storage_t r;
-      r._data = static_cast<void*>(
-        static_cast<char*>(storage._data) +
-        amount * storage_byte_size_v * space.step(dim));
+      int                             amount) noexcept -> Storage {
+      Storage r;
+      r.data_ = static_cast<void*>(
+        static_cast<char*>(storage.data_) +
+        amount * storage_byte_size * space.step(dim));
       return r;
     }
 
@@ -174,13 +179,13 @@ class ContiguousStorageView
      */
     template <typename SpaceImpl, typename Dim>
     ripple_host_device static auto shift(
-      storage_t&                      storage,
+      Storage&                        storage,
       const MultidimSpace<SpaceImpl>& space,
       Dim&&                           dim,
       int                             amount) noexcept -> void {
-      storage._data = static_cast<void*>(
-        static_cast<char*>(storage._data) +
-        amount * storage_byte_size_v * space.step(dim));
+      storage.data_ = static_cast<void*>(
+        static_cast<char*>(storage.data_) +
+        amount * storage_byte_size * space.step(dim));
     }
 
     // clang-format off
@@ -205,11 +210,11 @@ class ContiguousStorageView
       typename SpaceImpl, typename... Is, variadic_ge_enable_t<1, Is...> = 0>
     ripple_host_device static auto
     create(void* ptr, const MultidimSpace<SpaceImpl>& space, Is&&... is)
-      noexcept -> storage_t {
-      storage_t r;
-      r._data = static_cast<void*>(
+      noexcept -> Storage {
+      Storage r;
+      r.data_ = static_cast<void*>(
         static_cast<char*>(ptr) +
-        offset_to_aos(space, storage_byte_size_v, std::forward<Is>(is)...));
+        offset_to_aos(space, storage_byte_size, static_cast<Is&&>(is)...));
       return r;
     }
     // clang-format on
@@ -229,30 +234,25 @@ class ContiguousStorageView
     template <typename SpaceImpl>
     ripple_host_device static auto
     create(void* ptr, const MultidimSpace<SpaceImpl>& space) noexcept
-      -> storage_t {
-      storage_t r;
-      r._data = ptr;
+      -> Storage {
+      Storage r;
+      r.data_ = ptr;
       return r;
     }
   };
 
   /*==--- [members] --------------------------------------------------------==*/
 
-  ptr_t _data = nullptr; //!< Pointer to the data.
+  Ptr data_ = nullptr; //!< Pointer to the data.
 
  public:
-  /*==--- [traits] ---------------------------------------------------------==*/
-
-  /** Defines the type of the allocator for creating StridedStorage. */
-  using allocator_t = Allocator;
-
   /**
    * Gets the number of components for the nth element.
    * \tparam I The index of the component to get the number of elements for.
    */
   template <size_t I>
-  static constexpr auto nth_element_components_v =
-    element_components_v<nth_element_t<I, Ts...>>;
+  static constexpr auto nth_element_components =
+    element_components<nth_element_t<I, Ts...>>;
 
   /*==--- [construction] ---------------------------------------------------==*/
 
@@ -268,13 +268,28 @@ class ContiguousStorageView
    * \note This will fail at compile time if Impl doesn't implement the
    *       StorageAccessor interface, \sa StorageAccessor.
    *
-   * \param  from The accessor to copy the data from.
-   * \tparam Impl The implementation of the StorageAccessor.
+   * \param  other The accessor to copy the data from.
+   * \tparam Impl  The implementation of the StorageAccessor.
    */
   template <typename Impl>
-  ripple_host_device ContiguousStorageView(const Impl& from) noexcept {
-    copy(from);
+  ripple_host_device
+  ContiguousStorageView(const StorageAccessor<Impl>& other) noexcept {
+    copy(static_cast<const Impl&>(other));
   }
+
+  /**
+   * Copy constructor to set the storage from the other storage.
+   * \param other The other storage to set this one from.
+   */
+  ripple_host_device
+  ContiguousStorageView(const ContiguousStorageView& other) noexcept = default;
+
+  /**
+   * Move constructor to move the other storage into this one.
+   * \param other The other storage to move into this one.
+   */
+  ripple_host_device
+  ContiguousStorageView(ContiguousStorageView&& other) noexcept = default;
 
   /*==--- [operator overloads] ---------------------------------------------==*/
 
@@ -285,13 +300,39 @@ class ContiguousStorageView
    * \note This will fail at compile time if Impl doesn't implement the
    *       StorageAccessor interface, \sa StorageAccessor.
    *
-   * \param  from The accessor to copy the data from.
-   * \tparam Impl The implementation of the StorageAccessor.
+   * \param  other The accessor to copy the data from.
+   * \tparam Impl  The implementation of the StorageAccessor.
    * \return A reference to the newly created storage.
    */
   template <typename Impl>
-  ripple_host_device auto operator=(const Impl& from) noexcept -> storage_t& {
-    copy(from);
+  ripple_host_device auto operator=(const StorageAccessor<Impl>& other) noexcept
+    -> ContiguousStorageView& {
+    copy(static_cast<const Impl&>(other));
+    return *this;
+  }
+
+  /**
+   * Overload of assignment operator to set the data for the stprage from the
+   * other storage.
+   * \param other The other storage to copy into this one.
+   * \return A reference to the newly created storage.
+   */
+  ripple_host_device auto operator=(const ContiguousStorageView& other) noexcept
+    -> ContiguousStorageView& {
+    copy(other);
+    return *this;
+  }
+
+  /**
+   * Overload of assignment operator to set the data for the stprage from the
+   * other storage.
+   * \param other The other storage to copy into this one.
+   * \return A reference to the newly created storage.
+   */
+  ripple_host_device auto
+  operator=(ContiguousStorageView&& other) noexcept -> ContiguousStorageView& {
+    data_       = other.data_;
+    other.data_ = nullptr;
     return *this;
   }
 
@@ -302,7 +343,7 @@ class ContiguousStorageView
    * \return A pointer to the data for the storage.
    */
   ripple_host_device auto data() noexcept -> void* {
-    return _data;
+    return data_;
   }
 
   /**
@@ -310,7 +351,7 @@ class ContiguousStorageView
    * \return A const pointer to the data for the storage.
    */
   ripple_host_device auto data() const noexcept -> const void* {
-    return _data;
+    return data_;
   }
 
   /**
@@ -329,11 +370,11 @@ class ContiguousStorageView
       is_storage_accessor_v<Other>, "Argument type isn't a StorageAccessor!");
 
     unrolled_for<num_types>([&](auto i) {
-      constexpr std::size_t type_idx = i;
-      constexpr auto        values =
-        element_components_v<nth_element_t<type_idx, Ts...>>;
+      constexpr size_t type_idx = i;
+      using Type                = nth_element_t<type_idx, Ts...>;
+      constexpr auto values     = element_components<Type>;
 
-      copy_from_to<type_idx, values>(other, *this);
+      copy_from_to<type_idx, values, Type>(other, *this);
     });
   }
 
@@ -360,7 +401,7 @@ class ContiguousStorageView
    */
   template <size_t I>
   ripple_host_device constexpr auto components_of() const noexcept -> size_t {
-    return helper_t::components[I];
+    return Helper::components[I];
   }
 
   /**
@@ -377,12 +418,12 @@ class ContiguousStorageView
    */
   template <
     size_t I,
-    typename T                      = nth_element_t<I, Ts...>,
-    non_storage_element_enable_t<T> = 0>
+    typename T                  = nth_element_t<I, Ts...>,
+    non_vec_element_enable_t<T> = 0>
   ripple_host_device auto get() noexcept -> element_value_t<T>& {
-    constexpr auto offset = offsets[I];
+    constexpr size_t offset = offsets[I];
     return *static_cast<element_value_t<T>*>(
-      static_cast<void*>(static_cast<char*>(_data) + offset));
+      static_cast<void*>(static_cast<char*>(data_) + offset));
   }
 
   /**
@@ -400,12 +441,12 @@ class ContiguousStorageView
    */
   template <
     size_t I,
-    typename T                      = nth_element_t<I, Ts...>,
-    non_storage_element_enable_t<T> = 0>
+    typename T                  = nth_element_t<I, Ts...>,
+    non_vec_element_enable_t<T> = 0>
   ripple_host_device auto get() const noexcept -> const element_value_t<T>& {
-    constexpr auto offset = offsets[I];
+    constexpr size_t offset = offsets[I];
     return *static_cast<const element_value_t<T>*>(
-      static_cast<void*>(static_cast<char*>(_data) + offset));
+      static_cast<void*>(static_cast<char*>(data_) + offset));
   }
 
   /**
@@ -425,14 +466,14 @@ class ContiguousStorageView
   template <
     size_t I,
     size_t J,
-    typename T                  = nth_element_t<I, Ts...>,
-    storage_element_enable_t<T> = 0>
+    typename T              = nth_element_t<I, Ts...>,
+    vec_element_enable_t<T> = 0>
   ripple_host_device auto get() noexcept -> element_value_t<T>& {
     static_assert(
-      J < element_components_v<T>, "Out of range acess for storage element!");
-    constexpr auto offset = offsets[I];
+      J < element_components<T>, "Out of range acess for storage element!");
+    constexpr size_t offset = offsets[I];
     return static_cast<element_value_t<T>*>(
-      static_cast<void*>(static_cast<char*>(_data) + offset))[J];
+      static_cast<void*>(static_cast<char*>(data_) + offset))[J];
   }
 
   /**
@@ -452,14 +493,14 @@ class ContiguousStorageView
   template <
     size_t I,
     size_t J,
-    typename T                  = nth_element_t<I, Ts...>,
-    storage_element_enable_t<T> = 0>
+    typename T              = nth_element_t<I, Ts...>,
+    vec_element_enable_t<T> = 0>
   ripple_host_device auto get() const noexcept -> const element_value_t<T>& {
     static_assert(
-      J < element_components_v<T>, "Out of range acess for storage element!");
-    constexpr auto offset = offsets[I];
+      J < element_components<T>, "Out of range acess for storage element!");
+    constexpr size_t offset = offsets[I];
     return static_cast<const element_value_t<T>*>(
-      static_cast<void*>(static_cast<char*>(_data) + offset))[J];
+      static_cast<void*>(static_cast<char*>(data_) + offset))[J];
   }
 
   /**
@@ -478,12 +519,12 @@ class ContiguousStorageView
    */
   template <
     size_t I,
-    typename T                  = nth_element_t<I, Ts...>,
-    storage_element_enable_t<T> = 0>
+    typename T              = nth_element_t<I, Ts...>,
+    vec_element_enable_t<T> = 0>
   ripple_host_device auto get(size_t j) noexcept -> element_value_t<T>& {
-    constexpr auto offset = offsets[I];
+    constexpr size_t offset = offsets[I];
     return static_cast<element_value_t<T>*>(
-      static_cast<void*>(static_cast<char*>(_data) + offset))[j];
+      static_cast<void*>(static_cast<char*>(data_) + offset))[j];
   }
 
   /**
@@ -500,13 +541,13 @@ class ContiguousStorageView
    */
   template <
     size_t I,
-    typename T                  = nth_element_t<I, Ts...>,
-    storage_element_enable_t<T> = 0>
+    typename T              = nth_element_t<I, Ts...>,
+    vec_element_enable_t<T> = 0>
   ripple_host_device auto
   get(size_t j) const noexcept -> const element_value_t<T>& {
-    constexpr auto offset = offsets[I];
+    constexpr size_t offset = offsets[I];
     return static_cast<const element_value_t<T>*>(
-      static_cast<void*>(static_cast<char*>(_data) + offset))[j];
+      static_cast<void*>(static_cast<char*>(data_) + offset))[j];
   }
 };
 

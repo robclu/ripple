@@ -16,6 +16,7 @@
 #ifndef RIPPLE_STORAGE_OWNED_STORAGE_HPP
 #define RIPPLE_STORAGE_OWNED_STORAGE_HPP
 
+#include "storage_element_traits.hpp"
 #include "storage_traits.hpp"
 #include "storage_accessor.hpp"
 #include <ripple/core/utility/type_traits.hpp>
@@ -28,29 +29,33 @@ namespace ripple {
  */
 template <typename... Ts>
 class OwnedStorage : public StorageAccessor<OwnedStorage<Ts...>> {
+  // clang-format off
   /** Defines the data type for the buffer. */
-  using buffer_t = char;
+  using Buffer  = char;
   /** Defines the type of the storage. */
-  using storage_t = OwnedStorage<Ts...>;
+  using Storage = OwnedStorage;
   /** The type of the helper traits class. */
-  using helper_t = detail::ContigStorageHelper<Ts...>;
+  using Helper  = detail::ContigStorageHelper<Ts...>;
+  // clang-format on
 
   /**
    * Gets the value type of the storage element traits for a type.
    * \tparam T The type to get the storage element traits for.
    */
   template <typename T>
-  using element_value_t = typename storage_element_traits_t<T>::value_t;
+  using element_value_t = typename storage_element_traits_t<T>::Value;
 
   /*==--- [constants] ------------------------------------------------------==*/
 
   // clang-format off
   /** Defines the number of different types. */
-  static constexpr size_t num_types           = sizeof...(Ts);
+  static constexpr size_t num_types         = sizeof...(Ts);
   /** Defines the offset to each of the I types.*/
-  static constexpr auto   offsets             = helper_t::offsets();
+  static constexpr auto   offsets           = Helper::offsets();
   /** Defines the effective byte size of all elements in the storage. */
-  static constexpr size_t storage_byte_size_v = helper_t::storage_byte_size();
+  static constexpr size_t storage_byte_size = Helper::storage_byte_size();
+  /** Alignment of first type. */
+  static constexpr size_t first_align       = alignof(nth_element_t<0,Ts...>);
   // clang-format on
 
   /**
@@ -58,12 +63,13 @@ class OwnedStorage : public StorageAccessor<OwnedStorage<Ts...>> {
    * \tparam T The type to get the size of.
    */
   template <typename T>
-  static constexpr size_t element_components_v =
+  static constexpr size_t element_components =
     storage_element_traits_t<T>::num_elements;
 
   /*==--- [members] --------------------------------------------------------==*/
 
-  buffer_t _data[storage_byte_size_v] = {}; //!< Buffer for the storage.
+  /** Buffer for the storage. */
+  alignas(first_align) Buffer data_[storage_byte_size] = {};
 
  public:
   /**
@@ -71,15 +77,15 @@ class OwnedStorage : public StorageAccessor<OwnedStorage<Ts...>> {
    * \tparam I The index of the component to get the number of elements for.
    */
   template <size_t I>
-  static constexpr size_t nth_element_components_v =
-    element_components_v<nth_element_t<I, Ts...>>;
+  static constexpr size_t nth_element_components =
+    element_components<nth_element_t<I, Ts...>>;
 
   /*==--- [construction] ---------------------------------------------------==*/
 
   /**
    * Default constructor for the storage.
    */
-  ripple_host_device OwnedStorage() noexcept = default;
+  ripple_host_device constexpr OwnedStorage() noexcept = default;
 
   /**
    * Constructor to set the owned storage from another type which implements the
@@ -88,8 +94,9 @@ class OwnedStorage : public StorageAccessor<OwnedStorage<Ts...>> {
    * \tparam Impl The implementation type of the StorageAccessor interface.
    */
   template <typename Impl>
-  ripple_host_device OwnedStorage(const Impl& from) noexcept {
-    copy(from);
+  ripple_host_device constexpr OwnedStorage(
+    const StorageAccessor<Impl>& from) noexcept {
+    copy(static_cast<const Impl&>(from));
   }
 
   /*==--- [operator overload] ----------------------------------------------=*/
@@ -103,8 +110,9 @@ class OwnedStorage : public StorageAccessor<OwnedStorage<Ts...>> {
    * \return A reference to the OwnedStorage with the copied data.
    */
   template <typename Impl>
-  ripple_host_device auto operator=(const Impl& from) noexcept -> storage_t& {
-    copy(from);
+  ripple_host_device constexpr auto
+  operator=(const StorageAccessor<Impl>& from) noexcept -> OwnedStorage& {
+    copy(static_cast<const Impl&>(from));
     return *this;
   }
 
@@ -118,14 +126,14 @@ class OwnedStorage : public StorageAccessor<OwnedStorage<Ts...>> {
    * \tparam Other The type of the other storage to copy from.
    */
   template <typename Other>
-  ripple_host_device auto copy(const Other& other) noexcept -> void {
+  ripple_host_device constexpr auto copy(const Other& other) noexcept -> void {
     static_assert(
       is_storage_accessor_v<Other>, "Argument type isn't a StorageAccessor!");
     unrolled_for<num_types>([&](auto i) {
       constexpr size_t type_idx = i;
-      constexpr auto   values =
-        element_components_v<nth_element_t<type_idx, Ts...>>;
-      copy_from_to<type_idx, values>(other, *this);
+      using Type                = nth_element_t<type_idx, Ts...>;
+      constexpr auto values     = element_components<Type>;
+      copy_from_to<type_idx, values, Type>(other, *this);
     });
   }
 
@@ -152,7 +160,7 @@ class OwnedStorage : public StorageAccessor<OwnedStorage<Ts...>> {
    */
   template <size_t I>
   ripple_host_device constexpr auto components_of() const noexcept -> size_t {
-    return helper_t::components[I];
+    return Helper::components[I];
   }
 
   /**
@@ -167,12 +175,12 @@ class OwnedStorage : public StorageAccessor<OwnedStorage<Ts...>> {
    */
   template <
     size_t I,
-    typename T                      = nth_element_t<I, Ts...>,
-    non_storage_element_enable_t<T> = 0>
-  ripple_host_device auto get() noexcept -> element_value_t<T>& {
-    constexpr auto offset = offsets[I];
+    typename T                  = nth_element_t<I, Ts...>,
+    non_vec_element_enable_t<T> = 0>
+  ripple_host_device constexpr auto get() noexcept -> element_value_t<T>& {
+    constexpr size_t offset = offsets[I];
     return *static_cast<element_value_t<T>*>(
-      static_cast<void*>(static_cast<char*>(_data) + offset));
+      static_cast<void*>(static_cast<char*>(data_) + offset));
   }
 
   /**
@@ -187,12 +195,13 @@ class OwnedStorage : public StorageAccessor<OwnedStorage<Ts...>> {
    */
   template <
     size_t I,
-    typename T                      = nth_element_t<I, Ts...>,
-    non_storage_element_enable_t<T> = 0>
-  ripple_host_device auto get() const noexcept -> const element_value_t<T>& {
-    constexpr auto offset = offsets[I];
+    typename T                  = nth_element_t<I, Ts...>,
+    non_vec_element_enable_t<T> = 0>
+  ripple_host_device constexpr auto
+  get() const noexcept -> const element_value_t<T>& {
+    constexpr size_t offset = offsets[I];
     return *reinterpret_cast<const element_value_t<T>*>(
-      static_cast<const char*>(_data) + offset);
+      static_cast<const char*>(data_) + offset);
   }
 
   /**
@@ -210,14 +219,14 @@ class OwnedStorage : public StorageAccessor<OwnedStorage<Ts...>> {
   template <
     size_t I,
     size_t J,
-    typename T                  = nth_element_t<I, Ts...>,
-    storage_element_enable_t<T> = 0>
-  ripple_host_device auto get() noexcept -> element_value_t<T>& {
+    typename T              = nth_element_t<I, Ts...>,
+    vec_element_enable_t<T> = 0>
+  ripple_host_device constexpr auto get() noexcept -> element_value_t<T>& {
     static_assert(
-      J < element_components_v<T>, "Out of range acess for storage element!");
-    constexpr auto offset = offsets[I];
+      J < element_components<T>, "Out of range acess for storage element!");
+    constexpr size_t offset = offsets[I];
     return static_cast<element_value_t<T>*>(
-      static_cast<void*>(static_cast<char*>(_data) + offset))[J];
+      static_cast<void*>(static_cast<char*>(data_) + offset))[J];
   }
 
   /**
@@ -235,14 +244,15 @@ class OwnedStorage : public StorageAccessor<OwnedStorage<Ts...>> {
   template <
     size_t I,
     size_t J,
-    typename T                  = nth_element_t<I, Ts...>,
-    storage_element_enable_t<T> = 0>
-  ripple_host_device auto get() const noexcept -> const element_value_t<T>& {
+    typename T              = nth_element_t<I, Ts...>,
+    vec_element_enable_t<T> = 0>
+  ripple_host_device constexpr auto
+  get() const noexcept -> const element_value_t<T>& {
     static_assert(
-      J < element_components_v<T>, "Out of range acess for storage element!");
-    constexpr auto offset = offsets[I];
+      J < element_components<T>, "Out of range acess for storage element!");
+    constexpr size_t offset = offsets[I];
     return reinterpret_cast<const element_value_t<T>*>(
-      static_cast<const char*>(_data) + offset)[J];
+      static_cast<const char*>(data_) + offset)[J];
   }
 
   /**
@@ -259,12 +269,13 @@ class OwnedStorage : public StorageAccessor<OwnedStorage<Ts...>> {
    */
   template <
     size_t I,
-    typename T                  = nth_element_t<I, Ts...>,
-    storage_element_enable_t<T> = 0>
-  ripple_host_device auto get(size_t j) noexcept -> element_value_t<T>& {
-    constexpr auto offset = offsets[I];
+    typename T              = nth_element_t<I, Ts...>,
+    vec_element_enable_t<T> = 0>
+  ripple_host_device constexpr auto
+  get(size_t j) noexcept -> element_value_t<T>& {
+    constexpr size_t offset = offsets[I];
     return static_cast<element_value_t<T>*>(
-      static_cast<void*>(static_cast<char*>(_data) + offset))[j];
+      static_cast<void*>(static_cast<char*>(data_) + offset))[j];
   }
 
   /**
@@ -281,13 +292,13 @@ class OwnedStorage : public StorageAccessor<OwnedStorage<Ts...>> {
    */
   template <
     size_t I,
-    typename T                  = nth_element_t<I, Ts...>,
-    storage_element_enable_t<T> = 0>
-  ripple_host_device auto
+    typename T              = nth_element_t<I, Ts...>,
+    vec_element_enable_t<T> = 0>
+  ripple_host_device constexpr auto
   get(size_t j) const noexcept -> const element_value_t<T>& {
-    constexpr auto offset = offsets[I];
+    constexpr size_t offset = offsets[I];
     return reinterpret_cast<const element_value_t<T>*>(
-      static_cast<const char*>(_data) + offset)[j];
+      static_cast<const char*>(data_) + offset)[j];
   }
 };
 

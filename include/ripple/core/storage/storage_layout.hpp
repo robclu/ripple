@@ -39,6 +39,14 @@ struct StorageLayout {
   static constexpr auto value = Layout;
 };
 
+/**
+ * An empty class which can be used to describe a vector layout.
+ * \tparam T    The type of the data for vector.
+ * \tparam Size The number of elements for the vector.
+ */
+template <typename T, size_t Size>
+struct Vector {};
+
 // clang-format off
 /** Alias for a type which defines contigous viewed storage. */
 using ContiguousView  = StorageLayout<LayoutKind::contiguous_view>;

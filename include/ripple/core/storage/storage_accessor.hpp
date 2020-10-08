@@ -1,7 +1,8 @@
-//==--- ripple/core/storage/storage_accessor.hpp ---------------- -*- C++ -*- ---==//
-//            
+//==--- ripple/core/storage/storage_accessor.hpp ---------------- -*- C++ -*-
+//---==//
+//
 //                                Ripple
-// 
+//
 //                      Copyright (c) 2019 Rob Clucas
 //
 //  This file is distributed under the MIT License. See LICENSE for details.
@@ -9,7 +10,7 @@
 //==------------------------------------------------------------------------==//
 //
 /// \file  storage_accessor.hpp
-/// \brief This file implements defines an interface for accessing storage 
+/// \brief This file implements defines an interface for accessing storage
 ///        with compile time indices.
 //
 //==------------------------------------------------------------------------==//
@@ -63,14 +64,14 @@ struct StorageAccessor {
   /// Gets a reference to the Ith data type which is stored.
   /// \tparam I The index of the type to get the data from.
   template <std::size_t I>
-  ripple_host_device auto get() {
+  ripple_host_device decltype(auto) get() {
     return impl()->template get<I>();
   }
 
   /// Gets a const reference to the Ith data type which is stored.
   /// \tparam I The index of the type to get the data from.
   template <std::size_t I>
-  ripple_host_device auto get() const {
+  ripple_host_device decltype(auto) get() const {
     return impl()->template get<I>();
   }
 
@@ -82,7 +83,7 @@ struct StorageAccessor {
   /// \tparam I The index of the type to get the data from.
   /// \tparam J The index of the element in the type to get.
   template <std::size_t I, std::size_t J>
-  ripple_host_device auto get() {
+  ripple_host_device decltype(auto) get() {
     return impl()->template get<I, J>();
   }
 
@@ -94,7 +95,7 @@ struct StorageAccessor {
   /// \tparam I The index of the type to get the data from.
   /// \tparam J The index of the element in the type to get.
   template <std::size_t I, std::size_t J>
-  ripple_host_device auto get() const {
+  ripple_host_device decltype(auto) get() const {
     return impl()->template get<I, J>();
   }
 
@@ -106,7 +107,7 @@ struct StorageAccessor {
   /// \param  j The index of the element in the type to get.
   /// \tparam I The index of the type to get the data from.
   template <std::size_t I>
-  ripple_host_device auto get(std::size_t j) {
+  ripple_host_device decltype(auto) get(std::size_t j) {
     return impl()->get<I>(j);
   }
 
@@ -118,22 +119,12 @@ struct StorageAccessor {
   /// \param  j The index of the element in the type to get.
   /// \tparam I The index of the type to get the data from.
   template <std::size_t I>
-  ripple_host_device auto get(std::size_t j) const {
+  ripple_host_device decltype(auto) get(std::size_t j) const {
     return impl()->get<I>(j);
   }
 };
 
 //==--- [utilities] --------------------------------------------------------==//
-
-/// Defines a valid type if V > 1, otherwise does not.
-/// \tparam V The size to base the enable on.
-template <std::size_t V>
-using indexable_enable_t = std::enable_if_t<(V > 1), int>;
-
-/// Defines a valid type if V <= 1, otherwise does not.
-/// \tparam V The size to base the enable on.
-template <std::size_t V>
-using non_indexable_enable_t = std::enable_if_t<(V <= 1), int>;
 
 /// Defines a function to copy the Values elements of the Ith type in ImplTo to
 /// the Values elements of the Ith type in ImplFrom.
@@ -150,15 +141,15 @@ using non_indexable_enable_t = std::enable_if_t<(V <= 1), int>;
 /// \tparam ImplFrom The type of the implementation of the \p from type.
 /// \tparam ImplTo   The type of the implementation for the \p to type.
 template <
-  std::size_t I        ,
-  std::size_t Values   ,
-  typename    ImplFrom ,
-  typename    ImplTo   ,
-  indexable_enable_t<Values> = 0
->
+  size_t I,
+  size_t Values,
+  typename TypeI,
+  typename ImplFrom,
+  typename ImplTo,
+  vec_element_enable_t<TypeI> = 0>
 ripple_host_device auto copy_from_to(const ImplFrom& from, ImplTo& to) -> void {
-  unrolled_for<Values>([&] (auto j) {
-    constexpr auto J = size_t{j};
+  unrolled_for<Values>([&](auto j) {
+    constexpr auto J        = size_t{j};
     to.template get<I, J>() = from.template get<I, J>();
   });
 }
@@ -178,12 +169,12 @@ ripple_host_device auto copy_from_to(const ImplFrom& from, ImplTo& to) -> void {
 /// \tparam ImplFrom The type of the implementation of the \p from type.
 /// \tparam ImplTo   The type of the implementation for the \p to type.
 template <
-  std::size_t I       ,
-  std::size_t Values  ,
-  typename    ImplFrom,
-  typename    ImplTo  ,
-  non_indexable_enable_t<Values> = 0
->
+  size_t I,
+  size_t Values,
+  typename TypeI,
+  typename ImplFrom,
+  typename ImplTo,
+  non_vec_element_enable_t<TypeI> = 0>
 ripple_host_device auto copy_from_to(const ImplFrom& from, ImplTo& to) -> void {
   to.template get<I>() = from.template get<I>();
 }

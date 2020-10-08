@@ -1,9 +1,8 @@
-//==--- ripple/core/storage/storage_descriptor.hpp -------------- -*- C++ -*-
-//---==//
+//==--- ripple/core/storage/storage_descriptor.hpp --------- -*- C++ -*- ---==//
 //
 //                                Ripple
 //
-//                      Copyright (c) 2019 Rob Clucas.
+//                      Copyright (c) 2019, 2020 Rob Clucas.
 //
 //  This file is distributed under the MIT License. See LICENSE for details.
 //
@@ -22,7 +21,6 @@
 #include "storage_layout.hpp"
 #include "strided_storage_view.hpp"
 #include "storage_layout.hpp"
-#include <ripple/core/utility/portability.hpp>
 
 namespace ripple {
 

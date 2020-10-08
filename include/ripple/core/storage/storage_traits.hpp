@@ -153,21 +153,15 @@ class OwnedStorage;
 template <typename... Ts>
 class StridedStorageView;
 
-/*==--- [interfaces] -------------------------------------------------------==*/
-
 /**
- * The StridableLayout type defines a static interface for classes to
- * implement for which it might be beneficial to allocate the class data in a
- * strided layout -- essentially any class which might be used for processing
- * on either the GPU or using AVX -- which is more performant.
+ * The PolymorphicLayout class defines a class which can be used as an empty
+ * base class to define that the layout of the data for the class is
+ * polymorphic.
  *
- * Inheriting this static interface will allow any containers which can use the
- * strided allocators to do so where appropriate.
- *
- * \tparam Impl The implementation of the interface.
+ * \tparam Impl The implementation type with a polymorphic layout.
  */
 template <typename Impl>
-struct StridableLayout;
+struct PolymorphicLayout;
 
 /**
  * The StorageAccessor types defines an interface for all classes which
@@ -182,13 +176,13 @@ struct StorageAccessor;
 /*==--- [traits] -----------------------------------------------------------==*/
 
 /**
- * Determines if a type has a StridableLayout.
+ * Determines if a type is a polymorphic layout type.
  * \tparam T The type to determine if implements the interface.
- * \return true if the type implements the stridable layout interface.
+ * \return true if the type implements the polymorphic layout interface.
  */
 template <typename T>
-static constexpr auto is_stridable_layout_v =
-  std::is_base_of_v<StridableLayout<std::decay_t<T>>, std::decay_t<T>>;
+static constexpr auto is_polymorphic_layout_v =
+  std::is_base_of_v<PolymorphicLayout<std::decay_t<T>>, std::decay_t<T>>;
 
 /**
  * Determines if a type is a StorageLayout type.
@@ -252,7 +246,7 @@ static constexpr auto storage_layout_kind_is_v =
 template <typename T>
 using layout_traits_t = LayoutTraits<
   std::decay_t<T>,
-  is_stridable_layout_v<std::decay_t<T>> &&
+  is_polymorphic_layout_v<std::decay_t<T>> &&
     !storage_layout_kind_is_v<T, ContiguousOwned>>;
 
 /**
@@ -285,40 +279,21 @@ template <typename T>
 using as_strided_view_t =
   typename detail::StorageAs<StridedView, std::decay_t<T>>::type;
 
-/*==--- [enables] ----------------------------------------------------------==*/
-
-/**
- * Define a valid type if the type T is a StorageElement, otherwise does not
- * define a valid type.
- * \tparam T The type to base the enable on.
- */
-template <typename T>
-using storage_element_enable_t = std::enable_if_t<is_storage_element_v<T>, int>;
-
-/**
- * Define a valid type if the type T is not a StorageElement, otherwise does
- * not define a valid type.
- * \tparam T The type to base the enable on.
- */
-template <typename T>
-using non_storage_element_enable_t =
-  std::enable_if_t<!is_storage_element_v<T>, int>;
-
 /*==--- [overloading] ------------------------------------------------------==*/
 
 /**
- * The StridableOverloader struct can be used to overload functions for types
- * which are Stridable.
- * \tparam IsStridable If the class is stridable.
+ * The PolyLayoutOverloader struct can be used to overload functions for types
+ * which are PolymorphicLayout.
+ * \tparam IsPolymorphicLayout If the class is a polymorphic layout type.
  */
-template <bool IsStridable>
-struct StridableOverloader {};
+template <bool IsPolymorphicLayout>
+struct PolyLayoutOverloader {};
 
 // clang-format off
-/** Defines an alias for an overload type for stridable types. */
-using StridableOverload    = StridableOverloader<true>;
-/** Defines an alias for an overload type for non stridable types. */
-using NonStridableOverload = StridableOverloader<false>;
+/** Defines an alias for an overload type for polymorphic layout types. */
+using PolyLayoutOverload    = PolyLayoutOverloader<true>;
+/** Defines an alias for an overload type for non polymorphic layout types. */
+using NonPolyLayoutOverload = PolyLayoutOverloader<false>;
 // clang-format off
 
 } // namespace ripple
