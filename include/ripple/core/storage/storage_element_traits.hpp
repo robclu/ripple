@@ -22,33 +22,44 @@
 
 namespace ripple {
 
-/// The StorageElementTraits struct defines traits for elements which can be
-/// stored. This is the default case which is used to define the storage traits
-/// for any type that does not have specialized storage.
-/// \tparam T The type to specify the storage element traits for.
+/**
+ * The StorageElementTraits struct defines traits for elements which are stored
+ * by the various storage implementations.
+ *
+ * This is the default case which is used to define the storage traits  for any
+ * type that does not have specialized storage.
+ *
+ *  \tparam T The type to specify the storage element traits for.
+ */
 template <typename T>
 struct StorageElementTraits {
-  /// Defines the value type of the element, which is the type to store.
-  using Value = T;
-  /// Defines the number of values of the element to store.
-  static constexpr auto num_elements = 1;
-  /// Defines the byte size required to allocate the element.
-  static constexpr auto byte_size = sizeof(Value);
-  /// Defines the alignment size required for the type.
-  static constexpr auto align_size = alignof(Value);
-  /** Defines that the type is not a storage element. */
-  static constexpr bool is_storage_element = false;
-};
-
-/// Specialization for a vector implementation.
-template <typename T, size_t Values>
-struct StorageElementTraits<Vector<T, Values>> {
   /** Defines the value type of the element, which is the type to store. */
   using Value = T;
 
   // clang-format off
   /** Defines the number of values of the element to store. */
-  static constexpr auto num_elements   = Values;
+  static constexpr auto num_elements       = 1;
+  /** Defines the byte size required to allocate the element. */
+  static constexpr auto byte_size          = sizeof(Value);
+  /** Defines the alignment size required for the type. */
+  static constexpr auto align_size         = alignof(Value);
+  /** Defines that the type is not a storage element. */
+  static constexpr bool is_storage_element = false;
+};
+
+/**
+ * Specialization for a vector implementation.
+ * \tparam T     The type of the data in the vector.
+ * \tparam Sizes The number of elements in the vector.
+ */
+template <typename T, size_t Size>
+struct StorageElementTraits<Vector<T, Size>> {
+  /** Defines the value type of the element, which is the type to store. */
+  using Value = T;
+
+  // clang-format off
+  /** Defines the number of values of the element to store. */
+  static constexpr auto num_elements   = Size;
   /** Defines the byte size required to allocate the element. */
   static constexpr auto byte_size      = sizeof(Value) * num_elements;
   /** Defines the alignment requirement for the storage. */
@@ -83,22 +94,26 @@ struct IsStorageLayout<StorageLayout<Layout>> : std::true_type {
   static constexpr bool value = true;
 };
 
-/// Defines a struct to determine if the type T has a storage layout type
-/// template parameter.
-/// \tparam T The type to determine if has a storage layout parameter.
+/**
+ * Defines a struct to determine if the type T has a storage layout type
+ * template parameter.
+ * \tparam T The type to determine if has a storage layout parameter.
+ */
 template <typename T>
 struct HasStorageLayout {
-  /// Returns that the type does not have a storage layout paramter.
-  static constexpr auto value = false;
+  /** Returns that the type does not have a storage layout paramter. */
+  static constexpr bool value = false;
 };
 
-/// Specialization for the case that the type has template parameters.
-/// \tparam T  The type to determine if has a storage layout parameter.
-/// \tparam Ts The types for the type T.
+/**
+ * Specialization for the case that the type has template parameters.
+ * \tparam T  The type to determine if has a storage layout parameter.
+ * \tparam Ts The types for the type T.
+ */
 template <template <class...> typename T, typename... Ts>
 struct HasStorageLayout<T<Ts...>> {
-  /// Returns that the type does not have a storage layout paramter.
-  static constexpr auto value = std::disjunction_v<IsStorageLayout<Ts>...>;
+  /** Returns that the type does not have a storage layout paramter. */
+  static constexpr bool value = std::disjunction_v<IsStorageLayout<Ts>...>;
 };
 
 } // namespace detail
