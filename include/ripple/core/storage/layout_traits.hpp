@@ -116,7 +116,7 @@ struct LayoutTraits<T, true> {
   /** Defines the value type for the layout. */
   using Value        = std::decay_t<T>;
   /** Defines the type T with owned storage for copying. */
-  using IterCopy     = typename AsContigOwned::type;
+  using IterCopy     = typename AsContigOwned::Type;
   /** Defines the type when referencing from an iterator. */
   using IterRef      = Value;
   /** Defines the type of a const reference for an iterator. */

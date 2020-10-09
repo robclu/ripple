@@ -257,7 +257,7 @@ using layout_traits_t = LayoutTraits<
  */
 template <typename T>
 using as_contiguous_owned_t =
-  typename detail::StorageAs<ContiguousOwned, std::decay_t<T>>::type;
+  typename detail::StorageAs<ContiguousOwned, std::decay_t<T>>::Type;
 
 /**
  * Defines the type T as a contiguous view type, if it is not already. If the
@@ -267,7 +267,7 @@ using as_contiguous_owned_t =
  */
 template <typename T>
 using as_contiguous_view_t =
-  typename detail::StorageAs<ContiguousView, std::decay_t<T>>::type;
+  typename detail::StorageAs<ContiguousView, std::decay_t<T>>::Type;
 
 /**
  * Defines the type T as a strided view type, if it is not already. If the
@@ -277,7 +277,7 @@ using as_contiguous_view_t =
  */
 template <typename T>
 using as_strided_view_t =
-  typename detail::StorageAs<StridedView, std::decay_t<T>>::type;
+  typename detail::StorageAs<StridedView, std::decay_t<T>>::Type;
 
 /*==--- [overloading] ------------------------------------------------------==*/
 
