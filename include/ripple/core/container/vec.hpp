@@ -20,25 +20,30 @@
 #include "array.hpp"
 #include "array_traits.hpp"
 #include "tuple.hpp"
+#include <ripple/core/storage/polymorphic_layout.hpp>
 #include <ripple/core/storage/storage_descriptor.hpp>
 #include <ripple/core/storage/storage_element_traits.hpp>
 #include <ripple/core/storage/storage_traits.hpp>
-#include <ripple/core/storage/stridable_layout.hpp>
 #include <ripple/core/storage/struct_accessor.hpp>
 #include <ripple/core/utility/portability.hpp>
 
 namespace ripple {
 
-/// The Vec class implements the Array interface for a vector with a fixed type
-/// and known compile time size. The data for the elements in allocated
-/// statically on the heap and is stored contiguously. This vector class should
-/// be used on the CPU, or when data is accessed from a register on the GPU.
-///
-/// \tparam T      The type of the elements in the vector.
-/// \tparam Size   The size of the vetor.
-/// \tparam Layout The type of the storage layout for the vector.
+/**
+ * The VecImpl class implements the Array interface for a vector with a fixed
+ * type and known compile time size.
+ *
+ * The data for the elements is allocated according to the layout, and can be
+ * contiguous, owned, or strided.
+ *
+ * \note This class should not be used directly, use the Vec aliases.
+ *
+ * \tparam T      The type of the elements in the vector.
+ * \tparam Size   The size of the vector.
+ * \tparam Layout The type of the storage layout for the vector.
+ */
 template <typename T, typename Size, typename Layout>
-struct VecImpl : public StridableLayout<VecImpl<T, Size, Layout>>,
+struct VecImpl : public PolymorphicLayout<VecImpl<T, Size, Layout>>,
                  public Array<VecImpl<T, Size, Layout>> {
  private:
   /*==--- [constants] ------------------------------------------------------==*/
@@ -50,7 +55,7 @@ struct VecImpl : public StridableLayout<VecImpl<T, Size, Layout>>,
 
   // clang-format off
   /** Defines the type of the descriptor for the storage. */
-  using Descriptor = StorageDescriptor<Layout, StorageElement<T, elements>>;
+  using Descriptor = StorageDescriptor<Layout, Vector<T, elements>>;
   /** Defines the storage type for the array. */
   using Storage    = typename Descriptor::Storage;
   /** Defines the value type of the data in the vector. */

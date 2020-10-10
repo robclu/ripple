@@ -131,40 +131,32 @@ struct ArrayTraits<Array<Impl>> {
  * \tparam T     The type to store in the vector.
  * \tparam Size  The size of the vector.
  */
-template <typename T, size_t Size>
-using Vec = VecImpl<T, Num<Size>>;
-
-/**
- * Alias for a vector to store data of type T with Size elements with the given
- * Layout.
- *
- * \tparam T      The type to store in the vector.
- * \tparam Size   The size of the vector.
- * \tparam Layout The layout to store the vector data.
- */
-template <typename T, size_t Size, typename Layout>
-using Vector = VecImpl<T, Num<Size>, Layout>;
+template <typename T, size_t Size, typename Layout = ContiguousOwned>
+using Vec = VecImpl<T, Num<Size>, Layout>;
 
 /**
  * Defines an alias to create a contiguous 1D vector of type T.
- * \tparam T The type of the data for the vector.
+ * \tparam T      The type of the data for the vector.
+ * \tparam Layout The layout for the vector.
  */
-template <typename T>
-using Vec1d = VecImpl<T, Num<1>>;
+template <typename T, typename Layout = ContiguousOwned>
+using Vec1d = VecImpl<T, Num<1>, Layout>;
 
 /**
  * Defines an alias to create a contiguous 2D vector of type T.
- * \tparam T The type of the data for the vector.
+ * \tparam T      The type of the data for the vector.
+ * \tparam Layout The layout for the vector.
  */
-template <typename T>
-using Vec2d = VecImpl<T, Num<2>>;
+template <typename T, typename Layout = ContiguousOwned>
+using Vec2d = VecImpl<T, Num<2>, Layout>;
 
 /**
  * Defines an alias to create a contiguous 3D vector of type T.
  * \tparam T The type of the data for the vector.
+ * \tparam Layout The layout for the vector.
  */
-template <typename T>
-using Vec3d = VecImpl<T, Num<3>>;
+template <typename T, typename Layout = ContiguousOwned>
+using Vec3d = VecImpl<T, Num<3>, Layout>;
 
 /**
  * Gets the array traits for the type T.
