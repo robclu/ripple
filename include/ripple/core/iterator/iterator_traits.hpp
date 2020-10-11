@@ -76,7 +76,7 @@ class IndexedIterator;
 template <typename Iterator>
 struct IteratorTraits {
   /** Defines the value type of the iterator. */
-  using value_t = void*;
+  using Value = void*;
 
   /** Defines that the iterator has a single dimension. */
   static constexpr size_t dimensions = 1;
@@ -93,7 +93,7 @@ template <typename T, typename Space>
 struct IteratorTraits<BlockIterator<T, Space>> {
  private:
   /** Defines the layout traits for the iterator. */
-  using layout_traits_t = layout_traits_t<T>;
+  using LayoutTraits = layout_traits_t<T>;
 
  public:
   // clang-format off
@@ -106,16 +106,16 @@ struct IteratorTraits<BlockIterator<T, Space>> {
   static constexpr bool has_indices  = false;
 
   /** Defines the value type of the iterator. */
-  using value_t = typename layout_traits_t::value_t;
+  using Value = typename LayoutTraits::Value;
   /** Defines the reference type for the iterator. */
-  using ref_t   = typename layout_traits_t::iter_ref_t;
+  using Ref   = typename LayoutTraits::IterRef;
   /** 
    * Defines the copy type for the iterator, which is a type to ensure
    * that the iterator data is copied. 
   */
-  using copy_t  = typename layout_traits_t::iter_copy_t;
+  using CopyType = typename LayoutTraits::IterCopy;
   /** Defines the type of a vector of value_t with matching dimensions. */
-  using vec_t   = Vector<copy_t, dimensions, contiguous_owned_t>;
+  using Vec      = Vec<CopyType, dimensions, ContiguousOwned>;
   // clang-format on
 };
 
@@ -128,25 +128,25 @@ template <typename T, typename Space>
 struct IteratorTraits<IndexedIterator<T, Space>> {
  private:
   /** Defines the traits for the block iterator. */
-  using block_iter_traits_t = IteratorTraits<BlockIterator<T, Space>>;
+  using BlockIterTraits = IteratorTraits<BlockIterator<T, Space>>;
 
  public:
   // clang-format off
   /** Defines the number of dimensions for the iterator. */
-  static constexpr size_t dimensions = block_iter_traits_t::dimensions;
+  static constexpr size_t dimensions = BlockIterTraits::dimensions;
   /** Returns that the traits are for a valid iterator. */
   static constexpr bool is_iterator  = true;
   /** Returns that the iterator does have index information. */
   static constexpr bool has_indices  = true;
 
   /** Defines the value type of the iterator. */
-  using value_t = typename block_iter_traits_t::value_t;
+  using Value    = typename BlockIterTraits::Value;
   /** Defines the reference type for the iterator. */
-  using ref_t   = typename block_iter_traits_t::ref_t;
+  using Ref      = typename BlockIterTraits::Ref;
   /** Defines the type of a vector of value_t with matching dimensions. */
-  using vec_t   = typename block_iter_traits_t::vec_t;
+  using Vec      = typename BlockIterTraits::Vec;
   /** Defines the copy type for the iterator. */
-  using copy_t  = typename block_iter_traits_t::copy_t;
+  using CopyType = typename BlockIterTraits::CopyType;
   // clang-format on
 };
 

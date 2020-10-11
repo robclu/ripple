@@ -50,24 +50,22 @@ namespace ripple {
 template <typename T, typename Space>
 class IndexedIterator : public BlockIterator<T, Space> {
   /** Defines the underlying type for the iterator. */
-  using value_t = typename layout_traits_t<T>::value_t;
+  using Value = typename layout_traits_t<T>::Value;
 
  public:
   // clang-format off
-  /** Defines the type of this iterator. */
-  using self_t       = IndexedIterator;
   /** Defines the type of the base class. */
-  using block_iter_t = BlockIterator<T, Space>;
+  using BlockIter = BlockIterator<T, Space>;
   /** Defines the index type used for the iterator. */
-  using index_t      = uint32_t;
+  using Index     = uint32_t;
   /** Defines the type of the contianer used to store the indices. */
-  using indices_t    = Vec<index_t, block_iter_t::dims>;
+  using Indices   = Vec<Index, BlockIter::dims>;
 
   /** The number of dimensions for the iterator. */
-  static constexpr size_t dims = block_iter_t::dims;
+  static constexpr size_t dims = BlockIter::dims;
 
   /** Defines the type for the coordinates of the iterator. */
-  using Coord  = Vec<index_t, dims>;
+  using Coord  = Vec<Index, dims>;
   /** Defines the type for the normalized coordinates of the iterator. */
   using Coordf = Vec<float, dims>;
   // clang-format on
@@ -75,14 +73,14 @@ class IndexedIterator : public BlockIterator<T, Space> {
   //==--- [consturction] ---------------------------------------------------==//
 
   /** Inherit all the base constructors. */
-  using block_iter_t::block_iter_t;
+  using BlockIter::BlockIter;
 
   /**
    * Constuctor to copy a BlockIterator \p block_iter into this iterator.
    * \param block_iter The block iterator to use to set this iterator.
    */
-  ripple_host_device IndexedIterator(block_iter_t block_iter) noexcept
-  : block_iter_t{block_iter} {}
+  ripple_host_device IndexedIterator(BlockIter block_iter) noexcept
+  : BlockIter{block_iter} {}
 
   /*==--- [interface] ------------------------------------------------------==*/
 
@@ -96,10 +94,11 @@ class IndexedIterator : public BlockIterator<T, Space> {
    */
   template <typename Dim>
   ripple_host_device constexpr auto
-  offset(Dim&& dim, int amount = 1) const noexcept -> self_t {
-    auto res = self_t{block_iter_t::offset(std::forward<Dim>(dim), amount)};
-    res._block_start_indices = _block_start_indices;
-    res._global_sizes        = _global_sizes;
+  offset(Dim&& dim, int amount = 1) const noexcept -> IndexedIterator {
+    auto res =
+      IndexedIterator{BlockIter::offset(static_cast<Dim&&>(dim), amount)};
+    res.block_start_indices_ = block_start_indices_;
+    res.global_sizes_        = global_sizes_;
     return res;
   }
 
@@ -112,9 +111,8 @@ class IndexedIterator : public BlockIterator<T, Space> {
    *         iterate from.
    */
   template <typename Dim>
-  ripple_host_device auto
-  block_start_index(Dim&& dim) const noexcept -> index_t {
-    return _block_start_indices.at(std::forward<Dim>(dim));
+  ripple_host_device auto block_start_index(Dim&& dim) const noexcept -> Index {
+    return block_start_indices_.at(static_cast<Dim&&>(dim));
   }
 
   /**
@@ -126,8 +124,8 @@ class IndexedIterator : public BlockIterator<T, Space> {
    */
   template <typename Dim>
   ripple_host_device auto
-  set_block_start_index(Dim&& dim, index_t index) noexcept -> void {
-    _block_start_indices.at(std::forward<Dim>(dim)) = index;
+  set_block_start_index(Dim&& dim, Index index) noexcept -> void {
+    block_start_indices_.at(static_cast<Dim&&>(dim)) = index;
   }
 
   /**
@@ -139,8 +137,8 @@ class IndexedIterator : public BlockIterator<T, Space> {
    *         which this iterator belongs.
    */
   template <typename Dim>
-  ripple_host_device auto global_size(Dim&& dim) const noexcept -> index_t {
-    return _global_sizes.at(std::forward<Dim>(dim));
+  ripple_host_device auto global_size(Dim&& dim) const noexcept -> Index {
+    return global_sizes_.at(static_cast<Dim&&>(dim));
   }
 
   /**
@@ -152,8 +150,8 @@ class IndexedIterator : public BlockIterator<T, Space> {
    */
   template <typename Dim>
   ripple_host_device auto
-  set_global_size(Dim&& dim, index_t index) noexcept -> void {
-    _global_sizes.at(std::forward<Dim>(dim)) = index;
+  set_global_size(Dim&& dim, Index index) noexcept -> void {
+    global_sizes_.at(static_cast<Dim&&>(dim)) = index;
   }
 
   /**
@@ -165,8 +163,8 @@ class IndexedIterator : public BlockIterator<T, Space> {
    */
   template <typename Dim>
   ripple_host_device auto global_idx(Dim&& dim) const noexcept -> size_t {
-    return ::ripple::global_idx(std::forward<Dim>(dim)) +
-           static_cast<size_t>(_block_start_indices[dim]);
+    return ::ripple::global_idx(static_cast<Dim&&>(dim)) +
+           static_cast<size_t>(block_start_indices_[dim]);
   }
 
   /**
@@ -180,8 +178,8 @@ class IndexedIterator : public BlockIterator<T, Space> {
    */
   template <typename Dim>
   ripple_host_device auto normalized_idx(Dim&& dim) const noexcept -> double {
-    return static_cast<double>(global_idx(std::forward<Dim>(dim))) /
-           _global_sizes[dim];
+    return static_cast<double>(global_idx(static_cast<Dim&&>(dim))) /
+           global_sizes_[dim];
   }
 
   /**
@@ -193,10 +191,13 @@ class IndexedIterator : public BlockIterator<T, Space> {
    */
   template <typename Dim>
   ripple_host_device auto is_valid(Dim&& dim) const noexcept -> bool {
-    const auto global_idx_in_block = ::ripple::global_idx(dim);
-    return global_idx_in_block < block_iter_t::size(dim) &&
-           (global_idx_in_block + _block_start_indices[dim]) <
-             _global_sizes[dim];
+    //    const auto global_idx_in_block = ::ripple::global_idx(dim);
+    //    return global_idx_in_block < BlockIter::size(dim) &&
+    //           (global_idx_in_block + block_start_indices_[dim]) <
+    //             global_sizes_[dim];
+    return block_start_indices_[dim] +
+             ::ripple::global_idx(static_cast<Dim&>(dim)) <
+           global_sizes_[dim];
   }
 
   /*==--- [coordinates] ----------------------------------------------------==*/
@@ -218,9 +219,37 @@ class IndexedIterator : public BlockIterator<T, Space> {
     return make_norm_coord(std::make_index_sequence<dims>());
   }
 
+  /**
+   * Determines if this is the first iterator in the global space, that is, it's
+   * the first valid iterator in each dimensions of the space.
+   * \return true if this is the first iterator in the global space.
+   */
+  ripple_host_device auto first_in_global_space() const noexcept -> bool {
+    for (size_t dim = 0; dim < dims; ++dim) {
+      if (global_idx(dim) != 0) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Determines if this is the last iterator in the global space, that is, it's
+   * the last valid iterator in each dimensions of the space.
+   * \return true if this is the last iterator in the global space.
+   */
+  ripple_host_device auto last_in_global_space() const noexcept -> bool {
+    for (size_t dim = 0; dim < dims; ++dim) {
+      if (global_idx(dim) != (global_sizes_[dim] - 1)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
  private:
-  indices_t _block_start_indices{0}; //!<  Indices of the iterable block;
-  indices_t _global_sizes{0};        //!< Global sizes of the space.
+  Indices block_start_indices_{0}; //!<  Indices of the iterable block;
+  Indices global_sizes_{0};        //!< Global sizes of the space.
 
   /**
    * Makes the global coordinates for the iterator.
