@@ -22,7 +22,6 @@
 #include "tuple.hpp"
 #include <ripple/core/storage/polymorphic_layout.hpp>
 #include <ripple/core/storage/storage_descriptor.hpp>
-#include <ripple/core/storage/storage_element_traits.hpp>
 #include <ripple/core/storage/storage_traits.hpp>
 #include <ripple/core/storage/struct_accessor.hpp>
 #include <ripple/core/utility/portability.hpp>
