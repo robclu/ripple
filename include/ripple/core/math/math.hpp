@@ -69,8 +69,6 @@ operator"" _hash(const char* input, unsigned long) noexcept -> unsigned int {
 
 namespace detail {
 
-/*==--- [xorshift] ---------------------------------------------------------==*/
-
 /**
  * Implementation of a random number generator using the xor32 method, as
  * described here: [xorshift32](https://en.wikipedia.org/wiki/Xorshift)
@@ -109,6 +107,37 @@ ripple_host_device constexpr auto sign(T x, std::false_type) noexcept -> T {
 template <typename T>
 ripple_host_device constexpr auto sign(T x, std::true_type) noexcept -> T {
   return (T(0) < x) - (x < T(0));
+}
+
+/**
+ * Base case implementation for computing the max element. This just returns the
+ * element since there is nothing to compare to.
+ * \param  element The element to return.
+ * \tparam T       The type of the element.
+ * \return The element.
+ */
+template <typename T>
+ripple_host_device constexpr auto
+max_element_impl(T&& element) noexcept -> T&& {
+  return static_cast<T&&>(element);
+}
+
+/**
+ * Implementation to compute the max of the current max and the next element and
+ * then continue the computation.
+ * \param current_max The current max element.
+ * \param next        The next element in the pack.
+ * \param rest        The remaining elements.
+ * \tparam T           The type of the current max.
+ * \tparam Next        The type of the next element.
+ * \tparam Ts          The type of the rest of the elements.
+ */
+template <typename T, typename Next, typename... Ts>
+ripple_host_device constexpr auto
+max_element_impl(T&& current_max, Next&& next, Ts&&... rest) noexcept -> T&& {
+  return max_element_impl(
+    std::max(static_cast<T&&>(current_max), static_cast<T&&>(next)),
+    static_cast<T&&>(rest)...);
 }
 
 } // namespace detail
@@ -308,6 +337,24 @@ min(const Array<ImplA>& a, const Array<ImplB>& b) noexcept
     r[i]               = std::min(a[i], b[i]);
   });
   return r;
+}
+
+/**
+ * Computes the max element from a variadic number of elements.
+ *
+ * \note This can be used at compile time to compute the max of a variadic pack.
+ *
+ * \param  first The first element in the pack.
+ * \param  rest  The rest of the elements in the pack.
+ * \tparam T     The type of the first element.
+ * \tparam Ts    The types of the rest of the elements.
+ * \return The max of the pack.
+ */
+template <typename T, typename... Ts>
+ripple_host_device constexpr auto
+max_element(T&& first, Ts&&... rest) noexcept -> T&& {
+  return detail::max_element_impl(
+    static_cast<T&&>(first), static_cast<T&&>(rest)...);
 }
 
 /**
