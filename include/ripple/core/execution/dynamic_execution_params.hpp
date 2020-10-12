@@ -37,22 +37,22 @@ struct DynamicExecParams : public ExecParams<DynamicExecParams<Shared>> {
 
   // clang-format off
   /** Defines the layout traits for the shared memory type. */
-  using traits_t    = layout_traits_t<Shared>;
+  using Traits    = layout_traits_t<Shared>;
   /** Defines the value type for the iterator over the execution space. */
-  using value_t     = typename traits_t::value_t;
+  using Value     = typename Traits::Value;
   /** Defines the allocator type for the execution space. */
-  using allocator_t = typename traits_t::allocator_t;
+  using Allocator = typename Traits::Allocator;
   /** Defines the type of the default space for the execution. */
-  using space_t     = DynamicMultidimSpace<3>;
+  using Space     = DynamicMultidimSpace<3>;
   /** Defines the type used by the space for the step information. */
-  using step_t      = typename space_t::step_t;
+  using Step      = typename Space::Step;
 
   /** 
    * Defines the type of the multidimensional space for the execution.
    * \tparam Dims The number of dimensions for the space.
    */
   template <size_t Dims>
-  using make_space_t = DynamicMultidimSpace<Dims>;
+  using MakeSpaceType = DynamicMultidimSpace<Dims>;
   // clang-format on
 
  public:
@@ -62,7 +62,7 @@ struct DynamicExecParams : public ExecParams<DynamicExecParams<Shared>> {
    * Default constructor to create a space with default sizes.
    */
   ripple_host_device constexpr DynamicExecParams() noexcept
-  : _space{1024, 1, 1} {}
+  : space_{1024, 1, 1} {}
 
   /**
    * Creates the execution space without padding.
@@ -71,7 +71,7 @@ struct DynamicExecParams : public ExecParams<DynamicExecParams<Shared>> {
    */
   template <typename... Sizes, all_arithmetic_size_enable_t<3, Sizes...> = 0>
   ripple_host_device constexpr DynamicExecParams(Sizes&&... sizes) noexcept
-  : _space{static_cast<step_t>(sizes)...} {}
+  : space_{static_cast<Step>(sizes)...} {}
 
   /**
    * Creates the eecution space without \p padding.
@@ -87,7 +87,7 @@ struct DynamicExecParams : public ExecParams<DynamicExecParams<Shared>> {
   template <typename... Sizes, all_arithmetic_size_enable_t<3, Sizes...> = 0>
   ripple_host_device constexpr DynamicExecParams(
     uint32_t padding, Sizes&&... sizes) noexcept
-  : _space{padding, static_cast<step_t>(sizes)...} {}
+  : space_{padding, static_cast<Step>(sizes)...} {}
 
   /*==--- [size] -----------------------------------------------------------==*/
 
@@ -100,13 +100,13 @@ struct DynamicExecParams : public ExecParams<DynamicExecParams<Shared>> {
    * \return The number of elements for Dims dimensions.
    */
   template <size_t Dims>
-  ripple_host_device constexpr auto size() const noexcept -> step_t {
+  ripple_host_device constexpr auto size() const noexcept -> Step {
     static_assert(
       Dims <= 3, "Execution space can't be more than 3 dimensions!");
-    auto total_size = _space.size(dim_x);
+    Step total_size = space_.size(dim_x);
     unrolled_for<Dims - 1>([&](auto d) {
       constexpr auto dim = d + 1;
-      total_size *= _space.size(dim);
+      total_size *= space_.size(dim);
     });
     return total_size;
   }
@@ -123,14 +123,14 @@ struct DynamicExecParams : public ExecParams<DynamicExecParams<Shared>> {
    */
   template <size_t Dims>
   ripple_host_device constexpr auto
-  size(size_t padding) const noexcept -> step_t {
+  size(size_t padding) const noexcept -> Step {
     static_assert(
       Dims <= 3, "Execution space can't be more than 3 dimensions!");
     const size_t pad        = padding * 2;
-    auto         total_size = _space.internal_size(dim_x) + pad;
+    Step         total_size = space_.internal_size(dim_x) + pad;
     unrolled_for<Dims - 1>([&](auto d) {
       constexpr auto dim = d + 1;
-      total_size *= _space.internal_size(dim) + pad;
+      total_size *= space_.internal_size(dim) + pad;
     });
     return total_size;
   }
@@ -144,7 +144,7 @@ struct DynamicExecParams : public ExecParams<DynamicExecParams<Shared>> {
    */
   template <typename Dim>
   ripple_host_device constexpr auto size(Dim&& dim) const noexcept -> size_t {
-    return _space.internal_size(std::forward<Dim>(dim));
+    return space_.internal_size(static_cast<Dim&&>(dim));
   }
 
   /*==--- [properties] -----------------------------------------------------==*/
@@ -158,7 +158,7 @@ struct DynamicExecParams : public ExecParams<DynamicExecParams<Shared>> {
    * \return The amount of padding for the space.
    */
   ripple_host_device constexpr auto padding() const noexcept -> size_t {
-    return _space.padding();
+    return space_.padding();
   }
 
   /*==--- [creation] -------------------------------------------------------==*/
@@ -173,29 +173,31 @@ struct DynamicExecParams : public ExecParams<DynamicExecParams<Shared>> {
    */
   template <size_t Dims, typename T>
   ripple_host_device auto iterator(T* data) const noexcept
-    -> BlockIterator<value_t, make_space_t<Dims>> {
-    using _space_t = make_space_t<Dims>;
-    using iter_t   = BlockIterator<value_t, _space_t>;
-    _space_t space;
+    -> BlockIterator<Value, MakeSpaceType<Dims>> {
+    using SpaceType = MakeSpaceType<Dims>;
+    using Iter      = BlockIterator<Value, SpaceType>;
+    SpaceType space;
     unrolled_for<Dims>([&](auto d) {
       constexpr auto dim = d;
-      space[dim]         = _space[dim];
+      space[dim]         = space_[dim];
     });
-    space.padding() = _space.padding();
-    return iter_t{allocator_t::create(data, space), space};
+    space.padding() = space_.padding();
+    return Iter{Allocator::create(data, space), space};
   }
 
   /**
    * Gets the number of bytes required to allocator data for the space.
    * \tparam Dims The number of dimensions to allocate for.
+   * \return The number of bytes required to allocate sufficient space for the
+   *         data.
    */
   template <size_t Dims>
   ripple_host_device constexpr auto allocation_size() const noexcept -> size_t {
-    return allocator_t::allocation_size(size<Dims>());
+    return Allocator::allocation_size(size<Dims>());
   }
 
  private:
-  space_t _space; //!< The execution space.
+  Space space_; //!< The execution space.
 };
 
 /*==--- [functions] --------------------------------------------------------==*/

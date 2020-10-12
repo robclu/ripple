@@ -1,7 +1,8 @@
-//==--- ripple/core/execution/detail/thread_index_impl_.hpp ----- -*- C++ -*- ---==//
-//            
+//==--- ripple/core/execution/detail/thread_index_impl_.hpp ----- -*- C++ -*-
+//---==//
+//
 //                                Ripple
-// 
+//
 //                      Copyright (c) 2019 Rob Clucas.
 //
 //  This file is distributed under the MIT License. See LICENSE for details.
@@ -13,7 +14,7 @@
 //
 //==------------------------------------------------------------------------==//
 
-#ifndef RIPPLE_EXECUTION_DETAIL_THREAD_INDEX_IMPL__HPP 
+#ifndef RIPPLE_EXECUTION_DETAIL_THREAD_INDEX_IMPL__HPP
 #define RIPPLE_EXECUTION_DETAIL_THREAD_INDEX_IMPL__HPP
 
 #include "../execution_traits.hpp"
@@ -24,9 +25,9 @@ namespace ripple::detail {
 
 /// The Dim3 class is stores information about the size/index in 3 dimensions.
 struct Dim3 {
-  std::size_t x = 0;  //!< X value.
-  std::size_t y = 0;  //!< Y value.
-  std::size_t z = 0;  //!< Z value.
+  std::size_t x = 0; //!< X value.
+  std::size_t y = 0; //!< Y value.
+  std::size_t z = 0; //!< Z value.
 };
 
 /// Values of the thread indices.
@@ -75,9 +76,11 @@ ripple_host_device inline auto thread_idx(dimz_t) -> std::size_t {
 /// Returns the index of the thread in the block in the \p dim dimension.
 /// \param dim The dimension to get thread index for.
 ripple_host_device inline auto thread_idx(std::size_t dim) -> std::size_t {
-  return dim == dimx_t::value ? thread_idx(dim_x) :
-         dim == dimy_t::value ? thread_idx(dim_y) :
-         dim == dimz_t::value ? thread_idx(dim_z) : 0;
+  return dim == dimx_t::value
+           ? thread_idx(dim_x)
+           : dim == dimy_t::value
+               ? thread_idx(dim_y)
+               : dim == dimz_t::value ? thread_idx(dim_z) : 0;
 }
 
 //==--- [block idx] -------------------------------------------------------==//
@@ -100,9 +103,10 @@ ripple_host_device inline auto block_idx(dimz_t) -> std::size_t {
 /// Returns the index of the block in the grid in the \p dim dimension.
 /// \param dim The dimension to get block index for.
 ripple_host_device inline auto block_idx(std::size_t dim) -> std::size_t {
-  return dim == dimx_t::value ? block_idx(dim_x) :
-         dim == dimy_t::value ? block_idx(dim_y) :
-         dim == dimz_t::value ? block_idx(dim_z) : 0;
+  return dim == dimx_t::value
+           ? block_idx(dim_x)
+           : dim == dimy_t::value ? block_idx(dim_y)
+                                  : dim == dimz_t::value ? block_idx(dim_z) : 0;
 }
 
 //==--- [global idx] -------------------------------------------------------==//
@@ -125,9 +129,11 @@ ripple_host_device inline auto global_idx(dimz_t) -> std::size_t {
 /// Returns the index of the thread in the grid in the \p dim dimension.
 /// \param dim The dimension to get grid index for.
 ripple_host_device inline auto global_idx(std::size_t dim) -> std::size_t {
-  return dim == dimx_t::value ? global_idx(dim_x) :
-         dim == dimy_t::value ? global_idx(dim_y) :
-         dim == dimz_t::value ? global_idx(dim_z) : 0;
+  return dim == dimx_t::value
+           ? global_idx(dim_x)
+           : dim == dimy_t::value
+               ? global_idx(dim_y)
+               : dim == dimz_t::value ? global_idx(dim_z) : 0;
 }
 
 //==--- [block size] -------------------------------------------------------==//
@@ -150,9 +156,11 @@ ripple_host_device inline auto block_size(dimz_t) -> std::size_t {
 /// Returns the size of the block in the grid in the \p dim dimension.
 /// \param dim The dimension to get block size for.
 ripple_host_device inline auto block_size(std::size_t dim) -> std::size_t {
-  return dim == dimx_t::value ? block_size(dim_x) :
-         dim == dimy_t::value ? block_size(dim_y) :
-         dim == dimz_t::value ? block_size(dim_z) : 0;
+  return dim == dimx_t::value
+           ? block_size(dim_x)
+           : dim == dimy_t::value
+               ? block_size(dim_y)
+               : dim == dimz_t::value ? block_size(dim_z) : 0;
 }
 
 //==--- [grid size] -------------------------------------------------------==//
@@ -175,9 +183,10 @@ ripple_host_device inline auto grid_size(dimz_t) -> std::size_t {
 /// Returns the number of blocks in the grid in the \p dim dimension.
 /// \param dim The dimension to get grid size for.
 ripple_host_device inline auto grid_size(std::size_t dim) -> std::size_t {
-  return dim == dimx_t::value ? grid_size(dim_x) :
-         dim == dimy_t::value ? grid_size(dim_y) :
-         dim == dimz_t::value ? grid_size(dim_z) : 0;
+  return dim == dimx_t::value
+           ? grid_size(dim_x)
+           : dim == dimy_t::value ? grid_size(dim_y)
+                                  : dim == dimz_t::value ? grid_size(dim_z) : 0;
 }
 
 #elif !defined(__CUDA__) || !defined(__CUDA_ARCH__) // __CUDA_ARCH__
@@ -202,9 +211,11 @@ ripple_host_device inline auto thread_idx(dimz_t) -> std::size_t {
 /// Returns the index of the thread in the block in the \p dim dimension.
 /// \param dim The dimension to get grid index for.
 ripple_host_device inline auto thread_idx(std::size_t dim) -> std::size_t {
-  return dim == dimx_t::value ? thread_idx(dim_x) :
-         dim == dimy_t::value ? thread_idx(dim_y) :
-         dim == dimz_t::value ? thread_idx(dim_z) : 0;
+  return dim == dimx_t::value
+           ? thread_idx(dim_x)
+           : dim == dimy_t::value
+               ? thread_idx(dim_y)
+               : dim == dimz_t::value ? thread_idx(dim_z) : 0;
 }
 
 //==--- [block idx] -------------------------------------------------------==//
@@ -227,9 +238,10 @@ ripple_host_device inline auto block_idx(dimz_t) -> std::size_t {
 /// Returns the index of the block in the grid in the \p dim dimension.
 /// \param dim The dimension to get block index for.
 ripple_host_device inline auto block_idx(std::size_t dim) -> std::size_t {
-  return dim == dimx_t::value ? block_idx(dim_x) :
-         dim == dimy_t::value ? block_idx(dim_y) :
-         dim == dimz_t::value ? block_idx(dim_z) : 0;
+  return dim == dimx_t::value
+           ? block_idx(dim_x)
+           : dim == dimy_t::value ? block_idx(dim_y)
+                                  : dim == dimz_t::value ? block_idx(dim_z) : 0;
 }
 
 //==--- [grid idx] ---------------------------------------------------------==//
@@ -252,9 +264,11 @@ ripple_host_device inline auto global_idx(dimz_t) -> std::size_t {
 /// Returns the index of the thread in the grid in the \p dim dimension.
 /// \param dim The dimension to get grid index for.
 ripple_host_device inline auto global_idx(std::size_t dim) -> std::size_t {
-  return dim == dimx_t::value ? global_idx(dim_x) :
-         dim == dimy_t::value ? global_idx(dim_y) :
-         dim == dimz_t::value ? global_idx(dim_z) : 0;
+  return dim == dimx_t::value
+           ? global_idx(dim_x)
+           : dim == dimy_t::value
+               ? global_idx(dim_y)
+               : dim == dimz_t::value ? global_idx(dim_z) : 0;
 }
 
 //==--- [block size] -------------------------------------------------------==//
@@ -277,9 +291,11 @@ ripple_host_device inline auto block_size(dimz_t) -> std::size_t {
 /// Returns the size of the block in the grid in the \p dim dimension.
 /// \param dim The dimension to get block size for.
 ripple_host_device inline auto block_size(std::size_t dim) -> std::size_t {
-  return dim == dimx_t::value ? block_size(dim_x) :
-         dim == dimy_t::value ? block_size(dim_y) :
-         dim == dimz_t::value ? block_size(dim_z) : 0;
+  return dim == dimx_t::value
+           ? block_size(dim_x)
+           : dim == dimy_t::value
+               ? block_size(dim_y)
+               : dim == dimz_t::value ? block_size(dim_z) : 0;
 }
 
 //==--- [grid size] -------------------------------------------------------==//
@@ -302,9 +318,10 @@ ripple_host_device inline auto grid_size(dimz_t) -> std::size_t {
 /// Returns the number of blocks in the grid in the \p dim dimension.
 /// \param dim The dimension to get grid size for.
 ripple_host_device inline auto grid_size(std::size_t dim) -> std::size_t {
-  return dim == dimx_t::value ? grid_size(dim_x) :
-         dim == dimy_t::value ? grid_size(dim_y) :
-         dim == dimz_t::value ? grid_size(dim_z) : 0;
+  return dim == dimx_t::value
+           ? grid_size(dim_x)
+           : dim == dimy_t::value ? grid_size(dim_y)
+                                  : dim == dimz_t::value ? grid_size(dim_z) : 0;
 }
 
 /// Returns the number of elements in the dimension, globally. This can be used
@@ -314,9 +331,9 @@ ripple_host_device inline auto grid_size(std::size_t dim) -> std::size_t {
 /// \tparam Dim The type of the dimension specifier.
 template <typename Dim>
 ripple_host_device inline auto global_elements(Dim&& dim) -> size_t& {
-  return dim == dimx_t::value ? grid_elements_.x :
-         dim == dimy_t::value ? grid_elements_.y :
-         grid_elements_.z;
+  return dim == dimx_t::value
+           ? grid_elements_.x
+           : dim == dimy_t::value ? grid_elements_.y : grid_elements_.z;
 }
 
 #endif // __CUDACC__
