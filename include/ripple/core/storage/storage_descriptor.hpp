@@ -43,11 +43,11 @@ struct StorageDescriptor {
   static constexpr bool is_contiguous = (layout == LayoutKind::contiguous_view);
 
   /** Defines the type of contigous view storage. */
-  using ContigView  = ContiguousStorageView<Ts...>;
+  using ContigView   = ContiguousStorageView<Ts...>;
   /** Defines the type of strided view storage. */
-  using StridedView = StridedStorageView<Ts...>;
+  using StridedView  = StridedStorageView<Ts...>;
   /** Defines the type of owned storage. */
-  using Owned       = OwnedStorage<Ts...>;
+  using Owned        = OwnedStorage<Ts...>;
 
   /** Defines which type of storage to use, based on the type of the layout. */
   using Storage = std::conditional_t<is_contiguous,

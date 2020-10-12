@@ -36,7 +36,7 @@ enum class LayoutKind : uint8_t {
 template <LayoutKind Layout>
 struct StorageLayout {
   /** Defines the value of the layout for the storage. */
-  static constexpr auto value = Layout;
+  static constexpr LayoutKind value = Layout;
 };
 
 /**

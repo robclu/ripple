@@ -48,13 +48,13 @@ namespace ripple {
  *
  * It provides access to the types via the StorageAccessor interface.
  *
- * If any of the Ts are StorageElement<T, V> types, then this will provide
+ * If any of the Ts are Vector<T, V> types, then this will provide
  * storage such each of the V components of the element are contiguous
  * (i.e as Aos), and also contiguous with the types on either side of the
- * StorageElement in the Ts pack.
+ * Vector in the Ts pack.
  *
- * To allocate multiple ContiguousStorageiView elements, the publicly
- * accessible `allocator_t` type should be used to determine the memory
+ * To allocate multiple ContiguousStorageiView elements, the
+ * Allocator type should be used to determine the memory
  * requirement, and then a ContiguousStorageView can be created through the
  * allocator, as also offset through the allocator.
  *
@@ -94,10 +94,10 @@ class ContiguousStorageView;
  *
  * It provides access to the types via the StorageAccessor interface.
  *
- * If any of the Ts are StorageElement<T, V> types, then this will provide
+ * If any of the Ts are Vector<T, V> types, then this will provide
  * storage such that each of the V components of the element are contiguous
  * (i.e as AoS), and also contiguous with the types on either side of the
- * StorageElement in the Ts pack.
+ * Vector in the Ts pack.
  *
  * This class does not have an allocator inteface, and is not intended to be
  * allocated, but rather reutned by data containers which use
@@ -134,12 +134,12 @@ class OwnedStorage;
  *
  * It provides access to the types via the StorageAccessor interface.
  *
- * If any of the Ts are StorageElement<T, V> types, then this will provide
+ * If any of the Ts are Vector<T, V> types, then this will provide
  * storage such each of the V components of the element are strided
  * (i.e as SoA).
  *
- * To allocate multiple StridedStorageiView elements, the publicly accessible
- * allocator_t type should be used to determine the memory requirement, and
+ * To allocate multiple StridedStorageiView elements, the
+ * Allocator type should be used to determine the memory requirement, and
  * then a StridedStorageView can be created through the allocator, as also
  * offset through the allocator.
  *
@@ -251,8 +251,8 @@ using layout_traits_t = LayoutTraits<
 
 /**
  * Defines the type T as a contiguous owned type, if it is not already. If the
- * type T is not stridable, this will just create an alias to T, for stridable
- * types, the layout kind will be converted.
+ * type T is not a polymorphic layout type then this will just create an alias
+ * to T, otherwise the layout will be converted.
  * \tparam T The type to get as a contiguous owned type.
  */
 template <typename T>
@@ -261,8 +261,8 @@ using as_contiguous_owned_t =
 
 /**
  * Defines the type T as a contiguous view type, if it is not already. If the
- * type T is not stridable, this will just create an alias to T, for striable
- * types, the layout will be converted.
+ * type T is not a polymorphic layout type then this will just create an alias
+ * to T, otherwise the layout will be converted.
  * \tparam T The type to get as a contiguous owned type.
  */
 template <typename T>
@@ -271,8 +271,8 @@ using as_contiguous_view_t =
 
 /**
  * Defines the type T as a strided view type, if it is not already. If the
- * type T is not stridable, this will just create an alias to T, for stridable
- * types, the layout type will be converted.
+ * type T is not a polymorphic layout type this will just create an alias to T
+ * otherwise the layout will be converted.
  * \tparam T The type to get as a contiguous owned type.
  */
 template <typename T>

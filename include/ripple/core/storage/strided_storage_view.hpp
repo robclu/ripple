@@ -428,8 +428,7 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
     });
     return *this;
   }
-  /*==--- [interface]
-   * ------------------------------------------------------==*/
+  /*==--- [interface] ------------------------------------------------------==*/
 
   /**
    * Copies the data from the other type.

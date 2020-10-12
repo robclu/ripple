@@ -82,7 +82,7 @@ struct StructAccessor : public Storage {
    * \param v The value to set the accessor to.
    */
   ripple_host_device auto operator=(T v) noexcept -> StructAccessor& {
-    if (is_accessor) {
+    if constexpr (is_accessor) {
       get_accessor<Index>() = v;
     } else {
       get_nonaccessor<Index>() = v;

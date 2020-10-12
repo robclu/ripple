@@ -17,8 +17,7 @@
 #define RIPPLE_STORAGE_STORAGE_ELEMENT_TRAITS_HPP
 
 #include "storage_layout.hpp"
-#include <ripple/core/utility/portability.hpp>
-#include <utility>
+#include <ripple/core/algorithm/max_element.hpp>
 
 namespace ripple {
 
@@ -38,13 +37,13 @@ struct StorageElementTraits {
 
   // clang-format off
   /** Defines the number of values of the element to store. */
-  static constexpr auto num_elements       = 1;
+  static constexpr auto num_elements   = 1;
   /** Defines the byte size required to allocate the element. */
-  static constexpr auto byte_size          = sizeof(Value);
+  static constexpr auto byte_size      = sizeof(Value);
   /** Defines the alignment size required for the type. */
-  static constexpr auto align_size         = alignof(Value);
+  static constexpr auto align_size     = alignof(Value);
   /** Defines that the type is not a storage element. */
-  static constexpr bool is_storage_element = false;
+  static constexpr bool is_vec_element = false;
 };
 
 /**
@@ -211,6 +210,10 @@ struct ContigStorageHelper {
   /** Defines the number of components in each of the types. */
   static constexpr size_t components[num_types] = {element_components_v<Ts>...};
 
+  /** Defines the max alignment of the types. */
+  static constexpr size_t max_align =
+    max_element(storage_element_traits_t<Ts>::align_size...);
+
   /**
    * Determines the effective byte size of all elements to store, including any
    * required padding. This should not be called, other than to define
@@ -229,6 +232,9 @@ struct ContigStorageHelper {
         size = next_align;
       }
       size += byte_sizes[i];
+    }
+    if (size % max_align != 0) {
+      size = (size + max_align - 1) & ~(max_align - 1);
     }
     return size;
   }

@@ -54,10 +54,9 @@ struct StorageAccessor {
    * \param  other     The other storage type tto copy from.
    * \tparam ImplOhter The type of the other storage.
    */
-  template <typename ImplOther>
-  ripple_host_device auto
-  copy(const StorageAccessor<ImplOther>& other) noexcept -> void {
-    impl()->copy(static_cast<const ImplOther&>(other));
+  template <typename Other>
+  ripple_host_device auto copy(const Other& other) noexcept -> void {
+    impl()->copy(other);
   }
 
   /**
