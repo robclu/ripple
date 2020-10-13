@@ -24,156 +24,199 @@
 
 namespace ripple {
 
-/// The DynamicMultidimSpace struct defines spatial information over multiple
-/// dimensions, specifically the sizes of the dimensions and the steps required
-/// to get from one element to another in the dimensions of the space. The
-/// dynamic nature of the space means that it can be modified. It implements the
-/// MultidimSpace interface.
-/// \tparam Dimensions The number of dimensions.
-template <std::size_t Dimensions>
+/**
+ * The DynamicMultidimSpace struct defines spatial information over multiple
+ * dimensions, specifically the sizes of the dimensions and the steps required
+ * to get from one element to another in the dimensions of the space. The
+ * dynamic nature of the space means that it can be modified. It implements the
+ * MultidimSpace interface.
+ * \tparam Dimensions The number of dimensions.
+ */
+template <size_t Dimensions>
 struct DynamicMultidimSpace
 : public MultidimSpace<DynamicMultidimSpace<Dimensions>> {
   // clang-format off
-  /// Defines the size type used for padding.
-  using padding_t   = uint32_t;
-  /// Defines the type used to store step information.
-  using step_t      = uint32_t;
+  /** Defines the size type used for padding. */
+  using Padding = uint32_t;
+  /** Defines the type used to store step information. */
+  using Step    = uint32_t;
   // clang-format on
 
  private:
-  /// Defines the number of dimensions
+  /** Defines the number of dimensions */
   static constexpr size_t dims = Dimensions;
 
-  /// Defines the type of container to store the size and step information.
-  using container_t = Vec<step_t, dims>;
+  /** Defines the type of container to store the size and step information. */
+  using Container = Vec<Step, dims>;
 
  public:
   //==--- [construction] ---------------------------------------------------==//
 
-  /// Default constructor -- enables creation of empty spatial information.
+  /**
+   * Default constructor -- enables creation of empty spatial information.
+   */
   constexpr DynamicMultidimSpace() = default;
 
-  /// Sets the sizes of the dimensions for the space.
-  /// \param  sizes The sizes of the dimensions.
-  /// \tparam Sizes The type of the sizes.
+  /**
+   * Sets the sizes of the dimensions for the space.
+   * \param  sizes The sizes of the dimensions.
+   * \tparam Sizes The type of the sizes.
+   */
   template <typename... Sizes, all_arithmetic_size_enable_t<dims, Sizes...> = 0>
-  ripple_host_device constexpr DynamicMultidimSpace(Sizes&&... sizes)
-  : _sizes{static_cast<step_t>(sizes)...} {}
+  ripple_host_device constexpr DynamicMultidimSpace(Sizes&&... sizes) noexcept
+  : sizes_{static_cast<Step>(sizes)...} {}
 
-  /// Sets the sizes of the dimensions for the space and the amount of padding
-  /// for the space.
-  /// \param  padding The amount of padding for each of the sides of each of the
-  ///                 dimensions.
-  /// \param  sizes   The sizes of the dimensions.
-  /// \tparam Sizes   The type of the sizes.
+  /**
+   * Sets the sizes of the dimensions for the space and the amount of padding
+   * for the space.
+   * \param  padding The amount of padding for a side of each dimension.
+   * \param  sizes   The sizes of the dimensions.
+   * \tparam Sizes   The type of the sizes.
+   */
   template <typename... Sizes, all_arithmetic_size_enable_t<dims, Sizes...> = 0>
   ripple_host_device constexpr DynamicMultidimSpace(
-    padding_t padding, Sizes&&... sizes)
-  : _padding{padding}, _sizes{static_cast<step_t>(sizes)...} {}
+    Padding padding, Sizes&&... sizes) noexcept
+  : sizes_{static_cast<Step>(sizes)...}, padding_{padding} {}
 
-  //==--- [padding] --------------------------------------------------------==//
+  /*==--- [padding] --------------------------------------------------------==*/
 
-  /// Returns the amount of padding for each side of each dimension for the
-  /// space.
-  ripple_host_device constexpr auto padding() -> padding_t& {
-    return _padding;
+  /**
+   * Gets the amount of padding for each side of each dimension for the
+   * space.
+   * \return A reference to the amount of padding on one side of each dimension.
+   */
+  ripple_host_device constexpr auto padding() noexcept -> Padding& {
+    return padding_;
   }
 
-  /// Returns the amount of padding for each side of each dimension for the
-  /// space.
-  ripple_host_device constexpr auto padding() const -> padding_t {
-    return _padding;
+  /**
+   * Gets the amount of padding for each side of each dimension for the
+   * space.
+   * \return The amount of padding on one side of each dimension.
+   */
+  ripple_host_device constexpr auto padding() const noexcept -> Padding {
+    return padding_;
   }
 
-  /// Returns the total amounnt of padding for the dimesion, which is twice the
-  /// dimension per side.
-  ripple_host_device constexpr auto dim_padding() const -> padding_t {
-    return _padding * 2;
+  /**
+   * Gets the total amounnt of padding for the dimesion, which is twice the
+   * dimension per side.
+   * \return The total amount of padding for a dimension.
+   */
+  ripple_host_device constexpr auto dim_padding() const noexcept -> Padding {
+    return padding_ * 2;
   }
 
-  //==--- [size] -----------------------------------------------------------==//
+  /*==--- [size] -----------------------------------------------------------==*/
 
-  /// Returns the number of dimensions for the space.
-  ripple_host_device constexpr auto dimensions() const -> size_t {
+  /**
+   * Gets the number of dimensions for the space.
+   * \return The number of dimensions for the space.
+   */
+  ripple_host_device constexpr auto dimensions() const noexcept -> size_t {
     return dims;
   }
 
-  /// Resizes each of the dimensions specified by the \p size. If
-  /// sizeof...(Sizes) < dims, the first sizeof...(Sizes) dimensions are
-  /// resized. If sizeof...(Sizes) > dims, then a compile time error is
-  /// generated.
-  /// \param  sizes The sizes to resize the dimensions to.
-  /// \tparam Sizes The type of the sizes.
+  /**
+   * Resizes each of the dimensions specified by the \p size. If
+   * `sizeof...(Sizes) < dims`, the first `sizeof...(Sizes)` dimensions are
+   * resized. If `sizeof...(Sizes) > dims`, then a compile time error is
+   * generated.
+   *
+   * \param  sizes The sizes to resize the dimensions to.
+   * \tparam Sizes The type of the sizes.
+   */
   template <typename... Sizes>
-  ripple_host_device auto resize(Sizes&&... sizes) -> void {
-    constexpr auto num_sizes = sizeof...(Sizes);
+  ripple_host_device auto resize(Sizes&&... sizes) noexcept -> void {
+    constexpr size_t num_sizes = sizeof...(Sizes);
     static_assert(num_sizes <= dims, "Too many sizes specified in resize.");
 
-    const step_t dim_sizes[num_sizes] = {static_cast<step_t>(sizes)...};
-    unrolled_for<num_sizes>([&](auto i) { _sizes[i] = dim_sizes[i]; });
+    const Step dim_sizes[num_sizes] = {static_cast<Step>(sizes)...};
+    unrolled_for<num_sizes>([&](auto i) { sizes_[i] = dim_sizes[i]; });
   }
 
-  /// Resizes the \p dim dimensions to have \p size.
-  /// \param  dim  The dimension to resize.
-  /// \param  size The size to resize the dimension to.
-  /// \tparam Dim  The type of the dimension specifier.
+  /**
+   * Resizes the given dimension to have size number of elements.
+   * \param  dim  The dimension to resize.
+   * \param  size The size to resize the dimension to.
+   * \tparam Dim  The type of the dimension specifier.
+   */
   template <typename Dim>
-  ripple_host_device auto resize_dim(Dim&& dim, step_t size) -> void {
-    _sizes[dim] = size;
+  ripple_host_device auto resize_dim(Dim&& dim, Step size) noexcept -> void {
+    sizes_[dim] = size;
   }
 
-  /// Returns the size of the \p dim dimension.
-  /// \param  dim  The dimension to get the size of.
-  /// \tparam Dim  The type of the dimension.
+  /**
+   * Gets the size of the given dimension.
+   * \param  dim  The dimension to get the size of.
+   * \tparam Dim  The type of the dimension.
+   * \return The number of elements for the dimension.
+   */
   template <typename Dim>
-  ripple_host_device constexpr auto size(Dim&& dim) const -> step_t {
-    return _sizes[dim] + dim_padding();
+  ripple_host_device constexpr auto size(Dim&& dim) const noexcept -> Step {
+    return sizes_[dim] + dim_padding();
   }
 
-  /// Returns the total size of the N dimensional space i.e the total number of
-  /// elements in the space. This is the product sum of the dimension sizes,
-  /// with the padding for the space.
-  ripple_host_device constexpr auto size() const -> step_t {
-    step_t prod_sum = 1;
+  /**
+   * Gets the total size of the N dimensional space i.e the total number of
+   * elements in the space. This is the product sum of the dimension sizes,
+   * *including* the padding for the space.
+   * \return The total number of elements in the space, including padding.
+   */
+  ripple_host_device constexpr auto size() const noexcept -> Step {
+    Step prod_sum = 1;
     unrolled_for<dims>(
-      [&](auto dim) { prod_sum *= (_sizes[dim] + dim_padding()); });
+      [&](auto dim) { prod_sum *= (sizes_[dim] + dim_padding()); });
     return prod_sum;
   }
 
-  /// Returns the size of the \p dim dimension, without padding.
-  /// \param  dim  The dimension to get the size of.
-  /// \tparam Dim  The type of the dimension.
+  /**
+   * Gets the internals size of the given dimension -- the size without padding
+   * elements.
+   * \param  dim  The dimension to get the size of.
+   * \tparam Dim  The type of the dimension.
+   * \return The number of elements in the given dimension.
+   */
   template <typename Dim>
-  ripple_host_device constexpr auto internal_size(Dim&& dim) const -> step_t {
-    return _sizes[dim];
+  ripple_host_device constexpr auto
+  internal_size(Dim&& dim) const noexcept -> Step {
+    return sizes_[dim];
   }
 
-  /// Returns the total size of the N dimensional space i.e the total number of
-  /// elements in the space. This is the product sum of the dimension sizes,
-  /// without the padding for the dimensions.
-  ripple_host_device constexpr auto internal_size() const -> step_t {
-    step_t prod_sum = 1;
-    unrolled_for<dims>([&](auto dim) { prod_sum *= _sizes[dim]; });
+  /**
+   * Gets the total internal  size of the N dimensional space i.e the total
+   * number of elements in the space.
+   *
+   * \note This is the product sum of the dimension sizes, *not including*
+   *       padding.
+   *
+   * \return The total number of internal elements for the space.
+   */
+  ripple_host_device constexpr auto internal_size() const noexcept -> Step {
+    Step prod_sum = 1;
+    unrolled_for<dims>([&](auto dim) { prod_sum *= sizes_[dim]; });
     return prod_sum;
   }
 
-  //==--- [step] -----------------------------------------------------------==//
+  /*==--- [step] -----------------------------------------------------------==*/
 
-  /// Returns the step size to from one element in \p dim to the next element in
-  /// \p dim.
-  /// \param  dim   The dimension to get the step size in.
-  /// \param  width The width of the array if the space is for soa or soa.
-  /// \tparam Dim   The type of the dimension.
+  /**
+   * Returns the step size to from one element in the given dimension to the
+   * next element in the given dimension.
+   *
+   * \param  dim The dimension to get the step size in.
+   * \tparam Dim The type of the dimension.
+   */
   template <typename Dim>
-  ripple_host_device constexpr auto step(Dim&& dim) const -> step_t {
-    using dim_t = std::decay_t<Dim>;
-    step_t res  = 1;
-    if constexpr (is_dimension_v<dim_t>) {
-      constexpr size_t end = static_cast<size_t>(dim_t::value);
-      unrolled_for<end>([&](auto d) { res *= (_sizes[d] + dim_padding()); });
+  ripple_host_device constexpr auto step(Dim&& dim) const noexcept -> Step {
+    using DimType = std::decay_t<Dim>;
+    Step res      = 1;
+    if constexpr (is_dimension_v<DimType>) {
+      constexpr size_t end = static_cast<size_t>(DimType::value);
+      unrolled_for<end>([&](auto d) { res *= (sizes_[d] + dim_padding()); });
     } else {
-      for (size_t d : range(static_cast<size_t>(dim))) {
-        res *= _sizes[d] + dim_padding();
+      for (size_t d = 0; d < static_cast<size_t>(dim); ++d) {
+        res *= sizes_[d] + dim_padding();
       }
     }
     return res;
@@ -181,28 +224,32 @@ struct DynamicMultidimSpace
 
   //==--- [access] ---------------------------------------------------------==//
 
-  /// Returns a reference to the size of dimension \p dim, which can be used to
-  /// set the size of the dimension.
-  /// \param  dim The dimension size to get a refernece to.
-  /// \tparam Dim The type of the dimension specifier.
+  /**
+   * Gets a reference to the size of the given dimension.
+   * \param  dim The dimension size to get a refernece to.
+   * \tparam Dim The type of the dimension specifier.
+   * \return A reference to the size of the space for the given dimension.
+   */
   template <typename Dim>
-  ripple_host_device constexpr auto operator[](Dim&& dim) -> step_t& {
-    return _sizes[dim];
+  ripple_host_device constexpr auto operator[](Dim&& dim) noexcept -> Step& {
+    return sizes_[dim];
   }
 
-  /// Returns a cosnt reference to the size of dimension \p dim, which can be
-  /// used to detemine the size of one of the dimensions in the space.
-  /// \param  dim The dimension size to get a refernece to.
-  /// \tparam Dim The type of the dimension specifier.
+  /**
+   * Gets a constt reference to the size of the given dimension.
+   * \param  dim The dimension size to get a refernece to.
+   * \tparam Dim The type of the dimension specifier.
+   * \return A const reference to the size of the space for the dimension.
+   */
   template <typename Dim>
   ripple_host_device constexpr auto
-  operator[](Dim&& dim) const -> const step_t& {
-    return _sizes[dim];
+  operator[](Dim&& dim) const noexcept -> const Step& {
+    return sizes_[dim];
   }
 
  private:
-  padding_t   _padding = 0; //!< Amount of padding for each side of each dim.
-  container_t _sizes;       //!< Sizes of the dimensions.
+  Container sizes_;       //!< Sizes of the dimensions.
+  Padding   padding_ = 0; //!< Amount of padding for each side of each dim.
 };
 
 } // namespace ripple
