@@ -169,9 +169,13 @@ class HostBlock {
 
   /**
    * Constructor to create the block from a device block.
-   * \param other The other block to create this block from.
+   * \param other   The other block to create this block from.
+   * \param op_kind The kind of the memory operations for the block.
    */
-  HostBlock(const DeviceBlock& other) : space_{other.space_} {
+  HostBlock(
+    const DeviceBlock& other, BlockOpKind op_kind = BlockOpKind::synchronous)
+  : space_{other.space_} {
+    set_op_kind(op_kind);
     reallocate();
     copy_from_device(other);
   }
@@ -253,10 +257,12 @@ class HostBlock {
   /**
    * Overload of copy assignment operator to create this block from the other
    * block.
-   * \param other The other block to create this block from.
+   * \param other    The other block to create this block from.
+   * \param op_kind The kind of the memory operations for the block.
    * \return A reference to the created block.
    */
   auto operator=(const DeviceBlock& other) -> HostBlock& {
+    set_op_kind(BlockOpKind::synchronous);
     space_ = other.space_;
     reallocate();
     copy_from_device(other);

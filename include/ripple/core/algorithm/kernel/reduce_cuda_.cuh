@@ -125,7 +125,7 @@ ripple_global auto reduce_block_shared(
     const auto     must_shift = idx < it.size(dim) && in_range;
     if (must_shift) {
       it.shift(dim, idx);
-      shared_it.shift(dim, thread_idx(dim) + shared_it.padding());
+      shared_it.shift(dim, thread_idx(dim) /*+ shared_it.padding()*/);
     } else {
       in_range = false;
     }
@@ -196,7 +196,8 @@ auto reduce(const DeviceBlock<T, Dims>& block, Pred&& pred, Args&&... args) {
 
   // Reduce the results -- this will automatically sync with the previous
   // operation.
-  const auto res = results.as_host();
+  const auto res = results.as_host(BlockOpKind::synchronous);
+
   return reduce(res, std::forward<Pred>(pred), std::forward<Args>(args)...);
 #endif // __CUDACC__
 }

@@ -271,10 +271,12 @@ class DeviceBlock {
 
   /**
    * Create a host block with the data from this device block.
+   * \param op_kind The kind of the memory operations for the block.
    * \return A host block with the data and properties of this block.
    */
-  auto as_host() const -> HostBlock {
-    return HostBlock{*this};
+  auto
+  as_host(BlockOpKind op_kind = BlockOpKind::synchronous) const -> HostBlock {
+    return HostBlock{*this, op_kind};
   }
 
   /**
