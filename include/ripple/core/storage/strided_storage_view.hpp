@@ -431,6 +431,22 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
   /*==--- [interface] ------------------------------------------------------==*/
 
   /**
+   * Gets a pointer to the data for the storage.
+   * \return A pointer to the data for the storage.
+   */
+  ripple_host_device auto data() noexcept -> Ptr {
+    return data_;
+  }
+
+  /**
+   * Gets a const pointer to the data.
+   * \return A const pointer to the data for the storage.
+   */
+  ripple_host_device auto data() const noexcept -> const Ptr {
+    return data_;
+  }
+
+  /**
    * Copies the data from the other type.
    *
    * \note If the other type is not a StorageAccessor, this will cause a
