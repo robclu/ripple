@@ -191,13 +191,10 @@ class IndexedIterator : public BlockIterator<T, Space> {
    */
   template <typename Dim>
   ripple_host_device auto is_valid(Dim&& dim) const noexcept -> bool {
-    //    const auto global_idx_in_block = ::ripple::global_idx(dim);
-    //    return global_idx_in_block < BlockIter::size(dim) &&
-    //           (global_idx_in_block + block_start_indices_[dim]) <
-    //             global_sizes_[dim];
-    return block_start_indices_[dim] +
-             ::ripple::global_idx(static_cast<Dim&>(dim)) <
-           global_sizes_[dim];
+    const auto global_idx_in_block = ::ripple::global_idx(dim);
+    return global_idx_in_block < BlockIter::size(dim) &&
+           (global_idx_in_block + block_start_indices_[dim]) <
+             global_sizes_[dim];
   }
 
   /*==--- [coordinates] ----------------------------------------------------==*/
