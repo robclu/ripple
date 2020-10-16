@@ -34,7 +34,7 @@ struct BlockMemoryProps {
    * Default constructor for memory properties.
    */
   constexpr BlockMemoryProps() noexcept
-  : pinned(1), allocated(0), async_copy(1), must_free(0) {}
+  : pinned(1), allocated(0), async_copy(0), must_free(0) {}
 
   /**
    * Resets the memory properties for the block to be the following:
