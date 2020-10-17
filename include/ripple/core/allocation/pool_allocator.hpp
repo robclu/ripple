@@ -16,122 +16,12 @@
 #ifndef RIPPLE_ALLOCATION_POOL_ALLOCATOR_HPP
 #define RIPPLE_ALLOCATION_POOL_ALLOCATOR_HPP
 
+#include "freelist.hpp"
 #include <ripple/core/utility/memory.hpp>
 #include <atomic>
 #include <cstddef>
 
 namespace ripple {
-
-//==--- [single-threaded free-list] ----------------------------------------==//
-
-/// This type is a simple, single-threaded free-list implementation, which is
-/// essentially just a singly-linked-list over an arena from which the free list
-/// nodes point to.
-class Freelist {
- public:
-  //==--- [construction] ---------------------------------------------------==//
-
-  /// Default constructor.
-  Freelist() = default;
-
-  /// Default destructor.
-  ~Freelist() noexcept {
-    if (_head != nullptr) {
-      _head = nullptr;
-    }
-  }
-
-  /// Constructor to initialize the freelist with the \p start and \p end of the
-  /// arena from which elements can be stored.
-  /// \param start        The start of the arena.
-  /// \param end          The end of the arena.
-  /// \param element_size The size of the elements in the freelist.
-  /// \param alignment    The alignment of the elements.
-  Freelist(
-    const void* start,
-    const void* end,
-    size_t      element_size,
-    size_t      alignment) noexcept
-  : _head(initialize(start, end, element_size, alignment)) {}
-
-  // clang-format off
-  /// Move constructor to move \p other to this freelist.
-  /// \param other The other freelist to move.
-  Freelist(Freelist&& other) noexcept                    = default;
-  /// Move assignment to move \p other to this freelist.
-  /// \param other The other freelist to move.
-  auto operator=(Freelist&& other) noexcept -> Freelist& = default;
-
-  //==--- [deleted] --------------------------------------------------------==//
-
-  /// Copy constructor -- deleted since the freelist can't be copied.
-  Freelist(const Freelist&)       = delete;
-  /// Copy assignment -- deleted since the freelist can't be copied.
-  auto operator=(const Freelist&) = delete;
-  // clang-format on
-
-  //==--- [interface] ------------------------------------------------------==//
-
-  /// Pops the most recently added element from the list, and returns it.
-  auto pop_front() noexcept -> void* {
-    Node* const popped_head = _head;
-    _head                   = popped_head ? popped_head->next : nullptr;
-    return static_cast<void*>(popped_head);
-  }
-
-  /// Pushes a new element onto the front of the list.
-  /// \param ptr The pointer to the element to push onto the list.
-  auto push_front(void* ptr) noexcept -> void {
-    if (ptr == nullptr) {
-      return;
-    }
-
-    Node* const pushed_head = static_cast<Node*>(ptr);
-    pushed_head->next       = _head;
-    _head                   = pushed_head;
-  }
-
- private:
-  /// Simple node type which points to the next element in the list.
-  struct Node {
-    Node* next = nullptr; //!< The next node in the list.
-  };
-
-  Node* _head = nullptr; //!< Pointer to the head of the list.
-
-  /// Intializes the free list by building the linked list.
-  /// \param start        The start of the freelist arena.
-  /// \param end          The end of the freelist arena.
-  /// \param element_size The size of the elements in the freelist.
-  /// \param alignment    The alignment of the elements.
-  static auto initialize(
-    const void* start, const void* end, size_t element_size, size_t alignment)
-    -> Node* {
-    // Create the first and second elements:
-    void* const first  = align_ptr(start, alignment);
-    void* const second = align_ptr(offset_ptr(first, element_size), alignment);
-
-    const size_t size     = uintptr_t(second) - uintptr_t(first);
-    const size_t elements = (uintptr_t(end) - uintptr_t(first)) / size;
-
-    // Set the head of the list:
-    Node* head = static_cast<Node*>(first);
-
-    // Initialize the rest of the list:
-    Node* current = head;
-    for (size_t i = 1; i < elements; ++i) {
-      Node* next    = static_cast<Node*>(offset_ptr(current, size));
-      current->next = next;
-      current       = next;
-    }
-    assert(
-      offset_ptr(current, size) <= end &&
-      "Freelist initialization overflows provided arena!");
-
-    current->next = nullptr;
-    return head;
-  }
-};
 
 //==--- [multi-threaded free list] -----------------------------------------==//
 
