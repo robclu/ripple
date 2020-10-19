@@ -118,11 +118,13 @@ struct BlockTraits<HostBlock<T, Dimensions>> {
   /** Defines the number of dimensions for the block. */
   static constexpr size_t dimensions      = Dimensions;
   /** Defines that the traits are for a valid block. */
-  static constexpr auto   is_block        = true;
+  static constexpr bool   is_block        = true;
   /** Defines that the blocks is a host block. */
-  static constexpr auto   is_host_block   = true;
+  static constexpr bool   is_host_block   = true;
   /** Defines that the block is not a device block. */
-  static constexpr auto   is_device_block = false;
+  static constexpr bool   is_device_block = false;
+  /** Defines the alignment for the block. */
+  static constexpr size_t alignment       = LayoutTraits::alignment;
   // clang-format on
 };
 
@@ -151,11 +153,13 @@ struct BlockTraits<DeviceBlock<T, Dimensions>> {
   /** Defines the number of dimensions for the block. */
   static constexpr size_t dimensions      = Dimensions;
   /** Defines that the traits are for a valid block. */
-  static constexpr auto   is_block        = true;
+  static constexpr bool   is_block        = true;
   /** Defines that the blocks is not a host block. */
-  static constexpr auto   is_host_block   = false;
+  static constexpr bool   is_host_block   = false;
   /** Defines that the block is a device block */
-  static constexpr auto   is_device_block = true;
+  static constexpr bool   is_device_block = true;
+  /** Defines the alignment for the block. */
+  static constexpr size_t alignment       = LayoutTraits::alignment;
   // clang-format on
 };
 

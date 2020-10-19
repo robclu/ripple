@@ -257,23 +257,33 @@ struct Block : public BlockEnabled<Block<T, Dimensions>> {
     // If we are on the same gpu, then we can do the device to device copy,
     // otherwise we need to go through the host:
     if (topology().device_to_device_available(gpu_id, other.gpu_id)) {
-      cudaSetDevice(other.gpu_id);
-      memcopy_padding(other.device_data, device_data, src_face, dst_face);
+      cudaSetDevice(gpu_id);
+      memcopy_padding(
+        other.device_data,
+        device_data,
+        src_face,
+        dst_face,
+        other.device_data.stream());
       return;
     }
 
     // Here we can't do a device -> device copy, so go through the host:
     // First copy from the other block's device data to this block's host data:
     cudaSetDevice(other.gpu_id);
-    memcopy_padding(other.device_data, host_data, src_face, src_face);
+    memcopy_padding(
+      other.device_data,
+      host_data,
+      src_face,
+      src_face,
+      other.device_data.stream());
 
-    // Have to wait for this to finish ...
-    // TODO: Change this to the copy stream.
+    // Have to wait for the copy to finish ...
     cudaStreamSynchronize(other.device_data.stream());
 
     // Then copy from this block's host data to this blocks device data:
     cudaSetDevice(gpu_id);
-    memcopy_padding(host_data, device_data, src_face, dst_face);
+    memcopy_padding(host_data, device_data, src_face, dst_face),
+      device_data.stream();
   }
 
   /*==--- [reduction] ------------------------------------------------------==*/
