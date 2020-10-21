@@ -9,13 +9,13 @@
 cmake_minimum_required(VERSION 3.8 FATAL_ERROR)
 project(ripple VERSION 0.1.0 LANGUAGES CXX)
 
-#==--- Build Type -----------------------------------------------------------==#
+#==--- [Build Type] ---------------------------------------------------------==#
 
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Build type not specified!")
 endif(NOT CMAKE_BUILD_TYPE)
 
-#==--- Compiler paths -------------------------------------------------------==#
+#==--- [Compiler paths] -----------------------------------------------------==#
 
 # 
 if (APPLE)
@@ -116,7 +116,7 @@ else()
   endif()
 endif()
 
-#==--- Googletest  ----------------------------------------------------------==#
+#==--- [Googletest] ---------------------------------------------------------==#
 
 if (EXISTS ${ripple_SOURCE_DIR}/googletest)
   add_subdirectory(googletest)
@@ -130,7 +130,7 @@ else()
   add_subdirectory(googletest)
 endif()
 
-#==--- Compiler Flags -------------------------------------------------------==#
+#==--- [Compiler Flags] -----------------------------------------------------==#
 
 # Gtest does not currently build without this flag!
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-function")
@@ -147,12 +147,27 @@ message("-- CUDA LIBRARY DIR: ${CUDA_LIB_DIRS}"   )
 
 set(CUDA_DEFS "-DRIPPLE_CUDA_AVAILABLE=1")
 
-if (NOT EXISTS ${CUDA_ARCH_VER})
+list(LENGTH CUDA_ARCHS ARCH_COUNT)
+if (${ARCH_COUNT} EQUAL "0")
   message("-- CUDA : No architecture version is set for cuda, using 3.5.")
   message("          Set using -DCUDA_ARCH_VER=<version> when building." )
+  set(CUDA_ARCHS "35;70")
 endif()
-set(CUDA_ARCH_VER "35")
-message("-- CUDA: Architecture versions : ${CUDA_ARCH_VER}")
+
+set(ARCH_LIST ${CUDA_ARCHS})
+separate_arguments(ARCH_LIST)
+
+foreach(ARCH IN LISTS ARCH_LIST)
+  list(APPEND CUDA_ARCH_FLAGS)
+  message("-- CUDA: Architecture added : ${ARCH}")
+  if (NOT ${USING_CLANG})
+    set(NEXT_ARCH "-gencode=arch=compute_${ARCH},code=sm_${ARCH}")
+  else()
+    set(NEXT_ARCH "--cuda-gpu-arch=sm_${ARCH}")
+  endif()
+  list(APPEND CUDA_ARCH_FLAGS ${NEXT_ARCH})
+
+endforeach()
 
 # Set max registers for kernels.
 if (NOT MAX_REG_COUNT)
@@ -163,8 +178,8 @@ if (WIN32)
 
 else(APPLE)
   set(FLAGS_ERRORS  "-Wpedantic -Wextra -Wall")
-  set(FLAGS_PERF    "-O3 -std=c++17 -pthread -Wno-c++1z-extensions")
-  set(FLAGS_DEBUG   "-g")
+  set(FLAGS_PERF    "-O3 -std=c++17 -pthread -Wno-c++1z-extensions -fopenmp=libomp")
+  set(FLAGS_DEBUG   "-g -G")
   set(DEBUG_FLAGS   "${FLAGS_PERF} ${FLAGS_ERRORS} ${FLAGS_DEBUG}")
   set(WARN_FLAGS    "-Wno-gnu-string-literal-operator-template")
   set(WARN_FLAGS    "${WARN_FLAGS} -Wno-unused-parameter")
@@ -174,8 +189,6 @@ else(APPLE)
   set(CMAKE_CXX_FLAGS_DEBUG   "${CMAKE_CXX_FLAGS_DEBUG} ${DEBUG_FLAGS}")
   set(CMAKE_CXX_FLAGS_DEBUG   "${CMAKE_CXX_FLAGS_DEBUG} ${WARN_FLAGS}")
   if (NOT ${USING_CLANG})
-    set(CUDA_ARCH_FLAG "-gencode arch=compute_${CUDA_ARCH_VER},")
-    set(CUDA_ARCH_FLAG "${CUDA_ARCH_FLAG}code=sm_${CUDA_ARCH_VER}")
     set(CUDA_EXP_FLAGS "-expt-relaxed-constexpr -expt-extended-lambda")
     set(CUDA_FLAGS     "-use_fast_math -O3 -std=c++14 ${CUDA_EXP_FLAGS}")
     set(CUDA_FLAGS     "${CUDA_FLAGS} -maxrregcount=${MAX_REG_COUNT}")
@@ -184,8 +197,8 @@ else(APPLE)
   else()
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -ffast-math")
     set(CUDA_FLAGS "--cuda-path=${CUDA_TOOLKIT_ROOT_DIR}") 
-    set(CUDA_FLAGS "${CUDA_FLAGS} --cuda-gpu-arch=sm_${CUDA_ARCH_VER}")
-    set(CUDA_FLAGS "${CUDA_FLAGS} -O3 -std=c++17")
+    set(CUDA_FLAGS "${CUDA_FLAGS} ${CUDA_ARCH_FLAGS}")
+    set(CUDA_FLAGS "${CUDA_FLAGS} -O3 -std=c++17 -ffast-math -ffp-contract=fast")
     if (CMAKE_BUILD_TYPE MATCHES Release)
       set(CUDA_FLAGS "${CUDA_FLAGS}")
     else()
@@ -209,11 +222,15 @@ endif()
 
 set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} ${CUDA_FLAGS}")
 
-#add_subdirectory(googletest)
+#==--- [Module path] --------------------------------------------------------==#
 
-#==--- Subdirectories -------------------------------------------------------==#
+set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 
-add_subdirectory(apps)
+#==--- [Subdirectories] -----------------------------------------------------==#
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+#add_subdirectory(apps)
 add_subdirectory(examples)
 add_subdirectory(benchmarks)
-add_subdirectory(tests)
+#add_subdirectory(tests)
+#=add_subdirectory(docs)
