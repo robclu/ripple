@@ -29,7 +29,7 @@ namespace ripple {
  */
 struct GpuInfo {
   /** The number of streams for the cpu. */
-  static constexpr size_t streams_per_device = 8;
+  static constexpr size_t streams_per_device = 2;
 
   /*==--- [aliases] --------------------------------------------------------==*/
 
@@ -69,7 +69,7 @@ struct GpuInfo {
   GpuInfo(index_t idx) noexcept : index(idx) {
     cudaSetDevice(index);
     for (auto& stream : streams) {
-      cudaStreamCreate(&stream);
+      cudaStreamCreateWithFlags(&stream, cudaStreamNonBlocking);
     }
   }
 
@@ -77,7 +77,6 @@ struct GpuInfo {
    * Destructor which cleans up the streams.
    */
   ~GpuInfo() noexcept {
-    printf("Destructing ... \n");
     // Currently causing a segfault, so we can't clean up the streams ...
     // cudaSetDevice(index);
     // for (auto& stream : streams) {
