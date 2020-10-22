@@ -31,7 +31,7 @@ namespace ripple {
 class Freelist {
  public:
   /** Default constructor. */
-  ripple_host_device Freelist() noexcept = default;
+  ripple_host_device Freelist() noexcept : head_{nullptr} {}
 
   /**
    * Destructor, resets the head pointer if it's not a nullptr.
@@ -74,7 +74,7 @@ class Freelist {
   /** Copy constructor -- deleted since the freelist can't be copied. */
   ripple_host_device Freelist(const Freelist&)       = delete;
   /** Copy assignment -- deleted since the freelist can't be copied. */
-  ripple_host_devoce auto operator=(const Freelist&) = delete;
+  ripple_host_device auto operator=(const Freelist&) = delete;
   // clang-format on
 
   /*==--- [interface] ------------------------------------------------------==*/

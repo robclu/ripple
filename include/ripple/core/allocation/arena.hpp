@@ -16,138 +16,305 @@
 #ifndef RIPPLE_ALLOCATION_ARENA_HPP
 #define RIPPLE_ALLOCATION_ARENA_HPP
 
+#include <ripple/core/utility/cuda.hpp>
 #include <ripple/core/utility/memory.hpp>
 #include <type_traits>
 
 namespace ripple {
 
-/// Defines a stack-based memory arena of a specific size.
-/// \tparam Size The size of the stack for the arena.
+/**
+ * Defines a stack-based memory arena of a specific size.
+ * \tparam Size The size of the stack for the arena.
+ */
 template <size_t Size>
 class StackArena {
-  /// Defines the size of the stack for the arena.
+  /** Defines the size of the stack for the arena. */
   static constexpr size_t stack_size = Size;
 
  public:
-  //==--- [traits] ---------------------------------------------------------==//
+  // clang-format off
+  /** Returns that the allocator has a constexpr size. */
+  static constexpr bool contexpr_size   = true;
+  /** Returns that the arena is valid on the device. */
+  static constexpr bool valid_on_device = true;
+  /** Returns that the arena is valid on the host. */
+  static constexpr bool valid_on_host   = true;
+  // clang-format on
 
-  /// Returns that the allocator has a constexpr size.
-  static constexpr bool contexpr_size = true;
+  using Ptr      = void*;       //!< Pointer type.
+  using ConstPtr = const void*; //!< Const pointer type.
 
-  using ptr_t       = void*;       //!< Pointer type.
-  using const_ptr_t = const void*; //!< Const pointer type.
+  /**
+   * Constructor which takes the size of the arena. This is provided so that
+   * arenas have the same interface.
+   * \param size The size of the arena.
+   *
+   */
+  ripple_host_device StackArena(size_t size = 0) noexcept {}
 
-  //==--- [constructor] ----------------------------------------------------==//
-
-  /// Constructor which takes the size of the arena. This is provided to arena's
-  /// have the same interface.
-  /// \param size The size of the arena.
-  StackArena(size_t size = 0) {}
-
-  //==--- [interface] ------------------------------------------------------==//
-
-  /// Returns a pointer to the beginning of the arena.
-  [[nodiscard]] auto begin() const -> const_ptr_t {
-    return static_cast<const_ptr_t>(&_buffer[0]);
+  /**
+   * Gets a pointer to the beginning of the arena.
+   * \return A pointer to the beginning of the arena.
+   */
+  ripple_nodiscard ripple_host_device auto begin() const noexcept -> ConstPtr {
+    return static_cast<ConstPtr>(&buffer_[0]);
   }
 
-  /// Returns a pointer to the end of the arena.
-  [[nodiscard]] auto end() const -> const_ptr_t {
-    return static_cast<const_ptr_t>(&_buffer[stack_size]);
+  /**
+   * Gets a pointer to the end of the arena.
+   * \return A pointer to the end of the arena.
+   */
+  ripple_nodiscard ripple_host_device auto end() const noexcept -> ConstPtr {
+    return static_cast<ConstPtr>(&buffer_[stack_size]);
   }
 
-  /// Returns the size of the arena.
-  [[nodiscard]] constexpr auto size() const -> size_t {
+  /**
+   * Gets the size of the arena.
+   * \return The size of the arena.
+   */
+  ripple_nodiscard ripple_host_device constexpr auto
+  size() const noexcept -> size_t {
     return stack_size;
   }
 
  private:
-  char _buffer[stack_size]; //!< The buffer for the stack.
+  char buffer_[stack_size]; //!< The buffer for the stack.
 };
 
-/// Defines a heap-based arena.
+/**
+ * Defines a heap-based arena for the host.
+ */
 struct HeapArena {
  public:
-  //==--- [traits] ---------------------------------------------------------==//
-
-  /// Returns that the allocator does not have a constexpr size.
-  static constexpr bool constexpr_size = false;
-
-  using ptr_t       = void*; //!< Pointer type.
-  using const_ptr_t = void*; //!< Const pointer type.
-
-  //==--- [construction] ---------------------------------------------------==//
-
-  /// Initializes the arena with a specific size.
-  /// \param size The size of the arena.
-  explicit HeapArena(size_t size) {
-    if (size) {
-      _start = malloc(size);
-      _end   = offset_ptr(_start, size);
-    }
-  }
-
-  /// Destructor to release the memory.
-  ~HeapArena() noexcept {
-    if (_start != nullptr) {
-      std::free(_start);
-      _start = nullptr;
-      _end   = nullptr;
-    }
-  }
-
-  //==--- [deleted] --------------------------------------------------------==//
-
   // clang-format off
-  /// Copy constructor -- deleted.
-  HeapArena(const HeapArena&)     = delete;
-  /// Move constructor -- deleted.
-  HeapArena(HeapArena&&) noexcept = delete;
-
-  /// Copy assignment operator -- deleted.
-  auto operator=(const HeapArena&)     = delete;
-  /// Move assignment operator -- deleted.
-  auto operator=(HeapArena&&) noexcept = delete;
+  /** Returns that the allocator does not have a constexpr size. */
+  static constexpr bool constexpr_size  = false;
+  /** Returns that the arena is not valid on the device. */
+  static constexpr bool valid_on_device = false;
+  /** Returns that the arena is valid on the host. */
+  static constexpr bool valid_on_host   = true;
   // clang-format on
 
-  //==--- [interface] ------------------------------------------------------==//
+  using Ptr      = void*; //!< Pointer type.
+  using ConstPtr = void*; //!< Const pointer type.
 
-  /// Returns a pointer to the beginning of the arena.
-  [[nodiscard]] auto begin() const -> const_ptr_t {
-    return _start;
+  /**
+   * Initializes the arena with a specific size.
+   * \param size The size of the arena.
+   */
+  explicit HeapArena(size_t size = 0) {
+    if (size) {
+      start_ = malloc(size);
+      end_   = offset_ptr(start_, size);
+    }
   }
 
-  /// Returns a pointer to the end of the arena.
-  [[nodiscard]] auto end() const -> const_ptr_t {
-    return _end;
+  /**
+   * Destructor to release the memory.
+   */
+  ~HeapArena() noexcept {
+    if (start_ != nullptr) {
+      std::free(start_);
+      start_ = nullptr;
+      end_   = nullptr;
+    }
   }
 
-  /// Returns the size of the arena.
-  [[nodiscard]] auto size() const -> size_t {
-    return uintptr_t(_end) - uintptr_t(_start);
+  // clang-format off
+  /** Copy constructor -- deleted. */
+  HeapArena(const HeapArena&)     = delete;
+  /** Move constructor -- deleted. */
+  HeapArena(HeapArena&&) noexcept = default;
+
+  /** Copy assignment operator -- deleted. */
+  auto operator=(const HeapArena&)     = delete;
+  /** Move assignment operator -- deleted. */
+  auto operator=(HeapArena&&) noexcept -> HeapArena& = default;
+  // clang-format on
+
+  /**
+   * Gets a pointer to the beginning of the arena.
+   * \return A pointer to the beginning of the arena.
+   */
+  ripple_nodiscard auto begin() const noexcept -> ConstPtr {
+    return start_;
+  }
+
+  /**
+   * Gets a pointer to the end of the arena.
+   * \return A pointer to the end of the arena.
+   */
+  ripple_nodiscard auto end() const noexcept -> ConstPtr {
+    return end_;
+  }
+
+  /**
+   * Resizes the area.
+   *
+   * \note This may be expensive since it needs to copy the already allocated
+   *       memory in the new space.
+   *
+   * \param size The new size of the area.
+   */
+  auto resize(size_t new_size) -> void {
+    if (new_size < size()) {
+      return;
+    }
+    void* new_ptr = malloc(new_size);
+    if (start_ != nullptr) {
+      std::memcpy(new_ptr, start_, size());
+      std::free(start_);
+    }
+    start_ = new_ptr;
+    end_   = offset_ptr(start_, new_size);
+  }
+
+  /**
+   * Gets the size of the arena.
+   * \return A size of the arena, in bytes.
+   */
+  ripple_nodiscard auto size() const noexcept -> size_t {
+    return uintptr_t(end_) - uintptr_t(start_);
   }
 
  private:
-  void* _start = nullptr; //!< Pointer to the heap data.
-  void* _end   = nullptr; //!< Pointer to the heap data.
+  void* start_ = nullptr; //!< Pointer to the heap data.
+  void* end_   = nullptr; //!< Pointer to the heap data.
 };
 
-//==--- [aliases] ----------------------------------------------------------==//
+/**
+ * Defines a heap-based arena for the gpu.
+ */
+struct GpuHeapArena {
+ public:
+  // clang-format off
+  /** Returns that the allocator does not have a constexpr size. */
+  static constexpr bool constexpr_size  = false;
+  /** Returns that the arena is not valid on the device. */
+  static constexpr bool valid_on_device = true;
+  /** Returns that the arena is valid on the host. */
+  static constexpr bool valid_on_host   = false;
+  // clang-format on
 
-/// Defines the default size for a stack arena.
+  using Ptr      = void*; //!< Pointer type.
+  using ConstPtr = void*; //!< Const pointer type.
+
+  /**
+   * Initializes the arena with a specific size.
+   * \param size The size of the arena.
+   */
+  explicit GpuHeapArena(size_t id, size_t size = 0) : id_{id} {
+    if (size) {
+      cudaSetDevice(id_);
+      cuda::allocate_device(&start_, size);
+      end_ = offset_ptr(start_, size);
+    }
+  }
+
+  /**
+   * Destructor to release the memory.
+   */
+  ~GpuHeapArena() noexcept {
+    cleanup();
+  }
+
+  // clang-format off
+  /** Copy constructor -- deleted. */
+  GpuHeapArena(const GpuHeapArena&)     = delete;
+  /** Move constructor -- defaulted. */
+  GpuHeapArena(GpuHeapArena&&) noexcept = default;
+
+  /** Copy assignment operator -- deleted. */
+  auto operator=(const GpuHeapArena&)     = delete;
+  /** Move assignment operator -- defauled. */
+  auto operator=(GpuHeapArena&&) noexcept -> GpuHeapArena& = default;
+  // clang-format on
+
+  /**
+   * Gets a pointer to the beginning of the arena.
+   * \return A pointer to the beginning of the arena.
+   */
+  ripple_nodiscard auto begin() const noexcept -> ConstPtr {
+    return start_;
+  }
+
+  /**
+   * Gets a pointer to the end of the arena.
+   * \return A pointer to the end of the arena.
+   */
+  ripple_nodiscard auto end() const noexcept -> ConstPtr {
+    return end_;
+  }
+
+  /**
+   * Resizes the area.
+   *
+   * \note This may be expensive since it needs to copy the already allocated
+   *       memory in the new space.
+   *
+   * \param size The new size of the area.
+   */
+  auto resize(size_t new_size) -> void {
+    if (new_size < size()) {
+      return;
+    }
+    void* new_ptr = nullptr;
+    cudaSetDevice(id_);
+    cuda::allocate_device(&new_ptr, new_size);
+    if (start_ != nullptr) {
+      cuda::memcpy_device_to_device_async(new_ptr, start_, size());
+      cuda::free_device(start_);
+    }
+    start_ = new_ptr;
+    end_   = offset_ptr(start_, new_size);
+  }
+
+  /**
+   * Gets the size of the arena.
+   * \return A size of the arena, in bytes.
+   */
+  ripple_nodiscard auto size() const noexcept -> size_t {
+    return uintptr_t(end_) - uintptr_t(start_);
+  }
+
+ private:
+  void*  start_ = nullptr; //!< Pointer to the heap data.
+  void*  end_   = nullptr; //!< Pointer to the heap data.
+  size_t id_    = 0;       //!< Id of the device for the arena.
+
+  /**
+   * Cleans up the allocator resources.
+   */
+  auto cleanup() noexcept -> void {
+    if (start_ != nullptr) {
+      cudaSetDevice(id_);
+      cuda::free_device(start_);
+      start_ = nullptr;
+      end_   = nullptr;
+    }
+  }
+};
+
+/*==--- [aliases] ----------------------------------------------------------==*/
+
+/** Defines the default size for a stack arena. */
 static constexpr size_t default_stack_arena_size = 1024;
 
-/// Defines the type for a default stack arena.
+/** Defines the type for a default stack arena. */
 using DefaultStackArena = StackArena<default_stack_arena_size>;
 
-/// Defines a valid type if the Arena has a contexpr size.
-/// \tparam Arena The arena to base the enable on.
+/**
+ * Defines a valid type if the Arena has a contexpr size.
+ * \tparam Arena The arena to base the enable on.
+ */
 template <typename Arena>
 using arena_constexpr_size_enable_t =
   std::enable_if_t<std::decay_t<Arena>::contexpr_size, int>;
 
-/// Defines a valid type if the Arena does not have a contexpr size.
-/// \tparam Arena The arena to base the enable on.
+/**
+ * Defines a valid type if the Arena does not have a contexpr size.
+ * \tparam Arena The arena to base the enable on.
+ */
 template <typename Arena>
 using arena_non_constexpr_size_enable_t =
   std::enable_if_t<!std::decay_t<Arena>::contexpr_size, int>;
