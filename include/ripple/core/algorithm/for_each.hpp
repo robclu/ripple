@@ -106,9 +106,9 @@ ripple_host_device constexpr auto for_each(
 template <typename Functor, typename... Args>
 ripple_host_device constexpr auto
 for_each(Functor&& functor, Args&&... args) -> void {
-  using TupleType = Tuple<static_cast<Args&&>...>;
+  using TupleType = Tuple<Args&&...>;
   for_each(
-    Tuple{static_cast<Args&&>(args)...}, static_cast<Functor&&>(functor));
+    TupleType{static_cast<Args&&>(args)...}, static_cast<Functor&&>(functor));
 }
 
 } // namespace ripple
