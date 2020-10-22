@@ -20,6 +20,7 @@
 #include "block_memory_properties.hpp"
 #include "block_traits.hpp"
 #include "device_block.hpp"
+#include <ripple/core/allocation/multiarch_allocator.hpp>
 #include <ripple/core/iterator/block_iterator.hpp>
 #include <ripple/core/utility/cuda.hpp>
 #include <cstring>
@@ -71,8 +72,12 @@ class HostBlock {
   friend class Block;
 
  public:
+  // clang-format off
   /** Defines the type of the padding. */
-  using Padding = typename Space::Padding;
+  using Padding      = typename Space::Padding;
+  /** Defines the type of the pointer to the allocator. */
+  using AllocatorPtr = MultiarchAllocator*;
+  // clang-format on
 
   /**
    * Swaps the blocks lhs and rhs blocks.
@@ -90,7 +95,12 @@ class HostBlock {
    * Default constructor.This constructor is available so that an unsized block
    * can be instanciated and then resized at runtime.
    */
-  HostBlock() = default;
+  HostBlock() noexcept = default;
+
+  /**
+   * Constructor to set the allocator for the block.
+   */
+  HostBlock(MultiarchAllocator* allocator) noexcept : allocator_{allocator_} {}
 
   /**
    * Destructor for the block, which cleans up the block resources.
@@ -174,7 +184,7 @@ class HostBlock {
    */
   HostBlock(
     const DeviceBlock& other, BlockOpKind op_kind = BlockOpKind::synchronous)
-  : space_{other.space_} {
+  : allocator_{other.allocator_}, space_{other.space_} {
     set_op_kind(op_kind);
     reallocate();
     copy_from_device(other);
@@ -263,7 +273,8 @@ class HostBlock {
    */
   auto operator=(const DeviceBlock& other) -> HostBlock& {
     set_op_kind(BlockOpKind::synchronous);
-    space_ = other.space_;
+    allocator_ = other.allocator_;
+    space_     = other.space_;
     reallocate();
     copy_from_device(other);
     return *this;
@@ -457,7 +468,7 @@ class HostBlock {
    * Sets the operation kind of the block to either synchronous or asynchronous.
    * \param op_kind The type of operation for the block.
    */
-  auto set_op_kind(BlockOpKind op_kind) -> void {
+  auto set_op_kind(BlockOpKind op_kind) noexcept -> void {
     if (op_kind == BlockOpKind::asynchronous) {
       mem_props_.pinned     = true;
       mem_props_.async_copy = true;
@@ -522,16 +533,20 @@ class HostBlock {
   }
 
  private:
-  Ptr              data_ = nullptr; //!< Storage for the tensor.
-  Space            space_;          //!< Spatial information for the tensor.
-  BlockMemoryProps mem_props_;      //!< Memory properties for the block.
+  Ptr              data_      = nullptr; //!< Storage for the block.
+  AllocatorPtr     allocator_ = nullptr; //!< Pointer to the allocator.
+  Space            space_;     //!< Spatial information for the tensor.
+  BlockMemoryProps mem_props_; //!< Memory properties for the block.
 
   /**
    * Allocates data for the block.
    */
   auto allocate() -> void {
     if (data_ == nullptr && !mem_props_.allocated) {
-      if (mem_props_.pinned) {
+      if (allocator_ != nullptr) {
+        data_ = allocator_->cpu_allocator().alloc(
+          mem_requirement(), Traits::alignment);
+      } else if (mem_props_.pinned) {
         cuda::allocate_host_pinned(
           reinterpret_cast<void**>(&data_), mem_requirement());
       } else {
@@ -565,7 +580,9 @@ class HostBlock {
    */
   auto cleanup() -> void {
     if (data_ != nullptr && mem_props_.must_free && mem_props_.allocated) {
-      if (mem_props_.pinned) {
+      if (allocator_ != nullptr) {
+        allocator_->cpu_allocator().free(data_);
+      } else if (mem_props_.pinned) {
         cuda::free_host_pinned(data_);
       } else {
         free(data_);

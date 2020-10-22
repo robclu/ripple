@@ -1,9 +1,8 @@
-//==--- ripple/core/container/device_block.hpp ---------------------- -*- C++
-//-*- ---==//
+//==--- ripple/core/container/device_block.hpp ------------- -*- C++ -*- ---==//
 //
 //                                Ripple
 //
-//                      Copyright (c) 2019 Rob Clucas.
+//                      Copyright (c) 2019, 2020 Rob Clucas.
 //
 //  This file is distributed under the MIT License. See LICENSE for details.
 //
@@ -20,6 +19,7 @@
 #include "block_traits.hpp"
 #include "host_block.hpp"
 #include "block_memory_properties.hpp"
+#include <ripple/core/allocation/multiarch_allocator.hpp>
 #include <ripple/core/iterator/block_iterator.hpp>
 #include <ripple/core/utility/cuda.hpp>
 
@@ -80,8 +80,12 @@ class DeviceBlock {
   friend class Block;
 
  public:
+  // clang-format off
   /** Defines the type used for padding. */
-  using Padding = typename Space::Padding;
+  using Padding      = typename Space::Padding;
+  /** Defines the type of the pointer to the allocator. */
+  using AllocatorPtr = MultiarchAllocator*;
+  // clang-format on
 
   /**
    * Swaps the blocks lhs and rhs blocks.
@@ -107,7 +111,22 @@ class DeviceBlock {
    * Constructor which sets the stream for the block.
    * \param stream The stream for the device.
    */
-  DeviceBlock(Stream stream) noexcept : stream_(stream) {}
+  DeviceBlock(Stream stream, AllocatorPtr allocator = nullptr) noexcept
+  : allocator_{allocator}, stream_{stream} {}
+
+  /**
+   * Default constructor.This constructor is available so that an unsized block
+   * can be instanciated and then resized at runtime.
+   */
+  DeviceBlock(AllocatorPtr allocator) noexcept : allocator_{allocator} {
+    cudaStreamCreate(&stream_);
+  }
+
+  /**
+   * Constructor which sets the stream for the block.
+   * \param stream The stream for the device.
+   */
+  DeviceBlock(Stream stream) noexcept : stream_{stream} {}
 
   /**
    * Destructor for the block, which cleans up the block resources.
@@ -194,7 +213,8 @@ class DeviceBlock {
    *
    * \param other The host block to create this block from.
    */
-  DeviceBlock(const HostBlock& other) : space_{other.space_} {
+  DeviceBlock(const HostBlock& other)
+  : allocator_{other.allocator_}, space_{other.space_} {
     cudaStreamCreate(&stream_);
     allocate();
     copy_from_host(other);
@@ -227,7 +247,8 @@ class DeviceBlock {
    * \return A reference to the created block.
    */
   auto operator=(const HostBlock& other) -> DeviceBlock& {
-    space_ = other._space;
+    space_     = other._space;
+    allocator_ = other.allocator_;
     cudaStreamCreate(&stream_);
     reallocate();
     copy_from_host(other);
@@ -499,11 +520,12 @@ class DeviceBlock {
   }
 
  private:
-  Ptr              data_ = nullptr; //!< Storage for the tensor.
-  Space            space_;          //!< Spatial information for the tensor.
-  Stream           stream_;         //!< The stream to use for the block.
-  uint32_t         device_id_ = 0;  //!< Id of the device for the block.
-  BlockMemoryProps mem_props_;      //!< Memory properties for the block data.
+  Ptr              data_      = nullptr; //!< Storage for the tensor.
+  AllocatorPtr     allocator_ = nullptr; //!< Allocator for device data.
+  Space            space_;         //!< Spatial information for the tensor.
+  Stream           stream_;        //!< The stream to use for the block.
+  uint32_t         device_id_ = 0; //!< Id of the device for the block.
+  BlockMemoryProps mem_props_;     //!< Memory properties for the block data.
 
   /**
    * Allocates data for the block.
@@ -512,8 +534,13 @@ class DeviceBlock {
     // Can only allocate if the memory is not allocated, and if we own it.
     if (data_ == nullptr && !mem_props_.allocated) {
       cudaSetDevice(device_id_);
-      cuda::allocate_device(
-        reinterpret_cast<void**>(&data_), mem_requirement());
+      if (allocator_ != nullptr) {
+        data_ = allocator_->gpu_allocator(device_id_)
+                  .alloc(mem_requirement(), Traits::alignment);
+      } else {
+        cuda::allocate_device(
+          reinterpret_cast<void**>(&data_), mem_requirement());
+      }
       mem_props_.allocated = true;
       mem_props_.must_free = true;
     }
@@ -525,7 +552,11 @@ class DeviceBlock {
   auto cleanup() -> void {
     if (data_ != nullptr && mem_props_.must_free) {
       cudaSetDevice(device_id_);
-      cuda::free_device(data_);
+      if (allocator_ != nullptr) {
+        allocator_->gpu_allocator(device_id_).free(data_);
+      } else {
+        cuda::free_device(data_);
+      }
       data_                = nullptr;
       mem_props_.must_free = false;
       mem_props_.allocated = false;
