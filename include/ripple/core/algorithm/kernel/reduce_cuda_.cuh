@@ -18,6 +18,7 @@
 #define RIPPLE_ALGORITHM_KERNEL_INVOKE_CUDA__CUH
 
 #include "reduce_cpp_.hpp"
+#include <ripple/core/allocation/multiarch_allocator.hpp>
 #include <ripple/core/execution/synchronize.hpp>
 #include <ripple/core/execution/thread_index.hpp>
 #include <ripple/core/functional/invoke.hpp>
@@ -59,15 +60,17 @@ ripple_device_only auto reduce_block_for_dim(
     dim_size >>= 1;
   }
 
-  // Need to use for loop instead of while for syncthreads correctnes:
-  // This previously used a while loop to avoid the iteration calculation above,
-  // but __syncthreads in the while loop caused erros. The register usage an
-  // performance of this is the same, however.
-  //
-  // It may be possible to use the while loop with coalesced_group.sync(). The
-  // performance of these two options needs to be tested though. It's likely
-  // that a reduction is almost never the bottleneck though, so perhaps not
-  // worth the effort.
+  /*
+   * Need to use for loop instead of while for syncthreads correctnes:
+   * This previously used a while loop to avoid the iteration calculation above,
+   * but __syncthreads in the while loop caused erros. The register usage an
+   * performance of this is the same, however.
+   *
+   * It may be possible to use the while loop with coalesced_group.sync(). The
+   * performance of these two options needs to be tested though. It's likely
+   * that a reduction is almost never the bottleneck though, so perhaps not
+   * worth the effort.
+   */
   auto left = it, right = it;
   for (auto i : range(iters)) {
     const auto rem = elements & 1;
@@ -125,7 +128,7 @@ ripple_global auto reduce_block_shared(
     const auto     must_shift = idx < it.size(dim) && in_range;
     if (must_shift) {
       it.shift(dim, idx);
-      shared_it.shift(dim, thread_idx(dim) /*+ shared_it.padding()*/);
+      shared_it.shift(dim, thread_idx(dim) + shared_it.padding());
     } else {
       in_range = false;
     }
@@ -179,7 +182,14 @@ auto reduce(const DeviceBlock<T, Dims>& block, Pred&& pred, Args&&... args) {
   using exec_params_t    = default_shared_exec_params_t<Dims, T>;
   auto [threads, blocks] = get_exec_size(block, exec_params_t{});
 
-  DeviceBlock<T, Dims> results(block.stream());
+  /*
+   * NOTE: The allocator here is important. Without it, when performing the
+   * reduction across multiple devices, if the allocation is done with
+   * cudaMalloc and malloc, rather than the allocator, even if small,
+   * significantly reduces the performance of the reduction because of both
+   * the synchronization required and allocation time.
+   */
+  DeviceBlock<T, Dims> results(block.stream(), &multiarch_allocator());
   cudaSetDevice(block.device_id());
   results.set_device_id(block.device_id());
 
@@ -195,10 +205,10 @@ auto reduce(const DeviceBlock<T, Dims>& block, Pred&& pred, Args&&... args) {
     block.begin(), results.begin(), exec_params_t(), pred, args...);
 
   // Reduce the results -- this will automatically sync with the previous
-  // operation.
+  // operation, since we use synchronous operations in the host.
   const auto res = results.as_host(BlockOpKind::synchronous);
 
-  return reduce(res, std::forward<Pred>(pred), std::forward<Args>(args)...);
+  return reduce(res, static_cast<Pred&&>(pred), static_cast<Args&&>(args)...);
 #endif // __CUDACC__
 }
 
