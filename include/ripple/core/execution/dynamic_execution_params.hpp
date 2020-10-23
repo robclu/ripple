@@ -203,7 +203,7 @@ struct DynamicExecParams : public ExecParams<DynamicExecParams<Shared>> {
 /*==--- [functions] --------------------------------------------------------==*/
 
 /**
- * Creates a default dynamic execution execution paramters for the device.
+ * Creates ddynamic execution execution paramters with the default settings.
  * \param  padding The amount of padding for the space.
  * \tparam Dims    The number of dimensions for the parameters.
  * \tparam Shared  The type of the shared memory for the parameters.
