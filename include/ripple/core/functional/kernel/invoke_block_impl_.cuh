@@ -1,21 +1,21 @@
-//==--- ripple/core/functional/kernel/invoke_cuda_.cuh ---------- -*- C++ -*- ---==//
-//            
+//==--- ripple/core/functional/kernel/invoke_block_impl_.cuh -*- C++ -*- ---==//
+//
 //                                Ripple
-// 
-//                      Copyright (c) 2019 Ripple.
+//
+//                      Copyright (c) 2019, 2020 Rob Clucas.
 //
 //  This file is distributed under the MIT License. See LICENSE for details.
 //
 //==------------------------------------------------------------------------==//
 //
-/// \file  invoke_cuda_.cuh
+/// \file  invoke_block_impl_.cuh
 /// \brief This file implements functionality to invoke a callable object on
-///        a cuda device.
+///        blocks on the gpu.
 //
 //==------------------------------------------------------------------------==//
 
-#ifndef RIPPLE_FUNCTIONAL_KERNEL_INVOKE_CUDA__HPP
-#define RIPPLE_FUNCTIONAL_KERNEL_INVOKE_CUDA__HPP
+#ifndef RIPPLE_FUNCTIONAL_KERNEL_INVOKE_BLOCK_IMPL__HPP
+#define RIPPLE_FUNCTIONAL_KERNEL_INVOKE_BLOCK_IMPL__HPP
 
 #include <ripple/core/boundary/copy_loader.hpp>
 #include <ripple/core/boundary/load_boundary.hpp>
@@ -29,7 +29,7 @@
 #include <ripple/core/iterator/iterator_traits.hpp>
 #include <ripple/core/perf/perf_traits.hpp>
 
-namespace ripple::kernel::cuda {
+namespace ripple::kernel::gpu {
 namespace detail {
 
 //==--- [non shared memory] ------------------------------------------------==//
@@ -45,18 +45,17 @@ namespace detail {
 /// \tparam Callable    The callable object to invoke.
 /// \tparam Args        The type of the arguments for the invocation.
 template <
-  typename    Iterator,
-  typename    Callable,
-  typename... Args    ,
-  non_iterator_enable_t<Callable> = 0
->
-ripple_global auto invoke(Iterator it, Callable callable, Args... args)
--> void {
-  constexpr auto dims = it.dimensions();
-  bool in_range       = true;
+  typename Iterator,
+  typename Callable,
+  typename... Args,
+  non_iterator_enable_t<Callable> = 0>
+ripple_global auto
+invoke(Iterator it, Callable callable, Args... args) -> void {
+  constexpr auto dims     = it.dimensions();
+  bool           in_range = true;
 
   // Shift higher dimensions ...
-  unrolled_for<dims>([&] (auto d) {
+  unrolled_for<dims>([&](auto d) {
     constexpr auto dim = d;
     const auto     idx = global_idx(dim);
     if (idx < it.size(dim) && in_range) {
@@ -73,7 +72,7 @@ ripple_global auto invoke(Iterator it, Callable callable, Args... args)
   callable(it, args...);
 }
 
-/// Invokes the \p callale on the iterator \p it_1 and passing the iterator 
+/// Invokes the \p callale on the iterator \p it_1 and passing the iterator
 /// \p it_2 as the second argument, shifting both of the iterators by the thread
 /// indices in each of the dimensions which are valid for the iterator.
 ///
@@ -86,24 +85,20 @@ ripple_global auto invoke(Iterator it, Callable callable, Args... args)
 /// \tparam Callable    The callable object to invoke.
 /// \tparam Args        The type of the arguments for the invocation.
 template <
-  typename    Iterator1, 
-  typename    Iterator2,
-  typename    Callable ,
-  typename... Args     ,
-  iterator_enable_t<Iterator2> = 0
->
-ripple_global auto invoke(
-  Iterator1 it_1    ,
-  Iterator2 it_2    ,
-  Callable  callable, 
-  Args...   args
-) -> void {
-  constexpr auto dims_1 = it_1.dimensions();
-  constexpr auto dims_2 = it_2.dimensions();
-  bool in_range         = true;
+  typename Iterator1,
+  typename Iterator2,
+  typename Callable,
+  typename... Args,
+  iterator_enable_t<Iterator2> = 0>
+ripple_global auto
+invoke(Iterator1 it_1, Iterator2 it_2, Callable callable, Args... args)
+  -> void {
+  constexpr auto dims_1   = it_1.dimensions();
+  constexpr auto dims_2   = it_2.dimensions();
+  bool           in_range = true;
 
   // Shift higher dimensions ...
-  unrolled_for<dims_1>([&] (auto d) {
+  unrolled_for<dims_1>([&](auto d) {
     constexpr auto dim = d;
     const auto     idx = global_idx(dim);
     if (idx < it_1.size(dim) && in_range) {
@@ -139,30 +134,26 @@ ripple_global auto invoke(
 /// \tparam Callable    The callable object to invoke.
 /// \tparam Args        The type of the arguments for the invocation.
 template <
-  std::size_t Dims          ,
-  typename    Iterator      ,
-  typename    SharedIterator,
-  typename    ExecImpl      ,
-  typename    Callable      ,
-  typename... Args
->
+  std::size_t Dims,
+  typename Iterator,
+  typename SharedIterator,
+  typename ExecImpl,
+  typename Callable,
+  typename... Args>
 ripple_device_only auto invoke_shared(
-  Iterator&&       it         ,
-  SharedIterator&& shared_it  ,
+  Iterator&&       it,
+  SharedIterator&& shared_it,
   ExecImpl&&       exec_params,
-  Callable&&       callable   ,
-  Args&&...        args  
-) -> void {
+  Callable&&       callable,
+  Args&&... args) -> void {
 #if defined(__CUDACC__)
   bool in_range = true;
   // Shift higher dimensions ...
-  unrolled_for<Dims>([&] (auto d) {
-    constexpr auto dim     = d;
-    const auto idx         = global_idx(dim);
-    const auto must_shift = 
-      idx             < it.size(dim)        &&
-      thread_idx(dim) < shared_it.size(dim) &&
-      in_range;
+  unrolled_for<Dims>([&](auto d) {
+    constexpr auto dim        = d;
+    const auto     idx        = global_idx(dim);
+    const auto     must_shift = idx < it.size(dim) &&
+                            thread_idx(dim) < shared_it.size(dim) && in_range;
     if (must_shift) {
       it.shift(dim, idx);
       shared_it.shift(dim, thread_idx(dim) + shared_it.padding());
@@ -178,8 +169,8 @@ ripple_device_only auto invoke_shared(
   using it_1_t = std::decay_t<decltype(*it)>;
   using it_2_t = std::decay_t<decltype(*shared_it)>;
 
-  constexpr auto same_type =
-    std::is_same_v<it_1_t, it_2_t> || std::is_convertible_v<it_1_t, it_2_t>;
+  constexpr auto same_type = std::is_same_v<it_1_t, it_2_t> ||
+                             std::is_convertible_v<it_1_t, it_2_t>;
 
   // Load in the padding data:
   if (same_type && shared_it.padding() > 0) {
@@ -204,22 +195,17 @@ ripple_device_only auto invoke_shared(
 /// \tparam Callable    The callable object to invoke.
 /// \tparam Args        The type of the arguments for the invocation.
 template <
-  typename    Iterator,
-  typename    ExecImpl,
-  typename    Callable,
-  typename... Args
->
+  typename Iterator,
+  typename ExecImpl,
+  typename Callable,
+  typename... Args>
 ripple_global auto invoke_static_shared(
-  Iterator  it         ,
-  ExecImpl  exec_params,
-  Callable  callable   ,
-  Args...   args
-) -> void {
-  constexpr auto dims       = it.dimensions();
-  constexpr auto alloc_size = exec_params.template allocation_size<dims>();
+  Iterator it, ExecImpl exec_params, Callable callable, Args... args) -> void {
+  constexpr auto  dims       = it.dimensions();
+  constexpr auto  alloc_size = exec_params.template allocation_size<dims>();
   __shared__ char buffer[alloc_size];
 
-  auto shared_it = 
+  auto shared_it =
     exec_params.template iterator<dims>(static_cast<void*>(buffer));
 
   invoke_shared<dims>(it, shared_it, exec_params, callable, args...);
@@ -238,20 +224,15 @@ ripple_global auto invoke_static_shared(
 /// \tparam Callable    The callable object to invoke.
 /// \tparam Args        The type of the arguments for the invocation.
 template <
-  typename    Iterator,
-  typename    ExecImpl,
-  typename    Callable,
-  typename... Args
->
+  typename Iterator,
+  typename ExecImpl,
+  typename Callable,
+  typename... Args>
 ripple_global auto invoke_dynamic_shared(
-  Iterator  it         ,
-  ExecImpl  exec_params,
-  Callable  callable   ,
-  Args...   args
-) -> void {
-  constexpr auto dims = it.dimensions();
+  Iterator it, ExecImpl exec_params, Callable callable, Args... args) -> void {
+  constexpr auto         dims = it.dimensions();
   extern __shared__ char buffer[];
-  auto shared_it = 
+  auto                   shared_it =
     exec_params.template iterator<dims>(static_cast<void*>(buffer));
 
   invoke_shared<dims>(it, shared_it, exec_params, callable, args...);
@@ -271,21 +252,19 @@ ripple_global auto invoke_dynamic_shared(
 /// \tparam Callable  The callable object to invoke.
 /// \tparam Args      The type of the arguments for the invocation.
 template <
-  typename    T       ,
-  std::size_t Dims    ,
-  typename    Callable,
-  typename... Args    ,
-  non_exec_param_enable_t<Callable> = 0
->
+  typename T,
+  std::size_t Dims,
+  typename Callable,
+  typename... Args,
+  non_exec_param_enable_t<Callable> = 0>
 auto invoke(DeviceBlock<T, Dims>& block, Callable&& callable, Args&&... args)
--> void {
+  -> void {
 #if defined(__CUDACC__)
-  using exec_params_t = default_exec_params_t<Dims>;
+  using exec_params_t    = default_exec_params_t<Dims>;
   auto [threads, blocks] = get_exec_size(block, exec_params_t{});
 
   detail::invoke<<<blocks, threads, 0, block.stream()>>>(
-    block.begin(), callable, args...
-  );
+    block.begin(), callable, args...);
 #endif // __CUDACC__
 }
 
@@ -302,27 +281,24 @@ auto invoke(DeviceBlock<T, Dims>& block, Callable&& callable, Args&&... args)
 /// \tparam Callable  The callable object to invoke.
 /// \tparam Args      The type of the arguments for the invocation.
 template <
-  typename    T1      ,
-  std::size_t Dims1   ,
-  typename    T2      ,
-  std::size_t Dims2   ,
-  typename    Callable,
-  typename... Args    ,
-  non_exec_param_enable_t<Callable> = 0
->
+  typename T1,
+  std::size_t Dims1,
+  typename T2,
+  std::size_t Dims2,
+  typename Callable,
+  typename... Args,
+  non_exec_param_enable_t<Callable> = 0>
 auto invoke(
-  DeviceBlock<T1, Dims1>& block_1 , 
-  DeviceBlock<T2, Dims2>& block_2 , 
+  DeviceBlock<T1, Dims1>& block_1,
+  DeviceBlock<T2, Dims2>& block_2,
   Callable&&              callable,
-  Args&&...               args
-) -> void {
+  Args&&... args) -> void {
 #if defined(__CUDACC__)
-  using exec_params_t = default_exec_params_t<Dims1>;
+  using exec_params_t    = default_exec_params_t<Dims1>;
   auto [threads, blocks] = get_exec_size(block_1, exec_params_t{});
 
   detail::invoke<<<blocks, threads, 0, block_1.stream()>>>(
-    block_1.begin(), block_2.begin(), callable, args...
-  );
+    block_1.begin(), block_2.begin(), callable, args...);
   ripple_check_cuda_result(cudaStreamSynchronize(block_1.stream()));
 #endif // __CUDACC__
 }
@@ -342,24 +318,21 @@ auto invoke(
 /// \tparam Callable    The callable object to invoke.
 /// \tparam Args        The type of the arguments for the invocation.
 template <
-  typename    T       ,
-  std::size_t Dims    ,
-  typename    ExecImpl,
-  typename    Callable,
-  typename... Args    ,
-  non_shared_enable_t<ExecImpl> = 0
->
+  typename T,
+  std::size_t Dims,
+  typename ExecImpl,
+  typename Callable,
+  typename... Args,
+  non_shared_enable_t<ExecImpl> = 0>
 auto invoke(
-  DeviceBlock<T, Dims>& block      ,
+  DeviceBlock<T, Dims>& block,
   ExecImpl&&            exec_params,
-  Callable&&            callable   ,
-  Args&&...             args
-) -> void {
+  Callable&&            callable,
+  Args&&... args) -> void {
 #if defined(__CUDACC__)
   auto [threads, blocks] = get_exec_size(block, exec_params);
   detail::invoke<<<blocks, threads, 0, block.stream()>>>(
-    block.begin(), callable, args...
-  );
+    block.begin(), callable, args...);
   ripple_check_cuda_result(cudaStreamSynchronize(block.stream()));
 #endif // __CUDACC__
 }
@@ -379,24 +352,21 @@ auto invoke(
 /// \tparam Callable    The callable object to invoke.
 /// \tparam Args        The type of the arguments for the invocation.
 template <
-  typename    T       ,
-  std::size_t Dims    ,
-  typename    ExeImpl ,
-  typename    Callable,
-  typename... Args    ,
-  static_shared_enable_t<ExeImpl> = 0
->
+  typename T,
+  std::size_t Dims,
+  typename ExeImpl,
+  typename Callable,
+  typename... Args,
+  static_shared_enable_t<ExeImpl> = 0>
 auto invoke(
-  DeviceBlock<T, Dims>& block      ,
+  DeviceBlock<T, Dims>& block,
   ExeImpl&&             exec_params,
-  Callable&&            callable   ,
-  Args&&...             args
-) -> void {
+  Callable&&            callable,
+  Args&&... args) -> void {
 #if defined(__CUDACC__)
   auto [threads, blocks] = get_exec_size(block, exec_params);
   detail::invoke_static_shared<<<blocks, threads, 0, block.stream()>>>(
-    block.begin(), exec_params, callable, args...
-  );
+    block.begin(), exec_params, callable, args...);
   ripple_check_cuda_result(cudaStreamSynchronize(block.stream()));
 #endif // __CUDACC__
 }
@@ -416,32 +386,27 @@ auto invoke(
 /// \tparam Callable    The callable object to invoke.
 /// \tparam Args        The type of the arguments for the invocation.
 template <
-  typename    T       ,
-  std::size_t Dims    ,
-  typename    ExeImpl ,
-  typename    Callable,
-  typename... Args    ,
-  dynamic_shared_enable_t<ExeImpl> = 0
->
+  typename T,
+  std::size_t Dims,
+  typename ExeImpl,
+  typename Callable,
+  typename... Args,
+  dynamic_shared_enable_t<ExeImpl> = 0>
 auto invoke(
-  DeviceBlock<T, Dims>& block      ,
+  DeviceBlock<T, Dims>& block,
   ExeImpl&&             exec_params,
-  Callable&&            callable   ,
-  Args&&...             args
-) -> void {
+  Callable&&            callable,
+  Args&&... args) -> void {
 #if defined(__CUDACC__)
   auto [threads, blocks] = get_exec_size(block, exec_params);
-  auto alloc_size = exec_params.template allocation_size<Dims>();
-  detail::invoke_dynamic_shared<<<
-    blocks, threads, alloc_size, block.stream()
-  >>>(
-    block.begin(), exec_params, callable, args...
-  );
+  auto alloc_size        = exec_params.template allocation_size<Dims>();
+  detail::
+    invoke_dynamic_shared<<<blocks, threads, alloc_size, block.stream()>>>(
+      block.begin(), exec_params, callable, args...);
   ripple_check_cuda_result(cudaStreamSynchronize(block.stream()));
 #endif
 }
 
-} // namespace ripple::kernel::cuda
+} // namespace ripple::kernel::gpu
 
-#endif // RIPPLE_FUNCTIONAL_KERNEL_INVOKE_CUDA__HPP
-
+#endif // RIPPLE_FUNCTIONAL_KERNEL_INVOKE_BLOCK_IMPL__HPP

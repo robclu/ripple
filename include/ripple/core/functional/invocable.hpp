@@ -42,14 +42,8 @@ namespace ripple {
 /// \tparam Functor The type of the functor to invoke.
 template <typename Functor>
 class Invocable {
-  //==--- [aliases] --------------------------------------------------------==//
-
-  // clang-format off
   /// Defines the type of the functor.
   using functor_t = Functor;
-  /// Defines the type of the invocable.
-  using self_t    = Invocable<Functor>;
-  // clang-format on
 
  public:
   //==--- [construction] ---------------------------------------------------==//
@@ -84,14 +78,14 @@ class Invocable {
   /// Copy assignment to copy the invocable from the \p other invocable.
   /// \param other The other invocable to copy from.
   ripple_host_device auto
-  operator=(const Invocable& other) noexcept -> self_t& {
+  operator=(const Invocable& other) noexcept -> Invocable& {
     _functor = other._functor;
     return *this;
   }
 
   /// Move assignment to move the invocable from the \p other invocable.
   /// \param other The other invocable to move into this one.
-  ripple_host_device auto operator=(Invocable&& other) noexcept -> self_t& {
+  ripple_host_device auto operator=(Invocable&& other) noexcept -> Invocable& {
     _functor = std::move(other._functor);
     return *this;
   }

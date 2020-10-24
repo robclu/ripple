@@ -1,7 +1,7 @@
 //==--- ripple/core/functional/kernel/invoke_utils_.cuh ---- -*- C++ -*- ---==//
-//            
+//
 //                                Ripple
-// 
+//
 //                      Copyright (c) 2020 Ripple.
 //
 //  This file is distributed under the MIT License. See LICENSE for details.
@@ -14,22 +14,21 @@
 //
 //==------------------------------------------------------------------------==//
 
-#ifndef RIPPLE_FUNCTIONAL_KERNEL_INVOKE_UTILS__HPP
-#define RIPPLE_FUNCTIONAL_KERNEL_INVOKE_UTILS__HPP
+#ifndef RIPPLE_FUNCTIONAL_KERNEL_INVOKE_UTILS__CUH
+#define RIPPLE_FUNCTIONAL_KERNEL_INVOKE_UTILS__CUH
 
 #include <ripple/core/boundary/load_boundary.hpp>
+#include <ripple/core/container/block.hpp>
+#include <ripple/core/container/block_traits.hpp>
 #include <ripple/core/execution/synchronize.hpp>
 #include <ripple/core/execution/detail/thread_index_impl_.hpp>
 #include <ripple/core/execution/thread_index.hpp>
 #include <ripple/core/iterator/iterator_traits.hpp>
+#include <ripple/core/utility/consume.hpp>
 
-namespace ripple::kernel::cuda::util {
+namespace ripple::kernel::gpu::util {
 
 //==--- [iterator shifting] ------------------------------------------------==//
-
-/// Dummy class which can be consumed when applying a function to a variadic
-/// pack.
-struct Consumer {};
 
 /// Shifts the \p it iterator in the \p dim dimension by \p amount. This
 /// overload is only enabled when the type of the \p it __is__ an iterator.
@@ -39,9 +38,8 @@ struct Consumer {};
 /// \tparam Iterator The type of the iterator.
 /// \tparam Dim      The type of the dimension specifier.
 template <typename Iterator, typename Dim, iterator_enable_t<Iterator> = 0>
-ripple_device_only auto shift_iter_in_dim(
-  Iterator& it, size_t amount, Dim&& dim
-)-> Consumer {
+ripple_device_only auto
+shift_iter_in_dim(Iterator& it, size_t amount, Dim&& dim) -> Consumer {
   it.shift(dim, amount);
   return Consumer();
 }
@@ -54,19 +52,10 @@ ripple_device_only auto shift_iter_in_dim(
 /// \tparam Iterator The type of the iterator.
 /// \tparam Dim      The type of the dimension specifier.
 template <typename Dim, typename Iterator, non_iterator_enable_t<Iterator> = 0>
-ripple_device_only auto shift_iter_in_dim(
-  Iterator& it, size_t amount, Dim&& dim 
-) -> Consumer {
+ripple_device_only auto
+shift_iter_in_dim(Iterator& it, size_t amount, Dim&& dim) -> Consumer {
   return Consumer();
 }
-
-/// This function simply does nothing, and results in a no op. It's purpose is
-/// to apply an operation to a variadic pack, consuming the result of each
-/// operation.
-/// \param  args The arguments to consume.
-/// \tparam Args The type of the arguments.
-template <typename... Args>
-ripple_device_only auto consume(Args&&... args) -> void {}
 
 /// Shifts the iterator by the global index if the global index is in the range
 /// of the iterator, and shifts any of the \p args if they are iterators.
@@ -76,17 +65,16 @@ ripple_device_only auto consume(Args&&... args) -> void {}
 /// \param  it       The iterator to shift.
 /// \tparam Iterator The type of the iterator.
 template <typename Iterator, typename... Args>
-ripple_device_only auto shift_in_range_global(
-  Iterator& it, Args&&... args 
-) -> bool {
-  bool in_range = true;
-  constexpr auto dims = iterator_traits_t<Iterator>::dimensions;
-  unrolled_for<dims>([&] (auto dim) {
+ripple_device_only auto
+shift_in_range_global(Iterator& it, Args&&... args) -> bool {
+  bool           in_range = true;
+  constexpr auto dims     = iterator_traits_t<Iterator>::dimensions;
+  unrolled_for<dims>([&](auto dim) {
     const auto idx = global_idx(dim);
     if (in_range && idx < it.size(dim)) {
       it.shift(dim, idx);
       if constexpr (sizeof...(Args) > 0) {
-        consume(shift_iter_in_dim(args, idx, dim)...);
+        (shift_iter_in_dim(args, idx, dim), ...);
       }
     } else {
       in_range = false;
@@ -107,18 +95,17 @@ ripple_device_only auto shift_in_range_global(
 /// \tparam Iterator       The type of the iterator.
 /// \tparam SharedIterator The type of the shared memory iterator.
 template <typename Iterator, typename SharedIterator, typename... Args>
-ripple_device_only auto shift_in_range(
-  Iterator& it, SharedIterator& sit, Args&&... args
-) -> bool {
-  bool in_range       = true;
-  constexpr auto dims = iterator_traits_t<Iterator>::dimensions;
-  unrolled_for<dims>([&] (auto dim) {
+ripple_device_only auto
+shift_in_range(Iterator& it, SharedIterator& sit, Args&&... args) -> bool {
+  bool           in_range = true;
+  constexpr auto dims     = iterator_traits_t<Iterator>::dimensions;
+  unrolled_for<dims>([&](auto dim) {
     const auto idx = global_idx(dim);
     if (in_range && idx < it.size(dim)) {
       it.shift(dim, idx);
       sit.shift(dim, thread_idx(dim) + sit.padding());
       if constexpr (sizeof...(Args) > 0) {
-        consume(shift_iter_in_dim(args, idx, dim)...);
+        (shift_iter_in_dim(args, idx, dim), ...);
       }
     } else {
       in_range = false;
@@ -136,13 +123,13 @@ ripple_device_only auto shift_in_range(
 /// \param  IteratorA The type of the first iterator.
 /// \tparam IteratorB The type of the second iterator.
 template <typename IteratorA, typename IteratorB>
-ripple_device_only auto set_iter_data(const IteratorA& it_a, IteratorB& it_b) 
--> void {
+ripple_device_only auto
+set_iter_data(const IteratorA& it_a, IteratorB& it_b) -> void {
   using it_a_t = std::decay_t<decltype(*it_a)>;
   using it_b_t = std::decay_t<decltype(*it_b)>;
 
-  constexpr auto must_set = 
-    std::is_same_v<it_a_t, it_b_t> || std::is_convertible_v<it_a_t, it_b_t>;
+  constexpr auto must_set = std::is_same_v<it_a_t, it_b_t> ||
+                            std::is_convertible_v<it_a_t, it_b_t>;
 
   if constexpr (must_set) {
     *it_b = *it_a;
@@ -155,14 +142,104 @@ ripple_device_only auto set_iter_data(const IteratorA& it_a, IteratorB& it_b)
 /// \param  IteratorA The type of the first iterator.
 /// \tparam IteratorB The type of the second iterator.
 template <typename IteratorA, typename IteratorB>
-ripple_device_only auto set_iter_boundary(IteratorA& it_a, IteratorB& it_b)
--> void {
-  if (it_b.padding() > 0) {
-    constexpr auto dims = iterator_traits_t<IteratorB>::dimensions;
-    load_internal_boundary<dims>(it_a, it_b);
+ripple_device_only auto
+set_iter_boundary(IteratorA& it_a, IteratorB& it_b) noexcept -> void {
+  constexpr auto dims = iterator_traits_t<IteratorB>::dimensions;
+  // load_internal_boundary<dims>(it_a, it_b);
+  const int32_t pad = it_b.padding();
+
+  if constexpr (dims == 2) {
+    it_a.shift(dim_x, -pad);
+    it_b.shift(dim_x, -pad);
+    it_a.shift(dim_y, -pad);
+    it_b.shift(dim_y, -pad);
+    *it_b = *it_a;
+    it_a.shift(dim_x, 2 * pad);
+    it_b.shift(dim_x, 2 * pad);
+    *it_b = *it_a;
+    it_a.shift(dim_y, 2 * pad);
+    it_b.shift(dim_y, 2 * pad);
+    *it_b = *it_a;
+    it_a.shift(dim_x, -2 * pad);
+    it_b.shift(dim_x, -2 * pad);
+    *it_b = *it_a;
+    it_a.shift(dim_x, pad);
+    it_b.shift(dim_x, pad);
+    it_a.shift(dim_y, -pad);
+    it_b.shift(dim_y, -pad);
   }
 }
 
-} // namespace ripple::kernel::cuda::util
+//==--- [get iter from block] ----------------------------------------------==//
 
-#endif // RIPPLE_FUNCTIONAL_KERNEL_INVOKE_UTILS__HPP
+/// Returns an iterator over the block data if \p t is block enabled.
+/// \param  t The block enabled type to get an iterator for.
+/// \tparam T The type of the block enabled type.
+template <typename T, std::enable_if_t<is_block_enabled_v<T>, int> = 0>
+auto block_iter_or_same(T&& t) -> std::decay_t<decltype(t.device_iterator())> {
+  return t.device_iterator();
+}
+
+/// Returns \p t, without modification.
+/// \param  t The block enabled type to get an iterator for.
+/// \tparam T The type of the block enabled type.
+template <typename T, std::enable_if_t<!is_block_enabled_v<T>, int> = 0>
+auto block_iter_or_same(T&& t) -> std::decay_t<T> {
+  return t;
+}
+
+/// Returns an iterator over the block data if \p t is a shared wrapper over a
+/// block type.
+/// \param  t The block enabled wrapped type.
+/// \tparam T The type of the block enabled type.
+template <typename T, block_enabled_t<T> = 0>
+auto block_iter_or_same(SharedWrapper<T>& t)
+  -> std::decay_t<decltype(t.wrapped.begin())> {
+  return t.wrapped.begin();
+}
+
+/// Returns the type wrapped by \p t.
+/// \param  t The block enabled type to get an iterator for.
+/// \tparam T The type of the block enabled type.
+template <typename T, non_block_enabled_t<T> = 0>
+auto block_iter_or_same(SharedWrapper<T>& t) -> std::decay_t<T> {
+  return t.wrapped;
+}
+
+/// Returns an iterator over the block data if \p t is block enabled.
+/// \param  t The block enabled type to get an iterator for.
+/// \tparam T The type of the block enabled type.
+template <typename T, std::enable_if_t<is_block_enabled_v<T>, int> = 0>
+auto block_iter_or_same(const T& t)
+  -> std::decay_t<decltype(t.device_iterator())> {
+  return t.device_iterator();
+}
+
+/// Returns \p t, without modification.
+/// \param  t The block enabled type to get an iterator for.
+/// \tparam T The type of the block enabled type.
+template <typename T, std::enable_if_t<!is_block_enabled_v<T>, int> = 0>
+auto block_iter_or_same(const T& t) -> std::decay_t<T> {
+  return t;
+}
+
+/// Returns an iterator over the block data if \p t is block enabled.
+/// \param  t The block enabled type to get an iterator for.
+/// \tparam T The type of the block enabled type.
+template <typename T, block_enabled_t<T> = 0>
+auto block_iter_or_same(const SharedWrapper<T>& t)
+  -> std::decay_t<decltype(t.wrapped.begin())> {
+  return t.wrapped.begin();
+}
+
+/// Returns \p t, without modification.
+/// \param  t The block enabled type to get an iterator for.
+/// \tparam T The type of the block enabled type.
+template <typename T, non_block_enabled_t<T> = 0>
+auto block_iter_or_same(const SharedWrapper<T>& t) -> std::decay_t<T> {
+  return t.wrapped;
+}
+
+} // namespace ripple::kernel::gpu::util
+
+#endif // RIPPLE_FUNCTIONAL_KERNEL_INVOKE_UTILS__CUH
