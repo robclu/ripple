@@ -58,6 +58,24 @@ using ContiguousOwned = StorageLayout<LayoutKind::contiguous_owned>;
 using NoLayout        = StorageLayout<LayoutKind::none>;
 // clang-format on
 
+/**
+ * Returns true if the kind is a contiguous view.
+ */
+template <LayoutKind Kind>
+static constexpr bool is_contig_view_v = Kind == LayoutKind::contiguous_view;
+
+/**
+ * Returns true if the kind is a strided view.
+ */
+template <LayoutKind Kind>
+static constexpr bool is_contig_owned_v = Kind == LayoutKind::contiguous_owned;
+
+/**
+ * Returns true if the kind is a strided view.
+ */
+template <LayoutKind Kind>
+static constexpr bool is_strided_view_v = Kind == LayoutKind::strided_view;
+
 } // namespace ripple
 
 #endif // RIPPLE_STORAGE_STORAGE_LAYOUT_HPP

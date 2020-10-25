@@ -37,11 +37,13 @@ template <typename T, bool PolyAndNonOwningData>
 struct LayoutTraits {
   // clang-format off
   /** Defines if the type T is a PolymorphicLayout type. */
-  static constexpr bool is_polymorphic_layout = false;
+  static constexpr bool       is_polymorphic_layout = false;
   /** Defines the type of the layout for T. */
-  static constexpr auto layout_kind           = LayoutKind::none;
+  static constexpr LayoutKind layout_kind           = LayoutKind::none;
   /** True if the Layout is a strided view layout kind. */
-  static constexpr auto is_strided_view       = false;
+  static constexpr bool       is_strided_view       = false;
+  /** Defines the alignment for allocating type T. */
+  static constexpr size_t     alignment             = alignof(std::decay_t<T>); 
 
   /** Defines the value type of T. */
   using Value        = std::decay_t<T>;
@@ -93,19 +95,15 @@ struct LayoutTraits<T, true> {
  public:
   /*==--- [constants] ------------------------------------------------------==*/
 
-  /** Defines if the type T is a PolymorphicLayout type. */
-  static constexpr bool is_polymorphic_layout = true;
-
   /** Defines the type of the layout for T. */
-  static constexpr auto layout_kind = detail::StorageLayoutKind<T>::value;
+  static constexpr LayoutKind layout_kind = detail::StorageLayoutKind<T>::value;
 
   /** True if the Layout is a strided view kind. */
-  static constexpr auto is_strided_view =
-    layout_kind == LayoutKind::strided_view;
-
+  static constexpr bool is_strided_view       = is_strided_view_v<layout_kind>;
   /** True if the Layout is a contiguous view kind */
-  static constexpr auto is_contiguous_view =
-    layout_kind == LayoutKind::contiguous_view;
+  static constexpr bool is_contiguous_view    = is_contig_view_v<layout_kind>;
+  /** Defines if the type T is a PolymorphicLayout type. */
+  static constexpr bool is_polymorphic_layout = true;
 
   /** Defines the type to use when storing in an iterator. */
   using IterStorage = std::conditional_t<
@@ -130,6 +128,9 @@ struct LayoutTraits<T, true> {
   /** Defines the type of the const raw pointer to the data. */
   using ConstRawPtr  = const void*;
   // clang-format off
+
+  /** Defines the alignment required for allocation of the type. */
+  static constexpr size_t alignment = Allocator::alignment;
 };
 
 } // namespace ripple

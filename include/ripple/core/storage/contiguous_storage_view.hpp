@@ -69,7 +69,7 @@ class ContiguousStorageView
    * \tparam T The type to get the size of.
    */
   template <typename T>
-  static constexpr auto element_components =
+  static constexpr size_t element_components =
     storage_element_traits_t<T>::num_elements;
 
   /*==--- [allocator] ------------------------------------------------------==*/
@@ -80,6 +80,11 @@ class ContiguousStorageView
    * as to offset ContiguousStorage elements within the allocated space.
    */
   struct Allocator {
+    /**
+     * Returns the alignment required to allocate the storage.
+     */
+    static constexpr size_t alignment = Helper::max_align;
+
     /**
      * Determines the number of bytes required to allocate a total of \p
      * elements of the types defined by Ts.
@@ -469,8 +474,8 @@ class ContiguousStorageView
     typename T              = nth_element_t<I, Ts...>,
     vec_element_enable_t<T> = 0>
   ripple_host_device auto get() noexcept -> element_value_t<T>& {
-    static_assert(
-      J < element_components<T>, "Out of range acess for storage element!");
+    constexpr size_t elements = element_components<T>;
+    static_assert(J < elements, "Out of range acess for storage element!");
     constexpr size_t offset = offsets[I];
     return static_cast<element_value_t<T>*>(
       static_cast<void*>(static_cast<char*>(data_) + offset))[J];

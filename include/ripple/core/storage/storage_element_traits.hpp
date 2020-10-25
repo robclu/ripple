@@ -33,7 +33,7 @@ namespace ripple {
 template <typename T>
 struct StorageElementTraits {
   /** Defines the value type of the element, which is the type to store. */
-  using Value = T;
+  using Value = std::decay_t<T>;
 
   // clang-format off
   /** Defines the number of values of the element to store. */
@@ -54,7 +54,7 @@ struct StorageElementTraits {
 template <typename T, size_t Size>
 struct StorageElementTraits<Vector<T, Size>> {
   /** Defines the value type of the element, which is the type to store. */
-  using Value = T;
+  using Value = std::decay_t<T>;
 
   // clang-format off
   /** Defines the number of values of the element to store. */

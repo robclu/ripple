@@ -69,18 +69,18 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
   /*==--- [constants] ------------------------------------------------------==*/
 
   /** Returns the number of different types. */
-  static constexpr auto num_types = sizeof...(Ts);
+  static constexpr size_t num_types = sizeof...(Ts);
 
   /**
    * Gets the numbber of components for the storage element.
    * \tparam T The type to get the size of.
    */
   template <typename T>
-  static constexpr auto element_components =
+  static constexpr size_t element_components =
     storage_element_traits_t<T>::num_elements;
 
   /** Defines the effective byte size of all elements to store. */
-  static constexpr auto storage_byte_size =
+  static constexpr size_t storage_byte_size =
     (storage_element_traits_t<Ts>::byte_size + ... + size_t{0});
 
   /**
@@ -88,7 +88,7 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
    * \tparam I The index of the component to get the number of bytes for.
    */
   template <size_t I>
-  static constexpr auto nth_element_bytes = sizeof(nth_element_value_t<I>);
+  static constexpr size_t nth_element_bytes = sizeof(nth_element_value_t<I>);
 
   /*==--- [allocator] ------------------------------------------------------==*/
 
@@ -146,6 +146,12 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
     }
 
    public:
+    /**
+     * Returns the alignment required to allocate the storage.
+     */
+    static constexpr size_t alignment =
+      max_element(storage_element_traits_t<Ts>::align_size...);
+
     /**
      * Computes the number of bytes required to allocate the the number of
      * specified elements.
@@ -340,7 +346,7 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
    * \tparam I The index of the element to get the number of components for.
    */
   template <size_t I>
-  static constexpr auto nth_element_components =
+  static constexpr size_t nth_element_components =
     element_components<nth_element_t<I, Ts...>>;
 
   /*==--- [construction] ---------------------------------------------------==*/
