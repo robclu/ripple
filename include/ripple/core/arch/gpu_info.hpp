@@ -66,7 +66,7 @@ struct GpuInfo {
    * Constructor to initialise the info with a specific index.
    * \param idx The index of the gpu for the info.
    */
-  GpuInfo(index_t idx) noexcept : index(idx) {
+  GpuInfo(index_t idx) noexcept : index{idx}, peers{idx} {
     cudaSetDevice(index);
     for (auto& stream : streams) {
       cudaStreamCreateWithFlags(&stream, cudaStreamNonBlocking);
@@ -187,8 +187,8 @@ struct GpuInfo {
   peer_container_t   peers     = {};      //!< Default to no peers.
   index_t            index     = invalid; //!< Index of the gpu in the system.
   uint64_t           mem_size  = 0;       //!< Amount of memory for the device.
-  uint64_t           mem_alloc = 0;     //!< Amount of device allocated memory.
-  uint8_t            pad[padding_size]; //!< Padding for false sharing.
+  uint64_t           mem_alloc = 0;       //!< Amount of device  memory.
+  uint8_t            pad[padding_size];   //!< Padding for false sharing.
 };
 
 } // namespace ripple
