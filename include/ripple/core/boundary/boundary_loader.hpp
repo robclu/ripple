@@ -16,6 +16,7 @@
 #ifndef RIPPLE_BOUNDARY_BOUNDARY_LOADER_HPP
 #define RIPPLE_BOUNDARY_BOUNDARY_LOADER_HPP
 
+#include <ripple/core/iterator/iterator_traits.hpp>
 #include <ripple/core/utility/portability.hpp>
 
 namespace ripple {
@@ -26,15 +27,25 @@ namespace ripple {
  */
 template <typename Impl>
 class BoundaryLoader {
-  /** Defines the type of the implementation. */
-  using impl_t = std::decay_t<Impl>;
-
   /**
    * Gets a const pointer to the implementation type.
    * \return A const pointer to the implementation.
    */
-  ripple_host_device constexpr auto impl() const noexcept -> const impl_t* {
-    return static_cast<const impl_t*>(this);
+  ripple_host_device constexpr auto impl() const noexcept -> const Impl* {
+    return static_cast<const Impl*>(this);
+  }
+
+ protected:
+  /**
+   * Checks that the iterator is an iterator.
+   * \tparam Iterator The iterator to check is an iterator.
+   */
+  template <typename Iterator>
+  ripple_host_device auto
+  static_assert_iterator(Iterator&&) const noexcept -> void {
+    static_assert(
+      is_iterator_v<Iterator>,
+      "Boundary loader requires a parameter which is an iterator!");
   }
 
  public:
@@ -54,10 +65,10 @@ class BoundaryLoader {
   load_front(Iterator&& it, int index, Dim&& dim, Args&&... args) const noexcept
     -> void {
     impl()->load_front(
-      std::forward<Iterator>(it),
+      static_cast<Iterator&&>(it),
       index,
-      std::forward<Dim>(dim),
-      std::forward<Args>(args)...);
+      static_cast<Dim&&>(dim),
+      static_cast<Args&&>(args)...);
   }
 
   /**
@@ -76,10 +87,10 @@ class BoundaryLoader {
   load_back(Iterator&& it, int index, Dim&& dim, Args&&... args) const noexcept
     -> void {
     impl()->load_back(
-      std::forward<Iterator>(it),
+      static_cast<Iterator&&>(it),
       index,
-      std::forward<Dim>(dim),
-      std::forward<Args>(args)...);
+      static_cast<Dim&&>(dim),
+      static_cast<Args&&>(args)...);
   }
 };
 

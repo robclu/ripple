@@ -48,7 +48,6 @@ ripple_host_device auto load_global_boundary_for_dim(
   Dim&&                   dim,
   Loader&&                loader,
   Args&&... args) noexcept -> void {
-  // clang-format on
   if (indices.is_front(dim)) {
     loader.load_front(
       it.offset(dim, -it.padding()), indices.index(dim), dim, args...);
@@ -81,11 +80,11 @@ ripple_host_device auto load_global_boundary(
   Loader&&                loader,
   Args&&... args) noexcept -> void {
   load_global_boundary_for_dim(
-    std::forward<It>(it),
+    static_cast<It&&>(it),
     indices,
     dimx,
-    std::forward<Loader>(loader),
-    std::forward<Args>(args)...);
+    static_cast<Loader&&>(loader),
+    static_cast<Args&&>(args)...);
 }
 
 /**
@@ -112,22 +111,22 @@ ripple_host_device auto load_global_boundary(
   It&&                    it,
   const GhostIndex<Dims>& indices,
   Loader&&                loader,
-  Args&&... args) -> void {
+  Args&&... args) noexcept -> void {
   // Load x boundary:
   load_global_boundary_for_dim(
-    std::forward<It>(it),
+    static_cast<It&&>(it),
     indices,
     dim_x,
-    std::forward<Loader>(loader),
-    std::forward<Args>(args)...);
+    static_cast<Loader&&>(loader),
+    static_cast<Args&&>(args)...);
 
   // Load y boundary:
   load_global_boundary_for_dim(
-    std::forward<It>(it),
+    static_cast<It&&>(it),
     indices,
     dim_y,
-    std::forward<Loader>(loader),
-    std::forward<Args>(args)...);
+    static_cast<Loader&&>(loader),
+    static_cast<Args&&>(args)...);
 
   // Load corner boundaries, first offset into y padding, then load x
   // boundaries using the padding data for y. The sign of the index is opposite
@@ -138,8 +137,8 @@ ripple_host_device auto load_global_boundary(
     it.offset(dim_y, step),
     indices,
     dim_x,
-    std::forward<Loader>(loader),
-    std::forward<Args>(args)...);
+    static_cast<Loader&&>(loader),
+    static_cast<Arg&&>(args)...);
 }
 
 /**
@@ -171,34 +170,35 @@ ripple_host_device auto load_global_boundary(
   It&&                    it,
   const GhostIndex<Dims>& indices,
   Loader&&                loader,
-  Args&&... args) -> void {
+  Args&&... args) noexcept -> void {
   // Load boundaries for 2D plane from cell:
   load_global_boundary(
     dim_y,
-    std::forward<It>(it),
+    static_cast<It&&>(it),
     indices,
-    std::forward<Loader>(loader),
-    std::forward<Args>(args)...);
+    static_cast<Loader&&>(loader),
+    static_cast<Args&&>(args)...);
 
   // Set the z boundary for the cell:
   load_global_boundary_for_dim(
-    std::forward<It>(it),
+    static_cast<It&&>(it),
     indices,
     dim_z,
-    std::forward<Loader>(loader),
-    std::forward<Args>(args)...);
+    static_cast<Loader&&>(loader),
+    static_cast<Args&&>(args)...);
 
-  // Offset in the z dimension and then load the boundaries for the 2D plane
-  // from the offset cell. As in the 2D case, the direction to offset in is
-  // opposite to the sign of the index since the index normal points into the
-  // domain, and here we are moving out of it.
+  /* Offset in the z dimension and then load the boundaries for the 2D plane
+   * from the offset cell. As in the 2D case, the direction to offset in is
+   * opposite to the sign of the index since the index normal points into the
+   * domain, and here we are moving out of it.
+   */
   const auto step = -math::sign(indices.index(dim_z)) * it.padding();
   load_global_boundary(
     dim_y,
     it.offset(dim_z, step),
     indices,
-    std::forward<Loader>(loader),
-    std::forward<Args>(args)...);
+    static_cast<Loader&&>(loader),
+    static_cast<Args&&>(args)...);
 }
 
 } // namespace ripple::detail

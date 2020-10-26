@@ -1,4 +1,4 @@
-//==--- ripple/core/boundary/fo_extrap_loader.hpp ---------- -*- C++ -*- ---==//
+//==--- ripple/core/boundary/const_loader.hpp -------------- -*- C++ -*- ---==//
 //
 //                                Ripple
 //
@@ -8,32 +8,37 @@
 //
 //==------------------------------------------------------------------------==//
 //
-/// \file  fo_extrap_loader.hpp
+/// \file  const_loader.hpp
 /// \brief This file defines an implementation of a boundary loader which
-///        performs a first order (constant) extrapolation fromt the last cell
-///        inside the domain to all boundary cells.
+///        loads a contant into the boundary.
 //
 //==------------------------------------------------------------------------==//
 
-#ifndef RIPPLE_BOUNDARY_FO_EXTRAP_LOADER_HPP
-#define RIPPLE_BOUNDARY_FO_EXTRAP_LOADER_HPP
+#ifndef RIPPLE_BOUNDARY_CONST_LOADER_HPP
+#define RIPPLE_BOUNDARY_CONST_LOADER_HPP
 
 #include "boundary_loader.hpp"
 
 namespace ripple {
 
 /**
- * The FOExtrapLoader is an implementation of an BoundaryLoader which copies
- * the data from the closest valid cell inside the domain to all boundary
- * cells.
- *
- * It performs a first order extrapolation of the data in an iterator into the
- * boundary data for the iterator.
+ * The  ConstLoader type implements the boundary loader interface to load the
+ * boundary with a constant value.
+ * \tparam T The type of the data for the boundary.
  */
-struct FOExtrapLoader : public BoundaryLoader<FOExtrapLoader> {
+template <typename T>
+struct ConstLoader : public BoundaryLoader<ConstLoader<T>> {
+  T value = 0; //!< The value to load.
+
   /**
-   * Loads the front boundary in the \p dim dimension, using the value of
-   * the \p index in the dimension to find the appropriate cell.
+   * Constructor, sets  the constant value to load as the boundary value.
+   * \param v The value for the boundary.
+   */
+  ripple_host_device ConstLoader(T v) noexcept : value(v) {}
+
+  /**
+   * Loads the front boundary in the given dimension, using the value of
+   * the index in the dimension to find the appropriate cell.
    * \param  it       An iterator to the boundary cell to load.
    * \param  index    The index of the boundary cell in the dimension.
    * \param  dim      The dimension to load the boundary in.
@@ -44,12 +49,12 @@ struct FOExtrapLoader : public BoundaryLoader<FOExtrapLoader> {
   ripple_host_device constexpr auto
   load_front(Iterator&& it, int index, Dim&& dim) const noexcept -> void {
     static_assert_iterator(it);
-    *it = *it.offset(dim, index);
+    *it = value;
   }
 
   /**
-   * Loads the back boundary in the \p dim dimension, using the value of
-   * the \p index in the dimension to find the appropriate cell.
+   * Loads the back boundary in the given dimension, using the value of
+   * the index in the dimension to find the appropriate cell.
    * \param  it       An iterator to the boundary cell to load.
    * \param  index    The index of the boundary cell in the dimension.
    * \param  dim      The dimension to load the boundary in.
@@ -60,10 +65,10 @@ struct FOExtrapLoader : public BoundaryLoader<FOExtrapLoader> {
   ripple_host_device constexpr auto
   load_back(Iterator&& it, int index, Dim&& dim) const noexcept -> void {
     static_assert_iterator(it);
-    *it = *it.offset(dim, index);
+    *it = value;
   }
 };
 
 } // namespace ripple
 
-#endif // RIPPLE_BOUNDARY_FO_EXTRAP_LOADER_HPP
+#endif // RIPPLE_BOUNDARY_CONST_LOADER_HPP

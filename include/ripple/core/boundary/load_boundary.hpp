@@ -23,7 +23,6 @@
 #include "boundary_loader.hpp"
 #include <ripple/core/execution/execution_traits.hpp>
 #include <ripple/core/execution/thread_index.hpp>
-#include <ripple/core/functional/pipeline.hpp>
 
 namespace ripple {
 
@@ -42,13 +41,16 @@ namespace ripple {
 template <typename Iterator, typename Loader, typename... Args>
 ripple_host_device auto
 load_boundary(Iterator&& it, Loader&& loader, Args&&... args) noexcept -> void {
+  static_cast(
+    is_iterator_v<Iterator>,
+    "Boundary loading requires input to be an iterator!");
   static_assert(
     is_loader_v<Loader>,
     "Boundary loading requires a loader which implements the BoundaryLoader "
     "interface!");
 
   constexpr auto dims = iterator_traits_t<Iterator>::dimensions;
-  using dim_spec_t    = std::conditional_t<
+  using DimType       = std::conditional_t<
     dims == 1,
     dimx_t,
     std::conditional_t<dims == 2, dimy_t, dimz_t>>;
@@ -60,11 +62,11 @@ load_boundary(Iterator&& it, Loader&& loader, Args&&... args) noexcept -> void {
 
   // Call loader impl ...
   detail::load_global_boundary(
-    dim_spec_t{},
-    std::forward<Iterator>(it),
+    DimType{},
+    static_cast<Iterator&&>(it),
     indices,
-    std::forward<Loader>(loader),
-    std::forward<Args>(args)...);
+    static_cast<Loader&&>(loader),
+    static_cast<Args&&>(args)...);
 }
 
 /**
@@ -94,15 +96,23 @@ load_boundary(Iterator&& it, Loader&& loader, Args&&... args) noexcept -> void {
 template <size_t Dims, typename ItFrom, typename ItTo>
 ripple_host_device auto
 load_internal_boundary(ItFrom&& it_from, ItTo&& it_to) noexcept -> void {
-  static constexpr auto dims_from = iterator_traits_t<ItFrom>::dimensions;
-  static constexpr auto dims_to   = iterator_traits_t<ItTo>::dimensions;
+  static_assert(
+    is_iterator_v<ItFrom>,
+    "Internal boundary loading requires the input to get loading data from to "
+    "be an iterator!");
+  static_assert(
+    is_iterator_v<ItTo>,
+    "Internal boundary loading requires the input to get loading data into to "
+    "be an iterator!");
+
+  static constexpr size_t dims_from = iterator_traits_t<ItFrom>::dimensions;
+  static constexpr size_t dims_to   = iterator_traits_t<ItTo>::dimensions;
   static_assert(
     dims_from >= Dims && dims_to >= Dims,
     "Invalid dimensions for loading of boundary data!");
 
   // Move both iterators to the top left of the domain:
-  unrolled_for<Dims>([&](auto d) {
-    constexpr auto dim = d;
+  unrolled_for<Dims>([&](auto dim) {
     it_from.shift(dim, -static_cast<int>(it_to.padding()));
     it_to.shift(dim, -static_cast<int>(it_to.padding()));
   });
@@ -111,8 +121,7 @@ load_internal_boundary(ItFrom&& it_from, ItTo&& it_to) noexcept -> void {
   detail::load_internal<Dims>(it_from, it_to);
 
   // Shift the iterators back:
-  unrolled_for<Dims>([&](auto d) {
-    constexpr auto dim = d;
+  unrolled_for<Dims>([&](auto dim) {
     it_from.shift(dim, static_cast<int>(it_to.padding()));
     it_to.shift(dim, static_cast<int>(it_to.padding()));
   });
