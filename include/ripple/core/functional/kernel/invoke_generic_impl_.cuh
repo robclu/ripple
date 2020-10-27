@@ -17,7 +17,8 @@
 #ifndef RIPPLE_FUNCTIONAL_KERNEL_INVOKE_GENERIC_IMPL__CUH
 #define RIPPLE_FUNCTIONAL_KERNEL_INVOKE_GENERIC_IMPL__CUH
 
-#include "invoke_utils_.cuh"
+#include "invoke_utils.hpp"
+#include "invoke_utils.cuh"
 #include <ripple/core/algorithm/max_element.hpp>
 #include <ripple/core/execution/dynamic_execution_params.hpp>
 #include <ripple/core/execution/execution_params.hpp>
@@ -155,57 +156,6 @@ using void_info_enable_t = std::enable_if_t<is_void_info_v<T>, int>;
  */
 template <typename T>
 using non_void_info_enable_t = std::enable_if_t<!is_void_info_v<T>, int>;
-
-/*==--- [block size] -------------------------------------------------------==*/
-
-/**
- * Gets the size of dimension from the block.
- *
- * \note This overload is only enabled which the type is block enabled.
- *
- * \param  block The block to get the size of.
- * \param  dim   The dimension to get the size of.
- * \tparam T     The type of the block.
- * \tparam Dim   The type of the dimension specifier.
- */
-template <typename T, typename Dim, block_enabled_t<T> = 0>
-auto get_block_size(T&& block, Dim&& dim) noexcept -> size_t {
-  return block_enabled_traits_t<T>::dimensions > dim
-           ? block.size(std::forward<Dim>(dim))
-           : size_t{0};
-}
-
-/**
- * Gets the size of dimension from the block.
- *
- * \note This overload is only enabled which the type is not block enabled,
- *       so just returns zero.
- *
- * \param  block The block to get the size of.
- * \param  dim   The dimension to get the size of.
- * \tparam T     The type of the block.
- * \tparam Dim   The type of the dimension specifier.
- */
-template <typename T, typename Dim, non_block_enabled_t<T> = 0>
-auto get_block_size(T&& block, Dim&& dim) noexcept -> size_t {
-  return 0;
-}
-
-/**
- * Gets the size of dimension from the shared wrapper.
- *
- * \note This overload is for a shared wrapper, and forwards the wrapped type
- *       to the other implementations to get the size.
- *
- * \param  wrapper The block to get the size of.
- * \param  dim     The dimension to get the size of.
- * \tparam T       The type of the wrapped type.
- * \tparam Dim     The type of the dimension specifier.
- */
-template <typename T, typename Dim>
-auto get_block_size(SharedWrapper<T>& wrapper, Dim&& dim) noexcept -> size_t {
-  return get_block_size(wrapper.wrapped, static_cast<Dim&&>(dim));
-}
 
 /*==--- [shared memory ops] ------------------------------------------------==*/
 
@@ -444,7 +394,7 @@ template <
   typename Shared,
   typename Global,
   both_iters_enable_t<Shared, Global> = 0>
-ripple_host_device auto offset_iters(
+ripple_host_device auto offset_if_iterator(
   Shared&& shared,
   Global&  global,
   uint8_t& iter_count,
@@ -452,7 +402,7 @@ ripple_host_device auto offset_iters(
   iter_count++;
   bool valid = true;
   unrolled_for<iterator_traits_t<Shared>::dimensions>([&](auto dim) {
-    if (thread_idx(dim) >= shared.size(dim) || !global.is_valid(dim)) {
+    if (!global.is_valid(dim) || thread_idx(dim) >= shared.size(dim)) {
       valid = false;
     } else {
       shared.shift(dim, thread_idx(dim) + shared.padding());
@@ -488,7 +438,7 @@ template <
   typename Shared,
   typename Other,
   only_first_iter_enable_t<Shared, Other> = 0>
-ripple_host_device auto offset_iters(
+ripple_host_device auto offse_if_iterator(
   Shared&& shared,
   Other&&  other,
   uint8_t& iter_count,
@@ -528,7 +478,7 @@ template <
   typename Void,
   typename Global,
   only_second_iter_enable_t<Void, Global> = 0>
-ripple_host_device auto offset_iters(
+ripple_host_device auto offset_if_iterator(
   Void, Global& global, uint8_t& iter_count, uint8_t& valid_count) noexcept
   -> Tuple<Global&, Void> {
   iter_count++;
@@ -563,7 +513,7 @@ template <
   typename Void,
   typename Other,
   neither_iters_enable_t<Void, Other> = 0>
-ripple_host_device auto offset_iters(
+ripple_host_device auto offset_if_iterator(
   Void, Other&& other, uint8_t& iter_count, uint8_t& valid_count) noexcept
   -> Tuple<Other&, Void> {
   return Tuple<Other&, Void>{other, Void()};
@@ -663,7 +613,7 @@ ripple_device_only auto expand_into_invocable(
     static_cast<Invocable&&>(invocable),
     iter_count,
     valid_count,
-    offset_iters(
+    offset_if_iterator(
       make_shared_iterator(get<I>(wrapped_args), data),
       static_cast<Args&&>(args),
       iter_count,
@@ -724,20 +674,24 @@ auto invoke_generic_impl(Invocable&& invocable, Args&&... args) noexcept
     max_element(block_enabled_traits_t<Args>::dimensions...);
 
   // Find the grid size:
-  const auto sizes = std::array<size_t, 3>{
-    max_element(size_t{1}, get_block_size(args, dim_x)...),
-    max_element(size_t{1}, get_block_size(args, dim_y)...),
-    max_element(size_t{1}, get_block_size(args, dim_z)...)};
+  const auto sizes =
+    DimSizes{max_element(size_t{1}, get_size_if_block(args, dim_x)...),
+             max_element(size_t{1}, get_size_if_block(args, dim_y)...),
+             max_element(size_t{1}, get_size_if_block(args, dim_z)...)};
 
-  // Gets the size of the grid to run on the gpu. Currently this only uses
-  // dynamic parameters, because the performance difference is minimal, but
-  // we should add the options for statically sizes parameters.
+  /*
+   * Gets the size of the grid to run on the gpu. Currently this only uses
+   * dynamic parameters, because the performance difference is minimal, but
+   * we should add the options for statically sizes parameters.
+   */
   const auto exec_params = dynamic_params<dims>();
   auto [threads, blocks] = get_execution_sizes(exec_params, sizes);
 
-  // Create a stream, incase we dont have one to run on. Also get any other
-  // types which may have been requested to be passed in shared memory, and
-  // compute the amount of shared memory.
+  /*
+   * Create a stream, incase we dont have one to run on. Also get any other
+   * types which may have been requested to be passed in shared memory, and
+   * compute the amount of shared memory.
+   */
   Stream stream;
   size_t shared_mem = 0;
   auto   all_params = make_tuple(

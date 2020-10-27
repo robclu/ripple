@@ -17,7 +17,6 @@
 #define RIPPLE_FUNCTIONAL_INVOKE_HPP
 
 #include "kernel/invoke_cpp_.hpp"
-#include "kernel/invoke_on_block_.hpp"
 #include "kernel/invoke_block_impl_.cuh"
 #include "kernel/invoke_generic_impl_.cuh"
 #include "kernel/invoke_generic_impl_.hpp"
@@ -111,11 +110,11 @@ auto invoke_generic(
  * \tparam Invocable   The type of the invocable.
  * \tparam Args        The type of the arguments
  */
-template <typename Invocable, typename... Args>
-auto block_invoke(Invocable&& invocable, Args&&... args) noexcept -> void {
-  kernel::block_invoke(
-    static_cast<Invocable&&>(invocable), static_cast<Args&&>(args)...);
-}
+// template <typename Invocable, typename... Args>
+// auto block_invoke(Invocable&& invocable, Args&&... args) noexcept -> void {
+//  kernel::block_invoke(
+//    static_cast<Invocable&&>(invocable), static_cast<Args&&>(args)...);
+//}
 
 //==--- [simple invoke] ----------------------------------------------------==//
 

@@ -20,29 +20,10 @@
 #include <ripple/core/container/shared_wrapper.hpp>
 #include <ripple/core/execution/execution_size.hpp>
 
-namespace ripple::kernel::util {
+namespace ripple::kernel {
 
-//==---- [execution sizes] -------------------------------------------------==//
-
-/// Gets the number of threads and thread blocks.
-/// \param  params     The paramers which define the execution space.
-/// \param  sizes      The sizes of the grid.
-/// \tparam ExecParams The type of the execution parameters.
-template <typename ExecParams>
-auto get_execution_sizes(
-  const ExecParams& params, const std::array<size_t, 3>& sizes)
-  -> std::tuple<dim3, dim3> {
-  auto threads = dim3(1, 1, 1), blocks = dim3(1, 1, 1);
-
-  threads.x = get_dim_num_threads(sizes[dim_x], params.size(dim_x));
-  threads.y = get_dim_num_threads(sizes[dim_y], params.size(dim_y));
-  threads.z = get_dim_num_threads(sizes[dim_z], params.size(dim_z));
-  blocks.x  = get_dim_num_blocks(sizes[dim_x], threads.x);
-  blocks.y  = get_dim_num_blocks(sizes[dim_y], threads.y);
-  blocks.z  = get_dim_num_blocks(sizes[dim_z], threads.z);
-
-  return std::make_tuple(threads, blocks);
-}
+/** Alias for dimension sizes. */
+using DimSizes = std::array<size_t, 3>;
 
 //==--- [block extraction] -------------------------------------------------==//
 
@@ -56,50 +37,172 @@ decltype(auto) extract_device_block(T&& t) {
   return t;
 }
 
-//==--- [block size] -------------------------------------------------------==//
+/*==--- [block size] -------------------------------------------------------==*/
 
+/**
+ * Gets the size of dimension from the block.
+ *
+ * \note This overload is only enabled which the type is block enabled.
+ *
+ * \param  block The block to get the size of.
+ * \param  dim   The dimension to get the size of.
+ * \tparam T     The type of the block.
+ * \tparam Dim   The type of the dimension specifier.
+ */
 template <typename T, typename Dim, block_enabled_t<T> = 0>
-auto get_block_size(T&& block, Dim&& dim) -> size_t {
+auto get_size_if_block(T&& block, Dim&& dim) noexcept -> size_t {
   return block_enabled_traits_t<T>::dimensions > dim
-           ? block.size(std::forward<Dim>(dim))
+           ? block.size(static_cast<Dim>(dim))
            : size_t{0};
 }
 
-template <typename T, typename Dim, block_enable_t<T> = 0>
-auto get_block_size(T&& block, Dim&& dim) -> size_t {
-  return block_enabled_traits_t<T>::dimensions > dim
-           ? block.size(std::forward<Dim>(dim))
-           : size_t{0};
-}
-
-template <typename T, typename Dim, non_block_enable_t<T> = 0>
-auto get_block_size(T&& t, Dim&& dim) -> size_t {
+/**
+ * Gets the size of dimension from the block.
+ *
+ * \note This overload is only enabled which the type is not block enabled,
+ *       so just returns zero.
+ *
+ * \param  block The block to get the size of.
+ * \param  dim   The dimension to get the size of.
+ * \tparam T     The type of the block.
+ * \tparam Dim   The type of the dimension specifier.
+ */
+template <typename T, typename Dim, non_block_enabled_t<T> = 0>
+auto get_size_if_block(T&& block, Dim&& dim) noexcept -> size_t {
   return 0;
 }
 
+/**
+ * Gets the size of dimension from the shared wrapper.
+ *
+ * \note This overload is for a shared wrapper, and forwards the wrapped type
+ *       to the other implementations to get the size.
+ *
+ * \param  wrapper The block to get the size of.
+ * \param  dim     The dimension to get the size of.
+ * \tparam T       The type of the wrapped type.
+ * \tparam Dim     The type of the dimension specifier.
+ */
 template <typename T, typename Dim>
-auto get_block_size(SharedWrapper<T>& t, Dim&& dim) -> size_t {
-  return get_block_size(t.wrapped, std::forward<Dim>(dim));
+auto get_size_if_block(SharedWrapper<T>& wrapper, Dim&& dim) noexcept
+  -> size_t {
+  return get_size_if_block(wrapper.wrapped, static_cast<Dim&&>(dim));
 }
 
 //==--- [get iter from block] ----------------------------------------------==//
 
-/// Returns an iterator over the block data if \p t is block enabled.
-/// \param  t The block enabled type to get an iterator for.
-/// \tparam T The type of the block enabled type.
+namespace cpu::util {
+
+/**
+ * Returns an iterator over the block data if the type is block enabled.
+ * \param  t The block enabled type to get an iterator for.
+ * \tparam T The type of the block enabled type.
+ */
 template <typename T, block_enabled_t<T> = 0>
-auto block_iter_or_same(T&& t) -> std::decay_t<decltype(t.host_iterator())> {
-  return t.begin_host();
+auto block_iter_or_same(T&& t) noexcept -> decltype(t.host_iterator()) {
+  return t.host_iterator();
 }
 
-/// Returns \p t, without modification.
-/// \param  t The block enabled type to get an iterator for.
-/// \tparam T The type of the block enabled type.
+/**
+ * Returns the paramter, without modification.
+ * \param  t The block enabled type to get an iterator for.
+ * \tparam T The type of the block enabled type.
+ */
 template <typename T, non_block_enabled_t<T> = 0>
-auto block_iter_or_same(T&& t) -> std::decay_t<T> {
+auto block_iter_or_same(T&& t) noexcept -> T&& {
+  return static_cast<T&&>(t);
+}
+
+} // namespace cpu::util
+
+namespace gpu::util {
+
+/**
+ * Returns an iterator over the block data if the parameter is block enabled.
+ *
+ * \note We need the decay here to ensure that we don't get a reference, which
+ *       would be undefined if passed to the device.
+ *
+ * \param  block The block enabled type to get an iterator for.
+ * \tparam T     The type of the block enabled type.
+ * \return An iterator over the device data.
+ */
+template <typename T, block_enabled_t<T> = 0>
+auto block_iter_or_same(T&& block) noexcept
+  -> std::decay_t<decltype(block.device_iterator())> {
+  return block.device_iterator();
+}
+
+/**
+ * Gets a decated  instance of the parameter.
+ *
+ * \note We need the decay here to ensure that we don't get a reference, which
+ *       would be undefined if passed to the device.
+ *
+ * \param  t The block enabled type to get an iterator for.
+ * \tparam T The type of the block enabled type.
+ * \return A decayed instance of the parameter.
+ */
+template <typename T, non_block_enabled_t<T> = 0>
+auto block_iter_or_same(T&& t) noexcept -> std::decay_t<T> {
   return t;
 }
 
-} // namespace ripple::kernel::util
+/**
+ * Returns an iterator over the block data if the parameter being wrapped is a
+ * block type.
+ *
+ * \param  wrapper The block enabled wrapper type.
+ * \tparam T       The type of the block enabled type.
+ * \return An iterator over the wrapped data.
+ */
+template <typename T, block_enabled_t<T> = 0>
+auto block_iter_or_same(SharedWrapper<T>& wrapper) noexcept
+  -> std::decay_t<decltype(wrapper.wrapped.device_iterator())> {
+  return wrapper.wrapped.device_iterator();
+}
+
+/**
+ * Gets a decayed instance of the wrapped type.
+ *
+ * \param  wrapper The non block enabled wrapper type.
+ * \tparam T       The type of the non block enabled type.
+ * \return A decayed instance of the wrapped type.
+ */
+template <typename T, non_block_enabled_t<T> = 0>
+auto block_iter_or_same(SharedWrapper<T>& wrapper) noexcept -> std::decay_t<T> {
+  return wrapper.wrapped;
+}
+
+/**
+ * Returns an iterator over the block data if the parameter being wrapped is a
+ * block type.
+ *
+ * \param  wrapper The block enabled wrapper type.
+ * \tparam T       The type of the block enabled type.
+ * \return An iterator over the wrapped data.
+ */
+template <typename T, block_enabled_t<T> = 0>
+auto block_iter_or_same(const SharedWrapper<T>& wrapper) noexcept
+  -> std::decay_t<decltype(wrapper.wrapped.device_iterator())> {
+  return wrapper.wrapped.device_iterator();
+}
+
+/**
+ * Gets a decayed instance of the wrapped type.
+ *
+ * \param  wrapper The non block enabled wrapper type.
+ * \tparam T       The type of the non block enabled type.
+ * \return A decayed instance of the wrapped type.
+ */
+template <typename T, non_block_enabled_t<T> = 0>
+auto block_iter_or_same(const SharedWrapper<T>& wrapper) noexcept
+  -> std::decay_t<T> {
+  return wrapper.wrapped;
+}
+
+} // namespace gpu::util
+
+} // namespace ripple::kernel
 
 #endif // RIPPLE_FUNCTIONAL_KERNEL_INVOKE_UTILS__HPP
