@@ -60,8 +60,23 @@ struct ExecParams {
    * \return The total number of elements in the execution space.
    */
   template <size_t Dims>
-  ripple_host_device constexpr auto size() const noexcept -> size_t {
+  ripple_host_device constexpr auto size() const noexcept {
     return impl()->template size<Dims>();
+  }
+
+  /**
+   * Gets the total size of the execution space, for Dims dimensions, with the
+   * given padding amount.
+   *
+   * \note The size here refers to the number of elements.
+   *
+   * \param  padding The amount of padding for each side of each dimension.
+   * \tparam Dims    The number of dimensions to get the size for.
+   * \return The total number of elements, including padding.
+   */
+  template <size_t Dims>
+  ripple_host_device constexpr auto size(size_t padding) const noexcept {
+    return impl()->template size<Dims>(padding);
   }
 
   /**

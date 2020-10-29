@@ -25,10 +25,27 @@ namespace ripple {
 /**
  * Defines the possible targets for execution.
  */
-enum class Execution : uint8_t {
+enum class ExecutionKind : uint8_t {
   gpu = 0, //!< Computation should be on the gpu.
   cpu = 1  //!< Computation should be on the cpu.
 };
+
+/**
+ * Class to define the execution based on a template parameter, so we can
+ * specialize implementations where necessary.
+ * \tparam Kind The kind of the execution.
+ */
+template <ExecutionKind Kind>
+struct Executor {
+  /** The target for the execution. */
+  static constexpr ExecutionKind value = Kind;
+};
+
+/** Alias for a cpu executor. */
+using CpuExecutor = Executor<ExecutionKind::cpu>;
+
+/** Alias for a gpu executor. */
+using GpuExecutor = Executor<ExecutionKind::gpu>;
 
 /*==--- [forward declarations] ---------------------------------------------==*/
 
