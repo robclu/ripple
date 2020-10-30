@@ -89,32 +89,6 @@ auto get_size_if_block(SharedWrapper<T>& wrapper, Dim&& dim) noexcept
   return get_size_if_block(wrapper.wrapped, static_cast<Dim&&>(dim));
 }
 
-//==--- [get iter from block] ----------------------------------------------==//
-
-namespace cpu::util {
-
-/**
- * Returns an iterator over the block data if the type is block enabled.
- * \param  t The block enabled type to get an iterator for.
- * \tparam T The type of the block enabled type.
- */
-template <typename T, block_enabled_t<T> = 0>
-auto block_iter_or_same(T&& t) noexcept -> decltype(t.host_iterator()) {
-  return t.host_iterator();
-}
-
-/**
- * Returns the paramter, without modification.
- * \param  t The block enabled type to get an iterator for.
- * \tparam T The type of the block enabled type.
- */
-template <typename T, non_block_enabled_t<T> = 0>
-auto block_iter_or_same(T&& t) noexcept -> T&& {
-  return static_cast<T&&>(t);
-}
-
-} // namespace cpu::util
-
 namespace gpu::util {
 
 /**
