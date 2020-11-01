@@ -142,9 +142,6 @@ else()
   set(CUDA_LIB_DIRS ${CUDA_TOOLKIT_ROOT_DIR}/lib64)
 endif()
 
-message("-- CUDA INCLUDE DIR: ${CUDA_INCLUDE_DIR}")
-message("-- CUDA LIBRARY DIR: ${CUDA_LIB_DIRS}"   )
-
 set(CUDA_DEFS "-DRIPPLE_CUDA_AVAILABLE=1")
 
 list(LENGTH CUDA_ARCHS ARCH_COUNT)
@@ -222,6 +219,74 @@ endif()
 
 set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} ${CUDA_FLAGS}")
 
+
+#==--- [install] ------------------------------------------------------------==#
+
+set(headers "")
+file(
+  GLOB_RECURSE 
+  headers
+  RELATIVE ${PROJECT_SOURCE_DIR} 
+  "include/ripple/core/*.hpp" "include/ripple/core/*.cuh")
+
+set(sources "")  
+file(
+  GLOB_RECURSE 
+  sources 
+  RELATIVE ${PROJECT_SOURCE_DIR} 
+  "src/*.cpp" "src/*.cu")
+
+# Currently this doesn't work because of the custom cuda build configuration.
+# TODO: Change this to use built-in cmake cuda support now that it has been
+#       updated.
+add_library(ripple STATIC ${sources})
+add_library(ripple::ripple ALIAS ripple)
+target_include_directories(ripple PUBLIC 
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+)
+target_include_directories(ripple SYSTEM PUBLIC
+  $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include>
+)
+
+# Setup package config
+include(CMakePackageConfigHelpers)
+set(RIPPLE_CMAKE_DIR "lib/cmake/ripple")
+set(version_config "${CMAKE_CURRENT_BINARY_DIR}/ripple-config-version.cmake")
+set(project_config "${CMAKE_CURRENT_BINARY_DIR}/ripple-config.cmake")
+set(targets_export_name ripple-targets)
+
+write_basic_package_version_file(
+  ${version_config}
+  VERSION       0.0.1
+  COMPATIBILITY AnyNewerVersion
+)
+configure_package_config_file(
+  "${CMAKE_CURRENT_SOURCE_DIR}/ripple-config.cmake.in"
+  ${project_config}
+  INSTALL_DESTINATION ${RIPPLE_CMAKE_DIR}
+)
+
+# Export targets for non-install use:
+export(
+  TARGETS   ripple 
+  NAMESPACE ripple:: 
+  FILE      ${CMAKE_CURRENT_BINARY_DIR}/${targets_export_name}.cmake
+)
+
+# Install version:
+install(
+  FILES ${project_config} ${version_config} DESTINATION ${RIPPLE_CMAKE_DIR}
+)
+
+# Install target:
+install(TARGETS ripple DESTINATION lib EXPORT ${targets_export_name})
+install(
+  EXPORT      ${targets_export_name}
+  DESTINATION lib
+  NAMESPACE   ripple::
+)
+install(DIRECTORY include/ripple DESTINATION include)
+
 #==--- [Module path] --------------------------------------------------------==#
 
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
@@ -229,8 +294,44 @@ set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 #==--- [Subdirectories] -----------------------------------------------------==#
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-#add_subdirectory(apps)
-add_subdirectory(examples)
-add_subdirectory(benchmarks)
-#add_subdirectory(tests)
-#=add_subdirectory(docs)
+option(RIPPLE_BUILD_BENCHMARKS "build benchmark" OFF)
+if (${RIPPLE_BUILD_BENCHMARKS} OR 
+  (CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR))
+    add_subdirectory(benchmarks)
+endif()
+
+option(RIPPLE_BUILD_DOCS "build docs" OFF)
+if(${RIPPLE_BUILD_DOCS})
+  add_subdirectory(docs)
+endif()
+
+option(RIPPLE_BUILD_EXAMPLES "build examples" ON)
+if (${RIPPLE_BUILD_EXAMPLES} OR 
+  (CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR))
+    add_subdirectory(examples)
+endif()
+
+string(
+  REPLACE " " "\n+|                    " CXX_FLAG_STRING ${CMAKE_CXX_FLAGS})
+string(
+  REPLACE " " "\n+|                    " CUDA_FLAG_STRING ${CMAKE_CUDA_FLAGS})
+
+message("
++|===== [build options] =======================================================|
++|
++| BUILD TYPE       : ${CMAKE_BUILD_TYPE}
++| CUDA_CLANG       : ${CUDA_CLANG}
++| CXX COMPILER     : ${RIPPLE_CXX_COMPILER}
++| CUDA COMPILER    : ${RIPPLE_CUDA_COMPILER}
++| CUDA PATH        : ${CUDA_TOOLKIT_ROOT_DIR}
++| CUDA INCLUDE     : ${CUDA_INCLUDE_DIR}
++| CUDA LIB         : ${CUDA_LIB_DIRS}
++| CUDA ARCHS       : ${ARCH_LIST}
++| BUILD_BENCHMARKS : ${RIPPLE_BUILD_BENCHMARKS}
++| BUILD_DOCS       : ${RIPPLE_BUILD_DOCS}
++| BUILD_EXAMPLES   : ${RIPPLE_BUILD_EXAMPLES}
++| CXX_FLAGS        : ${CXX_FLAG_STRING}
++| CUDA_FLAGS       : ${CUDA_FLAG_STRING}
++|
++|=============================================================================|
+")
