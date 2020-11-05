@@ -74,7 +74,7 @@ class BlockIterator {
   using Storage      = typename LayoutTraits::IterStorage;
   /** Defines the type of the class to use to offset the storage. */
   using Offsetter    = typename LayoutTraits::Allocator;
-  /** Defines the type of a vector of value_t with matching dimensions. */
+  /** Defines the type of a vector of value type with matching dimensions. */
   using Vec          = Vec<CopyType, dims, ContiguousOwned>;
   // clang-format on
 

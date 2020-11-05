@@ -114,7 +114,7 @@ struct IteratorTraits<BlockIterator<T, Space>> {
    * that the iterator data is copied. 
   */
   using CopyType = typename LayoutTraits::IterCopy;
-  /** Defines the type of a vector of value_t with matching dimensions. */
+  /** Defines the type of a vector of value type with matching dimensions. */
   using Vec      = Vec<CopyType, dimensions, ContiguousOwned>;
   // clang-format on
 };
@@ -143,7 +143,7 @@ struct IteratorTraits<IndexedIterator<T, Space>> {
   using Value    = typename BlockIterTraits::Value;
   /** Defines the reference type for the iterator. */
   using Ref      = typename BlockIterTraits::Ref;
-  /** Defines the type of a vector of value_t with matching dimensions. */
+  /** Defines the type of a vector of value type with matching dimensions. */
   using Vec      = typename BlockIterTraits::Vec;
   /** Defines the copy type for the iterator. */
   using CopyType = typename BlockIterTraits::CopyType;
