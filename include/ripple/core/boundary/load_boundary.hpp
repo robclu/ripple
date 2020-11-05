@@ -41,7 +41,7 @@ namespace ripple {
 template <typename Iterator, typename Loader, typename... Args>
 ripple_host_device auto
 load_boundary(Iterator&& it, Loader&& loader, Args&&... args) noexcept -> void {
-  static_cast(
+  static_assert(
     is_iterator_v<Iterator>,
     "Boundary loading requires input to be an iterator!");
   static_assert(

@@ -138,7 +138,7 @@ ripple_host_device auto load_global_boundary(
     indices,
     dim_x,
     static_cast<Loader&&>(loader),
-    static_cast<Arg&&>(args)...);
+    static_cast<Args&&>(args)...);
 }
 
 /**
