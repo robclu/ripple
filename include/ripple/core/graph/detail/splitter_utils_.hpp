@@ -57,8 +57,7 @@ auto deref_if_iter(T&& iter) noexcept -> decltype(*iter)& {
  * \return A reference to the iterated data.
  */
 template <typename T, non_iterator_enable_t<T> = 0>
-decltype(auto)
-deref_if_iter(T&& t) noexcept /*-> std::remove_reference_t<T>&& */ {
+decltype(auto) deref_if_iter(T&& t) noexcept {
   return ripple_forward(t);
 }
 
@@ -68,8 +67,8 @@ deref_if_iter(T&& t) noexcept /*-> std::remove_reference_t<T>&& */ {
  * Copies the padding for the faces of the block iterated over by the iterato
  * for each of the dimensions which can be iterated over.
  *
- * This will fail at compile time if the iterator does not iterator over a
- * Block.
+ * \note This will fail at compile time if the iterator does not iterator over a
+ *       Block.
  *
  * \param  exec_kind The kind of the execution for the operation.
  * \param  it        The iterator to copy the face padding for.

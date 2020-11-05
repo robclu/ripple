@@ -214,7 +214,7 @@ struct Splitter {
         unwrap_modifiers(ripple_forward(args))...);
 
       // Start new layer in the graph.
-      graph._split_ids.emplace_back(graph._nodes.size());
+      graph.split_ids_.emplace_back(graph.nodes_.size());
     }
 
     /* Add the nodes to perform the actual computation. */

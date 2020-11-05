@@ -20,7 +20,6 @@
 #include <ripple/core/functional/invocable.hpp>
 #include <ripple/core/math/math.hpp>
 #include <ripple/core/utility/forward.hpp>
-#include <ripple/core/utility/range.hpp>
 #include <array>
 #include <atomic>
 #include <cassert>
@@ -257,13 +256,21 @@ struct NodeInfo {
 
   /**
    * Constructor to set the execution kind for the node.
-   * \param exec_kind The execution kind for the node.
+   * \param exec_kind_ The execution kind for the node.
    */
-  explicit NodeInfo(ExecutionKind exec_kind) noexcept : exec{exec_kind} {}
+  explicit NodeInfo(ExecutionKind exec_kind_) noexcept : exec{exec_kind_} {}
+
+  /**
+   * Constructor to set the kind and execution kind for the node.
+   * \param kind_      The kind of teh node.
+   * \param exec_kind_ The execution kind for the node.
+   */
+  explicit NodeInfo(NodeKind kind_, ExecutionKind exec_kind_) noexcept
+  : kind{kind_}, exec{exec_kind_} {}
 
   /**
    * Constructor for node info which sets the name for the node.
-   * \param name The name of the node.
+   * \param name_ The name of the node.
    */
   NodeInfo(Name name_) noexcept : name{ripple_move(name_)} {}
 
