@@ -1,23 +1,23 @@
-//==--- ripple/core/graph/graph_executor.hpp --------------- -*- C++ -*- ---==//
+//==--- ripple/core/graph/executor.hpp --------------------- -*- C++ -*- ---==//
 //
 //                                 Ripple
 //
-//                      Copyright (c) 2020 Rob Clucas
+//                      Copyright (c) 2019, 2020 Rob Clucas
 //
 //  This file is distributed under the MIT License. See LICENSE for details.
 //
 //==------------------------------------------------------------------------==//
 //
-/// \file  graph_executor.hpp
-/// \brief This file implements an executor for graphs.
+/// \file  executor.hpp
+/// \brief This file implements an executor class.
 //
 //==------------------------------------------------------------------------==//
 
-#ifndef RIPPLE_GRAPH_GRAPH_EXECUTOR_HPP
-#define RIPPLE_GRAPH_GRAPH_EXECUTOR_HPP
+#ifndef RIPPLE_EXECUTION_EXECUTOR_HPP
+#define RIPPLE_EXECUTION_EXECUTOR_HPP
 
-#include "graph.hpp"
-#include "stealer.hpp"
+#include <ripple/core/graph/graph.hpp>
+#include <ripple/core/graph/stealer.hpp>
 #include <ripple/core/arch/topology.hpp>
 #include <ripple/core/container/static_stealable_dequeue.hpp>
 #include <chrono>
@@ -657,4 +657,4 @@ inline auto fence() noexcept -> void {
 
 } // namespace ripple
 
-#endif // RIPPLE_GRAPH_GRAPH_EXECUTOR_HPP
+#endif // RIPPLE_EXECUTION_EXECUTOR_HPP

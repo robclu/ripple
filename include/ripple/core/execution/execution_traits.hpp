@@ -36,16 +36,19 @@ enum class ExecutionKind : uint8_t {
  * \tparam Kind The kind of the execution.
  */
 template <ExecutionKind Kind>
-struct Executor {
+struct Execution {
   /** The target for the execution. */
   static constexpr ExecutionKind value = Kind;
 };
 
 /** Alias for a cpu executor. */
-using CpuExecutor = Executor<ExecutionKind::cpu>;
+using CpuExecutor = Execution<ExecutionKind::cpu>;
 
 /** Alias for a gpu executor. */
-using GpuExecutor = Executor<ExecutionKind::gpu>;
+using GpuExecutor = Execution<ExecutionKind::gpu>;
+
+/** Defines the default execution kind. */
+static constexpr ExecutionKind default_execution_kind = ExecutionKind::gpu;
 
 /*==--- [forward declarations] ---------------------------------------------==*/
 
