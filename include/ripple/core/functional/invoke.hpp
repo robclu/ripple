@@ -47,7 +47,7 @@ namespace ripple {
  */
 template <ExecutionKind Kind, typename Invocable, typename... Args>
 auto invoke_generic(
-  Executor<Kind> exec_kind, Invocable&& invocable, Args&&... args) noexcept
+  Execution<Kind> exec_kind, Invocable&& invocable, Args&&... args) noexcept
   -> void {
   if constexpr (Kind == ExecutionKind::gpu) {
     kernel::gpu::invoke_generic_impl(
