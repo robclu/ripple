@@ -74,7 +74,8 @@ type_extractor(Element<I, T> e) noexcept -> T {
  */
 template <size_t I, typename T>
 ripple_host_device constexpr inline auto
-get_impl(const Element<I, T>&& e) noexcept -> const T&& {
+get_impl(const Element<I, T>&& e) noexcept
+  -> const std::remove_reference_t<T>&& {
   return e.value;
 }
 
@@ -87,7 +88,7 @@ get_impl(const Element<I, T>&& e) noexcept -> const T&& {
  */
 template <size_t I, typename T>
 ripple_host_device constexpr inline auto
-get_impl(const Element<I, T>& e) noexcept -> const T& {
+get_impl(const Element<I, T>& e) noexcept -> const std::remove_reference_t<T>& {
   return e.value;
 }
 

@@ -30,6 +30,8 @@
 
 namespace ripple {
 
+struct BlockExtractor;
+
 /**
  * Implementation of a tensor class for an N-dimensional container for which
  * the data resides on both the host and the device.
@@ -40,10 +42,10 @@ namespace ripple {
 template <typename T, size_t Dimensions>
 class Tensor {
   /** Allow the splitter access to partition the work. */
-  friend struct Splitter;
+  friend struct BlockExtractor;
   /** Allow the reducer access to partition the work. */
-  template <typename Type, size_t Dims>
-  friend struct Reducer;
+  // template <typename Type, size_t Dims>
+  // friend struct Reducer;
 
   // clang-format off
   /** Defines the type of the block for the grid. */

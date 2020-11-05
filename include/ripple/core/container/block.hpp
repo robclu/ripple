@@ -20,6 +20,7 @@
 #include "device_block.hpp"
 #include "host_block.hpp"
 #include "memcopy_padding.hpp"
+#include <ripple/core/algorithm/reduce.hpp>
 #include <ripple/core/arch/topology.hpp>
 #include <ripple/core/iterator/indexed_iterator.hpp>
 
@@ -249,44 +250,36 @@ struct Block : public BlockEnabled<Block<T, Dimensions>> {
    */
   template <size_t Dim, Face Location, Mapping Map>
   auto fill_padding(
-    const Block& other, FaceSpecifier<Dim, Location, Map> dest_face) noexcept
-    -> void {
-    constexpr auto src_face = opp_face_for_src(dest_face);
-    constexpr auto dst_face = same_face_for_dst(dest_face);
-
-    // If we are on the same gpu, then we can do the device to device copy,
-    // otherwise we need to go through the host:
-    if (topology().device_to_device_available(gpu_id, other.gpu_id)) {
-      cudaSetDevice(gpu_id);
-      memcopy_padding(
-        other.device_data,
-        device_data,
-        src_face,
-        dst_face,
-        other.device_data.stream());
+    Block&                            other,
+    FaceSpecifier<Dim, Location, Map> dest_face,
+    ExecutionKind                     exe) noexcept -> void {
+    if (exe == ExecutionKind::gpu) {
+      fill_padding_device(other, dest_face);
       return;
     }
-
-    // Here we can't do a device -> device copy, so go through the host:
-    // First copy from the other block's device data to this block's host data:
-    cudaSetDevice(other.gpu_id);
-    memcopy_padding(
-      other.device_data,
-      host_data,
-      src_face,
-      src_face,
-      other.device_data.stream());
-
-    // Have to wait for the copy to finish ...
-    cudaStreamSynchronize(other.device_data.stream());
-
-    // Then copy from this block's host data to this blocks device data:
-    cudaSetDevice(gpu_id);
-    memcopy_padding(host_data, device_data, src_face, dst_face),
-      device_data.stream();
+    fill_padding_host(other, dest_face);
   }
 
   /*==--- [reduction] ------------------------------------------------------==*/
+
+  /**
+   * Performs a reduction on either the host or the device, depending on the
+   * kind of the exection.
+   * \param  exe  The kind of the execution.
+   * \param  pred The predicate for the reduction.
+   * \param  as   Arguments for the predicate.
+   * \tparam Pred The type of the predicate.
+   * \tparam As   The type of the predicate arguments.
+   ** \return The results of the reduction of the data.
+   */
+  template <typename Pred, typename... As>
+  auto reduce(ExecutionKind exec, Pred&& pred, As&&... as) noexcept -> T {
+    // clang-format off
+    return exec == ExecutionKind::gpu
+      ? reduce_on_device(static_cast<Pred&&>(pred), static_cast<As&&>(as)...)
+      : reduce_on_host(static_cast<Pred&&>(pred), static_cast<As>(as)...);
+    // clang-format on
+  }
 
   /**
    * Performs a reduction of the block device data, returning the result.
@@ -303,7 +296,7 @@ struct Block : public BlockEnabled<Block<T, Dimensions>> {
   template <typename Pred, typename... Args>
   auto reduce_on_device(Pred&& pred, Args&&... args) noexcept -> T {
     ensure_device_data_available();
-    return reduce(
+    return ::ripple::reduce(
       device_data, static_cast<Pred&&>(pred), static_cast<Args&&>(args)...);
   }
 
@@ -322,7 +315,7 @@ struct Block : public BlockEnabled<Block<T, Dimensions>> {
   template <typename Pred, typename... Args>
   auto reduce_on_host(Pred&& pred, Args&&... args) noexcept -> T {
     ensure_host_data_available();
-    return reduce(
+    return ::ripple::reduce(
       host_data, static_cast<Pred&&>(pred), static_cast<Args&&>(args)...);
   }
 
@@ -386,6 +379,91 @@ struct Block : public BlockEnabled<Block<T, Dimensions>> {
       it.set_block_start_index(dim, indices[dim] * block_sizes[dim]);
       it.set_global_size(dim, global_sizes[dim]);
     });
+  }
+
+  /**
+   * Fills the padding for this block using the other block, for the specified
+   * face.
+   *
+   * \note Note, this implementation is for execution on the device.
+   *
+   * \param  other     The other block to use to fill the padding.
+   * \param  dest_face The destination face to fill.
+   * \tparam Dim       The dimension of the destination face.
+   * \tparam Location  The location of the face to fill the padding for.
+   * \tparam Map       The padding for the face.
+   */
+  template <size_t Dim, Face Location, Mapping Map>
+  auto fill_padding_device(
+    Block& other, FaceSpecifier<Dim, Location, Map> dest_face) noexcept
+    -> void {
+    constexpr auto src_face = opp_face_for_src(dest_face);
+    constexpr auto dst_face = same_face_for_dst(dest_face);
+
+    // If we are on the same gpu, then we can do the device to device copy,
+    // otherwise we need to go through the host:
+    if (topology().device_to_device_available(gpu_id, other.gpu_id)) {
+      cudaSetDevice(other.gpu_id);
+      memcopy_padding(
+        other.device_data,
+        device_data,
+        src_face,
+        dst_face,
+        other.device_data.stream());
+      if (other.gpu_id == gpu_id) {
+        cudaStreamSynchronize(other.device_data.stream());
+      }
+      return;
+    }
+
+    // Here we can't do a device -> device copy, so go through the host:
+    // First copy from the other block's device data to this block's host data:
+    cudaSetDevice(other.gpu_id);
+    memcopy_padding(
+      other.device_data,
+      host_data,
+      src_face,
+      src_face,
+      other.device_data.stream());
+
+    // Have to wait for the copy to finish ...
+    cudaStreamSynchronize(other.device_data.stream());
+
+    // Then copy from this block's host data to this blocks device data:
+    cudaSetDevice(gpu_id);
+    memcopy_padding(
+      host_data, device_data, src_face, dst_face, device_data.stream());
+  }
+
+  /**
+   * Fills the padding for this block using the other block, for the specified
+   * face.
+   *
+   * \note Note, this implementation is for execution on the host
+   *
+   * \param  other     The other block to use to fill the padding.
+   * \param  dest_face The destination face to fill.
+   * \tparam Dim       The dimension of the destination face.
+   * \tparam Location  The location of the face to fill the padding for.
+   * \tparam Map       The padding for the face.
+   */
+  template <size_t Dim, Face Location, Mapping Map>
+  auto fill_padding_host(
+    Block& other, FaceSpecifier<Dim, Location, Map> dest_face) noexcept
+    -> void {
+    constexpr auto src_face = opp_face_for_src(dest_face);
+    constexpr auto dst_face = same_face_for_dst(dest_face);
+
+    // Here we know that we have to go through the host.
+    // First make sure that the host data is up to date. We start both copies
+    // and then wait for both copies:
+    other.ensure_host_data_available();
+    ensure_device_data_available();
+    other.synchronize();
+    synchronize();
+
+    // Then copy from this block's host data to this blocks device data:
+    memcopy_padding(host_data, device_data, src_face, dst_face);
   }
 };
 

@@ -368,14 +368,16 @@ using non_block_enable_t = std::enable_if_t<!is_block_v<T>, int>;
  * \tparam T The type to base the enable on.
  */
 template <typename T>
-using block_enabled_t = std::enable_if_t<is_block_enabled_v<T>, int>;
+using block_enabled_t =
+  std::enable_if_t<is_block_enabled_v<T> || is_block_v<T>, int>;
 
 /**
  * Defines a valid type if T is not block enabled.
  * tparam T The type to base the enable on.
  */
 template <typename T>
-using non_block_enabled_t = std::enable_if_t<!is_block_enabled_v<T>, int>;
+using non_block_enabled_t =
+  std::enable_if_t<!is_block_enabled_v<T> && !is_block_v<T>, int>;
 
 /**
  * Defines a valid type if T is a 1 dimensional block.

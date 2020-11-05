@@ -35,14 +35,14 @@ struct SharedWrapper {
   /** Defines a size for invalid padding. */
   static constexpr size_t invalid_padding = std::numeric_limits<size_t>::max();
 
-  T      wrapped;                   //!< THe wrapped type for shared memory.
+  T      wrapped;                   //!< The wrapped type for shared memory.
   size_t padding = invalid_padding; //!< The padding for the type.
 
   /**
-   * Determines if the wrapped type is padded.
-   * Returns true if the wraped type is padded.
+   * Determines if the wrapper is padded or not.
+   * \return true if the padding is valid, otherwise false.
    */
-  auto padded() const noexcept -> bool {
+  ripple_host_device auto padded() const noexcept -> bool {
     return padding != invalid_padding;
   }
 };
@@ -164,6 +164,39 @@ auto as_shared(T& t) noexcept -> SharedWrapper<T&> {
 template <typename T>
 auto as_shared(T& t, size_t padding) noexcept -> SharedWrapper<T&> {
   return SharedWrapper<T&>{t, padding};
+}
+
+/**
+ * Returns the padding for the wrapper. If this wrapper has its padding set,
+ * then it returs that, otherwise it will check if the type is block enabled,
+ * and if so return that padding of the wrapped type.
+ *
+ * \note This overload is only enabled if the template type is block enabled,
+ *       and therefore it has a padding method.
+ *
+ * \param wrapper The wrapper to get the amount of padding for.
+ * \return The amount of padding for the wrapper.
+ */
+template <typename T, block_enabled_t<T> = 0>
+auto padding(SharedWrapper<T>& wrapper) noexcept -> size_t {
+  return wrapper.padded() ? wrapper.padding : wrapper.wrapped.padding();
+}
+
+/**
+ * Returns the padding for the wrapper. If this wrapper has its padding set,
+ * then it returs that, otherwise it will check if the type is block enabled,
+ * and if so return that padding of the wrapped type.
+ *
+ * \note This overload is only enabled if the template type is not block
+ *       enabled, and therefore it does not have a padding method so
+ *       the default case returns zero.
+ *
+ * \param wrapper The wrapper to get the amount of padding for.
+ * \return The amount of padding for the wrapper.
+ */
+template <typename T, non_block_enabled_t<T> = 0>
+auto padding(SharedWrapper<T>& wrapper) noexcept -> size_t {
+  return wrapper.padded() ? wrapper.padding : 0;
 }
 
 } // namespace ripple
