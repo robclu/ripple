@@ -21,54 +21,86 @@
 #include <ripple/core/storage/struct_accessor.hpp>
 #include <ripple/core/utility/portability.hpp>
 
+/**
+ * Defines possible states for levelset reinitialization.
+ */
 enum class State : uint32_t { source = 0, converged = 1, updatable = 2 };
 
+/**
+ * Defines an element for a levelset, which has a value and a state for whether
+ * the element is converged.
+ * \param T The type of the data for the levelset element.
+ */
 template <typename T, typename Layout = ripple::StridedView>
 struct LevelsetElement
 : public ripple::PolymorphicLayout<LevelsetElement<T, Layout>> {
-  /// Defines the types to store for FIM. We need the actual type, and a boolean
-  /// to represent if the cell has converged.
+  /**
+   * Defines the types to store for FIM. We need the actual type, and a boolean
+   * to represent if the cell has converged.
+   */
   using Descriptor = ripple::StorageDescriptor<Layout, T, State>;
-  using Storage    = typename Descriptor::Storage;
+  /** Type of the storage for the element. */
+  using Storage = typename Descriptor::Storage;
 
-  Storage storage;
+  Storage storage; //!< Storage for the element.
 
+  /**
+   * Constructor to set the element from another element.
+   * \param e The other element to set from.
+   */
   ripple_host_device LevelsetElement(const LevelsetElement& e) noexcept
   : storage(e.storage) {}
 
-  ripple_host_device LevelsetElement(const Storage& s) : storage(s) {}
+  /**
+   * Constructor to set the element from the storage.
+   * \param s The storage to set the element from.
+   */
+  ripple_host_device LevelsetElement(const Storage& s) noexcept : storage(s) {}
 
-  // Overload of assignment operator. Copies the data only, not if the cell has
-  // converged.
+  /**
+   * Overload of assignment operator which copies the storage.
+   * \param other The other element to set this one from.
+   */
   ripple_host_device auto
-  operator=(const LevelsetElement& other) -> LevelsetElement& {
+  operator=(const LevelsetElement& other) noexcept -> LevelsetElement& {
     storage = other.storage;
     return *this;
   }
 
-  // Overload of assignment operator. Copies the value of \p val into the value
-  // being wrapped.
-  ripple_host_device auto operator=(T val) -> LevelsetElement& {
+  /**
+   * Overload of assignment operato which sets the value for the element to the
+   * given value.
+   * \param value The value to set the element to.
+   */
+  ripple_host_device auto operator=(T val) noexcept -> LevelsetElement& {
     value() = val;
     return *this;
   }
 
-  /// Returns the value of the type being wrapped.
-  ripple_host_device auto value() -> T& {
+  /**
+   * Returns the value of the levelset element.
+   */
+  ripple_host_device auto value() noexcept -> T& {
     return storage.template get<0>();
   }
 
-  /// Returns the value of the type being wrapped.
-  ripple_host_device auto value() const -> const T& {
+  /**
+   * Returns the value of the element.
+   */
+  ripple_host_device auto value() const noexcept -> const T& {
     return storage.template get<0>();
   }
 
-  /// Returns if the cell has converged.
+  /**
+   * Returns the state of the element.
+   */
   ripple_host_device auto state() -> State& {
     return storage.template get<1>();
   }
 
-  /// Returns if the cell has converged.
+  /**
+   * Returns the state of the element.
+   */
   ripple_host_device auto state() const -> const State& {
     return storage.template get<1>();
   }

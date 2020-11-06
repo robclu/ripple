@@ -1,5 +1,4 @@
-//==--- ripple/core/synchronization/synchronize.hpp ------------- -*- C++ -*-
-//---==//
+//==--- ripple/core/synchronization/synchronize.hpp -------- -*- C++ -*- ---==//
 //
 //                                Ripple
 //
@@ -32,13 +31,13 @@ namespace ripple {
  *       Not sure if this might cause errors since sm_70 can have divergent
  *       branches.
  */
-ripple_device_only auto sync_block() -> void {
+ripple_host_device inline auto syncthreads() noexcept -> void {
 /*
  * For newer architectures, __syncthreads is called on each thread in a block,
- * so if one thread has returned and __syncthreads is called then there will be
- * a deadlock, which is solved by using the coalesced groups.
+ * so if one thread has returned and __syncthreads is called then there will
+ * be a deadlock, which is solved by using the coalesced groups.
  */
-#if defined(__CUDACC__) && __CUDA_ARCH__ >= 600 && __CUDA_ARCH__ != 700
+#if defined(__CUDA__) && __CUDA_ARCH__ >= 600 && __CUDA_ARCH__ != 700
   auto g = cooperative_groups::coalesced_threads();
   g.sync();
 
@@ -47,10 +46,15 @@ ripple_device_only auto sync_block() -> void {
  * thread in the block to avoid deadlock, and the coalesced groupd does not
  * work, so here we default to the old syncthreads.
  */
-#elif defined(__CUDACC__)
+#elif defined(__CUDA__) && defined(__CUDA_ARCH__)
   __syncthreads();
 #endif // __CUDACC__
 }
+
+/**
+ * Does nothing on the host, for now.
+ */
+// ripple_host_device inline auto syncthreads() noexcept -> void {}
 
 } // namespace ripple
 

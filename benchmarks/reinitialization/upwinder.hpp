@@ -30,14 +30,20 @@ struct Upwinder;
 template <>
 struct Upwinder<1> {
   /**
-   * Invokes the upwinder on the iterator.
+   * Invokes the upwinder on the iterator, when the solver is for a single
+   * dimension.
+   * \param  it The iterator to compute the upwinding from.
+   * \param  dh The resolution of the domain.
+   * \param  f  The speed function for the eikonal equation.
+   * \tparam It The type of the iterator.
+   * \tparam T  The type of the resolution.
+   * \tparam F  The type of the speed function.
    */
   template <typename It, typename T, typename F>
   ripple_host_device auto operator()(It&& it, T dh, F&& f) const noexcept -> T {
     using namespace ripple;
     return std::min(
-             it.offset(ripple::dim_x, -1)->value(),
-             it.offset(ripple::dim_x, 1)->value()) +
+             it.offset(dim_x, -1)->value(), it.offset(dim_x, 1)->value()) +
            (f + dh);
   }
 };
@@ -48,21 +54,25 @@ struct Upwinder<1> {
 template <>
 struct Upwinder<2> {
   /**
-   * Invokes the upwinder on the iterator.
+   * Invokes the upwinder on the iterator, when the solver is for two
+   * dimensions.
+   * \param  it The iterator to compute the upwinding from.
+   * \param  dh The resolution of the domain.
+   * \param  f  The speed function for the eikonal equation.
+   * \tparam It The type of the iterator.
+   * \tparam T  The type of the resolution.
+   * \tparam F  The type of the speed function.
    */
   template <typename It, typename T, typename F>
   ripple_host_device auto operator()(It&& it, T dh, F&& f) const noexcept -> T {
     using namespace ripple;
-    const T a = std::min(
-      it.offset(ripple::dim_x, -1)->value(),
-      it.offset(ripple::dim_x, 1)->value());
-    const T b = std::min(
-      it.offset(ripple::dim_y, -1)->value(),
-      it.offset(ripple::dim_y, 1)->value());
+    const T a =
+      std::min(it.offset(dim_x, -1)->value(), it.offset(dim_x, 1)->value());
+    const T b =
+      std::min(it.offset(dim_y, -1)->value(), it.offset(dim_y, 1)->value());
 
     const T fh  = f * dh;
     const T amb = a - b;
-
     return std::abs(amb) >= fh
              ? std::min(a, b) + fh
              : T(0.5) * (a + b + std::sqrt(T(2) * fh * fh - (amb * amb)));
@@ -75,19 +85,24 @@ struct Upwinder<2> {
 template <>
 struct Upwinder<3> {
   /**
-   * Invokes the upwinder on the iterator.
+   * Invokes the upwinder on the iterator, when the solver is for three
+   * dimensions.
+   * \param  it The iterator to compute the upwinding from.
+   * \param  dh The resolution of the domain.
+   * \param  f  The speed function for the eikonal equation.
+   * \tparam It The type of the iterator.
+   * \tparam T  The type of the resolution.
+   * \tparam F  The type of the speed function.
    */
   template <typename It, typename T, typename F>
   ripple_host_device auto operator()(It&& it, T dh, F&& f) const noexcept -> T {
-    const T aa = std::min(
-      it.offset(ripple::dim_x, -1)->value(),
-      it.offset(ripple::dim_x, 1)->value());
-    const T bb = std::min(
-      it.offset(ripple::dim_y, -1)->value(),
-      it.offset(ripple::dim_y, 1)->value());
-    const T cc = std::min(
-      it.offset(ripple::dim_z, -1)->value(),
-      it.offset(ripple::dim_z, 1)->value());
+    using namespace ripple;
+    const T aa =
+      std::min(it.offset(dim_x, -1)->value(), it.offset(dim_x, 1)->value());
+    const T bb =
+      std::min(it.offset(dim_y, -1)->value(), it.offset(dim_y, 1)->value());
+    const T cc =
+      std::min(it.offset(dim_z, -1)->value(), it.offset(dim_z, 1)->value());
 
     const T a = std::min(aa, std::min(bb, cc));
     const T b = std::max(std::min(aa, bb), std::min(std::max(aa, bb), cc));

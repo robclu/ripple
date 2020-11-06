@@ -8,8 +8,9 @@
 //
 //==------------------------------------------------------------------------==//
 //
-/// \file  upwinder.hpp
-/// \brief This file defines an implementation of upwinding.
+/// \file  fim_solver.hpp
+/// \brief This file defines an implementation of an eikonal solver using the
+///        fast iterative method.
 //
 //==------------------------------------------------------------------------==//
 
@@ -25,14 +26,18 @@
  */
 struct FimSolver {
   /**
-   * Applies the method to the solver.
+   * Solves the eikonal equation for for data at the given iterator.
+   * \param  it       The iterator to the data to solve.
+   * \param  dh       The resolution of the domain.
+   * \param  iters    The number of iterations to solve for.
+   * \tparam Iterator The type of the iterator.
+   * \tparam T        The data type for  the resilution.
    */
   template <typename Iterator, typename T>
   ripple_host_device auto
   operator()(Iterator it, T dh, size_t iters) const noexcept -> void {
     static constexpr size_t dims =
       ripple::iterator_traits_t<Iterator>::dimensions;
-    // Set all data to be out of the list:
     constexpr auto solve = Upwinder<dims>();
     constexpr auto f     = T{1};
     constexpr auto tol   = T{1e-4};
@@ -49,11 +54,10 @@ struct FimSolver {
 
     int32_t iter      = 0;
     bool    updatable = false;
-
     while (iter++ < iters) {
       updatable = it->state() == State::updatable;
       q         = solve(it, dh, f);
-      ripple::sync_block();
+      ripple::syncthreads();
 
       if (updatable) {
         p           = it->value();
@@ -66,7 +70,7 @@ struct FimSolver {
           it->state() = State::updatable;
         }
       }
-      ripple::sync_block();
+      ripple::syncthreads();
     }
     if (it->value() >= (std::numeric_limits<T>::max() - 1)) {
       it->state() = State::updatable;

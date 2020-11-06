@@ -18,6 +18,13 @@ add_executable(
   particle_update ${ripple_SOURCE_DIR}/benchmarks/particle/particle_update.cu)
 target_link_libraries(particle_update ripple::ripple)
 
+#=--- [reinitialization] ----------------------------------------------------==#
+
+add_executable(
+  reinitialization 
+  ${ripple_SOURCE_DIR}/benchmarks/reinitialization/reinitialization.cu)
+target_link_libraries(reinitialization ripple::ripple)
+
 #==--- [saxpy ---------------------------------------------------------------==#
 
 add_executable(

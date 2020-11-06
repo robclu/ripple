@@ -16,17 +16,30 @@
 #include "fim_solver.hpp"
 #include <ripple/core/boundary/fo_extrap_loader.hpp>
 #include <ripple/core/container/tensor.hpp>
-#include <ripple/core/graph/graph_executor.hpp>
+#include <ripple/core/execution/executor.hpp>
 #include <ripple/core/utility/timer.hpp>
 #include <cuda_profiler_api.h>
 #include <iostream>
 
+/*
+ * This benchmarks reinitializes levelset data using the fast iterative method.
+ * Usage is:
+ *    ./reinitializtion <elements per dim> <bandwidth>
+ */
+
+/** Number of dimensions for the solver. */
 constexpr size_t dims = 2;
 
 using Real    = float;
 using Element = LevelsetElement<Real, ripple::StridedView>;
 using Tensor  = ripple::Tensor<Element, dims>;
 
+/**
+ * Makes a tensor with the given number of elements per dimension and padding
+ * elements.
+ * \param elements The number of elements per dimension.
+ * \param padding  The number of padding elements per side of the dimension.
+ */
 auto make_tensor(size_t elements, uint32_t padding = 0) noexcept {
   if constexpr (dims == 1) {
     return ripple::Tensor<Element, 1>{{1}, padding, elements};
@@ -50,13 +63,13 @@ int main(int argc, char** argv) {
   if (argc > 2) {
     iters = std::atol(argv[2]);
   }
-
   auto data = make_tensor(elements, padding);
 
   ripple::Graph init;
   init
     .split(
       [] ripple_host_device(auto&& it) {
+        /* Set the very first cell in the space as the source node. */
         if (it.first_in_global_space()) {
           it->value() = 0;
           it->state() = State::source;
@@ -72,7 +85,7 @@ int main(int argc, char** argv) {
       },
       data);
   ripple::execute(init);
-  ripple::wait_until_finished();
+  ripple::fence();
 
   ripple::Graph solve;
   Real          dh = 0.1;
@@ -81,30 +94,18 @@ int main(int argc, char** argv) {
       constexpr auto fim_solve = FimSolver();
       fim_solve(it, dh, iters);
     },
-    data,
+    ripple::in_shared(data),
     dh,
     iters);
 
   ripple::Timer timer;
   ripple::execute(solve);
-  ripple::wait_until_finished();
+  ripple::fence();
 
   double elapsed = timer.elapsed_msec();
   std::cout << "Size: " << elements << "x" << elements
             << " elements, Iters: " << iters << ", Time: " << elapsed
             << " ms\n";
 
-  /*
-    for (int j = 0; j < elements; ++j) {
-      for (int i = 0; i < elements; ++i) {
-        auto v = data(i, j)->value();
-        if (v > 5.0) {
-          v = 5.0;
-        }
-        printf("%5.5f ", v);
-      }
-      std::cout << "\n";
-    }
-  */
   return 0;
 }
