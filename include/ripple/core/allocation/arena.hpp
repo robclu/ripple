@@ -162,7 +162,7 @@ struct HeapArena {
     }
     void* new_ptr = malloc(new_size);
     if (start_ != nullptr) {
-      std::memcpy(new_ptr, start_, size());
+      memcpy(new_ptr, start_, size());
       std::free(start_);
     }
     start_ = new_ptr;
