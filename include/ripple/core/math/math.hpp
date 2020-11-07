@@ -374,7 +374,6 @@ clamp(const T& v, const T& lo, const T& hi) noexcept -> const T& {
 template <typename Impl, typename T>
 ripple_host_device auto
 clamp(Array<Impl>& a, const T& lo, const T& hi) noexcept -> void {
-  using Value = typename array_traits_t<Impl>::value_t;
   unrolled_for<array_traits_t<Impl>::size>(
     [&](auto i) { a[i] = std::clamp(a[i], lo, hi); });
 }
@@ -393,13 +392,12 @@ clamp(Array<Impl>& a, const T& lo, const T& hi) noexcept -> void {
 template <typename ImplA, typename ImplB>
 ripple_host_device constexpr auto
 dot(const Array<ImplA>& a, const Array<ImplB>& b) noexcept ->
-  typename array_traits_t<ImplA>::value_t {
-  using traits_t = array_traits_t<ImplA>;
-  using value_t  = typename traits_t::value_t;
-  value_t r      = 0;
-  unrolled_for_bounded<traits_t::size>([&](auto i) {
-    r += static_cast<value_t>(a[i]) * static_cast<value_t>(b[i]);
-  });
+  typename array_traits_t<ImplA>::Value {
+  using Traits = array_traits_t<ImplA>;
+  using Value  = typename Traits::Value;
+  Value r      = 0;
+  unrolled_for_bounded<Traits::size>(
+    [&](auto i) { r += static_cast<Value>(a[i]) * static_cast<Value>(b[i]); });
   return r;
 }
 
@@ -411,13 +409,12 @@ dot(const Array<ImplA>& a, const Array<ImplB>& b) noexcept ->
  */
 template <typename Impl>
 ripple_host_device constexpr auto
-dot2(const Array<Impl>& a) noexcept -> typename array_traits_t<Impl>::value_t {
-  using traits_t = array_traits_t<Impl>;
-  using value_t  = typename traits_t::value_t;
-  value_t r      = 0;
-  unrolled_for_bounded<traits_t::size>([&](auto i) {
-    r += static_cast<value_t>(a[i]) * static_cast<value_t>(a[i]);
-  });
+dot2(const Array<Impl>& a) noexcept -> typename array_traits_t<Impl>::Value {
+  using Traits = array_traits_t<Impl>;
+  using Value  = typename Traits::Value;
+  Value r      = 0;
+  unrolled_for_bounded<Traits::size>(
+    [&](auto i) { r += static_cast<Value>(a[i]) * static_cast<Value>(a[i]); });
   return r;
 }
 
@@ -437,7 +434,7 @@ template <
   array_size_enable_t<ImplB, 2> = 0>
 ripple_host_device constexpr auto
 cross(const Array<ImplA>& a, const Array<ImplB>& b) noexcept ->
-  typename array_traits_t<ImplA>::value_t {
+  typename array_traits_t<ImplA>::Value {
   return a[0] * b[1] - b[0] * a[1];
 }
 
@@ -472,9 +469,9 @@ cross(const Array<ImplA>& a, const Array<ImplB>& b) noexcept
  * \return The length of the array.
  */
 template <typename Impl>
-ripple_host_device auto length(const Array<Impl>& a) noexcept ->
-  typename array_traits_t<Impl>::value_t {
-  using Value = typename array_traits_t<Impl>::value_t;
+ripple_host_device auto
+length(const Array<Impl>& a) noexcept -> typename array_traits_t<Impl>::Value {
+  using Value = typename array_traits_t<Impl>::Value;
   Value r{0};
   unrolled_for_bounded<array_traits_t<Impl>::size>(
     [&](auto i) { r += a[i] * a[i]; });
