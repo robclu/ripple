@@ -80,7 +80,7 @@ ripple_device_only auto reduce_block_for_dim(
       pred(left, right, args...);
     }
     elements += rem;
-    sync_block();
+    syncthreads();
   }
 #endif // __CUDACC__
 }
@@ -139,7 +139,7 @@ ripple_global auto reduce_block_shared(
   }
 
   *shared_it = *it;
-  sync_block();
+  syncthreads();
 
   // Reduce each dimension to get a single value per block:
   unrolled_for<dims>([&](auto d) {

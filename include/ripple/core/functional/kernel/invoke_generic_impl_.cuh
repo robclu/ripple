@@ -573,7 +573,7 @@ ripple_device_only auto execute_invocable(
   Args&&... args) noexcept -> void {
   // Sync needed here because of shared to global load:
   if (valid > 0) {
-    sync_block();
+    syncthreads();
   }
   invocable(get<0>(args)...);
 

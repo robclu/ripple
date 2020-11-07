@@ -176,7 +176,7 @@ ripple_device_only auto invoke_shared(
   if (same_type && shared_it.padding() > 0) {
     load_internal_boundary<Dims>(it, shared_it);
   }
-  sync_block();
+  syncthreads();
 
   callable(it, shared_it, args...);
 #endif // __CUDACC__
