@@ -17,7 +17,8 @@
 #ifndef RIPPLE_ALGORITHM_UNROLLED_FOR_IMPL_HPP
 #define RIPPLE_ALGORITHM_UNROLLED_FOR_IMPL_HPP
 
-#include <ripple/core/utility/number.hpp>
+#include "../../utility/forward.hpp"
+#include "../../utility/number.hpp"
 
 namespace ripple {
 namespace detail {
@@ -49,9 +50,8 @@ struct Unroll : public Unroll<(Amount <= 1 ? 0 : Amount - 1)> {
   template <typename Functor, typename... Args>
   ripple_host_device constexpr Unroll(
     Functor&& functor, Args&&... args) noexcept
-  : PreviousLevel{
-      static_cast<Functor&&>(functor), static_cast<Args&&>(args)...} {
-    functor(Num<previous_level>(), static_cast<Args&&>(args)...);
+  : PreviousLevel{ripple_forward(functor), ripple_forward(args)...} {
+    functor(Num<previous_level>(), ripple_forward(args)...);
   }
 };
 
@@ -73,7 +73,7 @@ struct Unroll<1> {
   template <typename Functor, typename... Args>
   ripple_host_device constexpr Unroll(
     Functor&& functor, Args&&... args) noexcept {
-    functor(Num<0>(), static_cast<Args&&>(args)...);
+    functor(Num<0>(), ripple_forward(args)...);
   }
 };
 

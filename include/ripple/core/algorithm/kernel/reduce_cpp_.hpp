@@ -17,9 +17,9 @@
 #ifndef RIPPLE_ALGORITHM_KERNEL_REDUCE_CPP__HPP
 #define RIPPLE_ALGORITHM_KERNEL_REDUCE_CPP__HPP
 
-#include <ripple/core/iterator/iterator_traits.hpp>
+#include "../../iterator/iterator_traits.hpp"
 
-namespace ripple::kernel {
+namespace ripple::kernel::cpu {
 namespace detail {
 
 /**
@@ -36,7 +36,7 @@ class Reducer;
 template <>
 class Reducer<0> {
   /** Defines the dimension to reduce over. */
-  static constexpr auto dim = ripple::dim_x;
+  static constexpr auto dim = ripple::dimx();
 
  public:
   /**
@@ -76,14 +76,14 @@ class Reducer<0> {
       unrolled_for<sub_iters>([&](auto j) {
         const size_t idx = i * sub_iters + j;
         other            = it.offset(dim, idx + 1);
-        pred(result, other);
+        pred.inplace(result, other);
       });
     }
 
     for (size_t i = 0; i < rem_iters; ++i) {
       const size_t idx = iters * sub_iters + i;
       other            = it.offset(dim, idx + 1);
-      pred(result, other);
+      pred.inplace(result, other);
     }
   }
 };
@@ -98,7 +98,7 @@ class Reducer {
   using NextReducer = Reducer<Dim - 1>;
 
   /** Defines the value of the dimension to reduce in. */
-  static constexpr auto dim = Dim == 1 ? ripple::dim_y : ripple::dim_z;
+  static constexpr auto dim = Dim == 1 ? ripple::dimy() : ripple::dimz();
 
  public:
   /**
@@ -127,14 +127,14 @@ class Reducer {
 
     // Reduce the first row/plane:
     NextReducer::reduce(
-      it, result, static_cast<Pred&&>(pred), static_cast<Args&&>(args)...);
+      it, result, ripple_forward(pred), ripple_forward(args)...);
     for (size_t i = 0; i < it.size(dim) - 1; ++i) {
       auto next = it.offset(dim, i + 1);
       // Next dimension doesn't do the first element:
-      pred(result, next);
+      pred.inplace(result, next);
 
       NextReducer::reduce(
-        next, result, static_cast<Pred&&>(pred), static_cast<Args&&>(args)...);
+        next, result, ripple_forward(pred), ripple_forward(args)...);
     }
   }
 };
@@ -161,8 +161,7 @@ auto reduce(
   // Store the inital value, and then reduce into the first iterated value.
   auto it         = block.begin();
   auto init_value = *it;
-  Reducer::reduce(
-    it, it, static_cast<Pred&&>(pred), static_cast<Args&&>(args)...);
+  Reducer::reduce(it, it, ripple_forward(pred), ripple_forward(args)...);
 
   // Get results and reset the first element, since it has been reduced into.
   auto result = *it;
@@ -170,6 +169,6 @@ auto reduce(
   return result;
 }
 
-} // namespace ripple::kernel
+} // namespace ripple::kernel::cpu
 
 #endif // RIPPLE_ALGORITHM_KERNEL_REDUCE_CPP__HPP

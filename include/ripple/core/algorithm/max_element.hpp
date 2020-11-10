@@ -17,7 +17,8 @@
 #ifndef RIPPLE_ALGORITHM_MAX_ELEMENT_HPP
 #define RIPPLE_ALGORITHM_MAX_ELEMENT_HPP
 
-#include <ripple/core/utility/portability.hpp>
+#include "../utility/forward.hpp"
+#include "../utility/portability.hpp"
 #include <algorithm>
 
 namespace ripple {
@@ -33,7 +34,7 @@ namespace detail {
 template <typename T>
 ripple_host_device constexpr auto
 max_element_impl(T&& element) noexcept -> T&& {
-  return static_cast<T&&>(element);
+  return ripple_forward(element);
 }
 
 /**
@@ -50,8 +51,8 @@ template <typename T, typename Next, typename... Ts>
 ripple_host_device constexpr decltype(auto)
 max_element_impl(T&& current_max, Next&& next, Ts&&... rest) noexcept {
   return max_element_impl(
-    std::max(static_cast<T&&>(current_max), static_cast<Next&&>(next)),
-    static_cast<Ts&&>(rest)...);
+    std::max(ripple_forward(current_max), ripple_forward(next)),
+    ripple_forward(rest)...);
 }
 
 } // namespace detail
@@ -71,7 +72,7 @@ template <typename T, typename... Ts>
 ripple_host_device constexpr decltype(auto)
 max_element(T&& first, Ts&&... rest) noexcept {
   return detail::max_element_impl(
-    static_cast<T&&>(first), static_cast<Ts&&>(rest)...);
+    ripple_forward(first), ripple_forward(rest)...);
 }
 
 } // namespace ripple

@@ -18,9 +18,22 @@
 
 #include "kernel/reduce_cpp_.hpp"
 #include "kernel/reduce_cuda_.cuh"
-#include <ripple/core/container/host_block.hpp>
+#include "../container/host_block.hpp"
 
 namespace ripple {
+
+/**
+ * \note There is supposedly hardware support for certain predicates, see:
+ *
+ *  #collectives-cg-reduce
+ *
+ * In the CUDA programming guide, however, it's been tested on sm_80 and sm_86
+ * and there is very little difference in performance compared to the
+ * implementations below, which work with both the host and device reduction
+ * versions, so these are preferred. Perhaps there is more difference in
+ * performance for different use cases than those which were tested.
+ *
+ */
 
 /*==--- [predicates] -------------------------------------------------------==*/
 
@@ -29,16 +42,14 @@ namespace ripple {
  */
 struct SumReducer {
   /**
-   * Adds the data pointed to by the \p from iterator to the data pointed to by
-   * \p into iterator.
-   * \param  into An iterator to the data to add to.
-   * \param  from An iterator to the data to add.
+   * Adds the data pointed to by the one iterator to the other.
+   * \param  a An iterator to the data to add to.
+   * \param  b An iterator to the data to add.
    * \tparam T    The type of the iterator.
    */
   template <typename T>
-  ripple_host_device auto
-  operator()(T& into, const T& from) const noexcept -> void {
-    *into += *from;
+  ripple_host_device auto inplace(T& a, const T& b) const noexcept -> void {
+    *a += *b;
   }
 
   /**
@@ -61,16 +72,14 @@ struct SumReducer {
  */
 struct SubtractionReducer {
   /**
-   * Subtracts the data pointed to by the \p with iterator from the data
-   * pointed to by \p from iterator.
-   * \param  from An iterator to the data to subtract from.
-   * \param  with An iterator to the data to suctract with.
-   * \tparam T    The type of the iterator.
+   * Subtracts the data pointed to by the one iterator from the other.
+   * \param  a An iterator to the data to subtract from.
+   * \param  b An iterator to the data to suctract with.
+   * \tparam T The type of the iterator.
    */
   template <typename T>
-  ripple_host_device auto
-  operator()(T& from, const T& with) const noexcept -> void {
-    *from -= *with;
+  ripple_host_device auto inplace(T& a, const T& b) const noexcept -> void {
+    *a -= *b;
   }
 
   /**
@@ -98,8 +107,9 @@ struct MaxReducer {
    * \param  b The compoennt to comapare with.
    * \tparam T The type of the iterator.
    */
+
   template <typename T>
-  ripple_host_device auto operator()(T& a, const T& b) const noexcept -> void {
+  ripple_host_device auto inplace(T& a, const T& b) const noexcept -> void {
     *a = std::max(*a, *b);
   }
 
@@ -152,74 +162,81 @@ struct MinReducer {
 /**
  * Reduces the \p block using the \p pred, returning the result.
  *
- * The pred must have the following form:
+ * The pred must have the following overloads form:
  *
  * ~~~.cpp
- * ripple_host_device auto (T<&> into, <const> T<&> from) const -> void {
- *   //...
- * };
+ * ripple_host_device auto inplace(T<&> into, <const> T<&> from) const ->
+ *   -> void {}
+ *
+ * and
+ *
+ * ripple_host_device auto operator()(const T<&> a, <const> T<&> b) const
+ *  -> T {}'
  * ~~~
  *
- * where T is an iterator over the type T, or a pointer, which can be
- * dereferenced.
+ * where T is an iterator over the type T, or a pointer, for thee inplace
+ * version, and is a reference of value for the operator overload version.
  *
- * The predicate *must modify* the data pointed to by the `into` iterator (first
- * argument), as appropriate, using the `from` iterator. Modifying the
- * `from` iterator may  cause unexpectd results, so make it const if it should
- * not be modified.
+ * For the inplace version, the predicate *must modify* the data pointed to by
+ * the `into` iterator (first argument), as appropriate, using the `from`
+ * iterator. Modifying the `from` iterator may  cause unexpectd results, so
+ * make it const if it should not be modified.
+ *
+ * \note Even though the signatures are different, the CUDA coop groups reduce
+ *       implementation doesn't choose the correct one if we make both
+ *       operator() overloads.
  *
  * This overload is for device blocks.
  *
  * \param  block The block to reduce.
  * \param  pred  The predicate for the reduction.
- * \param  args  Arguments for the predicate.
  * \tparam T     The type of the data in the block.
  * \tparam Dims  The number of dimensions in the block.
  * \tparam Pred  The type of the predicate.
- * \tparam Args  The type of the arguments for the invocation.
  */
-template <typename T, std::size_t Dims, typename Pred, typename... Args>
-auto reduce(
-  const DeviceBlock<T, Dims>& block, Pred&& pred, Args&&... args) noexcept
-  -> T {
-  return kernel::cuda::reduce(
-    block, std::forward<Pred>(pred), std::forward<Args>(args)...);
+template <typename T, size_t Dims, typename Pred>
+auto reduce(const DeviceBlock<T, Dims>& block, Pred&& pred) noexcept -> T {
+  return kernel::gpu::reduce(block, ripple_forward(pred));
 }
 
 /**
  * Reduces the \p block using the \p pred, returning the result.
  *
- * The pred must have the form:
+ * The pred must have the following overloads form:
  *
  * ~~~.cpp
- * ripple_host_device auto (T<&> into, <const> T<&> from) const -> void {
- *   //...
- * };
+ * ripple_host_device auto inplace(T<&> into, <const> T<&> from) const ->
+ *   -> void {}
+ *
+ * and
+ *
+ * ripple_host_device auto operator()(const T<&> a, <const> T<&> b) const
+ *  -> T {}'
  * ~~~
  *
- * where T is an iterator over the type T, or a pointer, which can be
- * dereferenced.
+ * where T is an iterator over the type T, or a pointer, for thee inplace
+ * version, and is a reference of value for the operator overload version.
  *
- * The predicate *must modify* the data pointed to by the `into` iterator (first
- * argument), as appropriate, using the `from` iterator. Modifying the
- * `from` iterator may  cause unexpectd results, so make it const if it should
- * not be modified.
+ * For the inplace version, the predicate *must modify* the data pointed to by
+ * the `into` iterator (first argument), as appropriate, using the `from`
+ * iterator. Modifying the `from` iterator may  cause unexpectd results, so
+ * make it const if it should not be modified.
+ *
+ * \note Even though the signatures are different, the CUDA coop groups reduce
+ *       implementation doesn't choose the correct one if we make both
+ *       operator() overloads.
  *
  * This overload is for host blocks.
  *
  * \param  block The block to reduce.
  * \param  pred  The predicate for the reduction.
- * \param  args  Arguments for the predicate.
  * \tparam T     The type of the data in the block.
  * \tparam Dims  The number of dimensions in the block.
  * \tparam Pred  The type of the predicate.
- * \tparam Args  The type of the arguments for the invocation.
  */
-template <typename T, std::size_t Dims, typename Pred, typename... Args>
-auto reduce(
-  const HostBlock<T, Dims>& block, Pred&& pred, Args&&... args) noexcept -> T {
-  return kernel::reduce(
-    block, std::forward<Pred>(pred), std::forward<Args>(args)...);
+template <typename T, size_t Dims, typename Pred>
+auto reduce(const HostBlock<T, Dims>& block, Pred&& pred) noexcept -> T {
+  return kernel::cpu::reduce(block, ripple_forward(pred));
 }
 
 } // namespace ripple

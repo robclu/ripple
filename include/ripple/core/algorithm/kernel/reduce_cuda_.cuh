@@ -18,144 +18,73 @@
 #define RIPPLE_ALGORITHM_KERNEL_INVOKE_CUDA__CUH
 
 #include "reduce_cpp_.hpp"
-#include <ripple/core/allocation/multiarch_allocator.hpp>
-#include <ripple/core/execution/synchronize.hpp>
-#include <ripple/core/execution/thread_index.hpp>
-#include <ripple/core/functional/invoke.hpp>
-#include <ripple/core/iterator/iterator_traits.hpp>
+#include "../../arch/gpu_utils.hpp"
+#include "../../allocation/multiarch_allocator.hpp"
+#include "../../execution/synchronize.hpp"
+#include "../../execution/thread_index.hpp"
+#include "../../functional/invoke.hpp"
+#include "../../iterator/iterator_traits.hpp"
+#include "../../utility/portability.hpp"
+#include <cooperative_groups/reduce.h>
 
-namespace ripple::kernel::cuda {
+namespace ripple::kernel::gpu {
 namespace detail {
 
 /**
- * Performs a reduction on the block data iterated over by the \p it in the
- * dimension given by Dim.
+ * Performs a reduction of over all currently active threads where each thread
+ * has the given value for the reduction. This sets the value based on the
+ * predicate.
  *
- * \param  it        An iterator over shared memory.
- * \param  elements  The total number of elements in the dimension.
- * \param  pred      The predicate for the reduction.
- * \param  args      Arguments for the callable.
- * \tparam Dim       The dimension to reduce over.
- * \tparam Iterator  The type of the iterator.
- * \tparam Pred      The type of the predicate.
- * \tparam Args      The type of the arguments.
+ * \param  value The value to reduce.
+ * \param  pred  The predicate for the reduction.
+ * \tparam T     The type of the value.
+ * \tparam Pred  The type of the predicate.
+ * \return The result of the reduction.
  */
-template <size_t Dim, typename Iterator, typename Pred, typename... Args>
-ripple_device_only auto reduce_block_for_dim(
-  Iterator&& it, size_t elements, Pred&& pred, Args&&... args) noexcept
-  -> void {
-#if defined(__CUDACC__)
-  // Force dim to be contexpr:
-  constexpr auto dim = Dim == 0 ? dim_x : Dim == 1 ? dim_y : dim_z;
-
-  // Account for threads which may not run in last block of dimension:
-  elements =
-    std::min(it.size(dim), elements - block_idx(dim) * block_size(dim));
-
-  // Compute iteration, essentially log_2(elements) + 1;
-  size_t dim_size = elements;
-  size_t iters    = 1;
-  while (dim_size > 1) {
-    iters++;
-    dim_size >>= 1;
-  }
-
-  /*
-   * Need to use for loop instead of while for syncthreads correctnes:
-   * This previously used a while loop to avoid the iteration calculation above,
-   * but __syncthreads in the while loop caused erros. The register usage an
-   * performance of this is the same, however.
-   *
-   * It may be possible to use the while loop with coalesced_group.sync(). The
-   * performance of these two options needs to be tested though. It's likely
-   * that a reduction is almost never the bottleneck though, so perhaps not
-   * worth the effort.
-   */
-  auto left = it, right = it;
-  for (auto i : range(iters)) {
-    const auto rem = elements & 1;
-    elements >>= 1;
-    if (thread_idx(dim) < elements) {
-      right = it.offset(dim, elements + rem);
-      pred(left, right, args...);
-    }
-    elements += rem;
-    syncthreads();
-  }
-#endif // __CUDACC__
+template <typename T, typename P>
+ripple_device auto reduce_impl(T value, P&& pred) noexcept -> T {
+  namespace cg = cooperative_groups;
+  auto active  = cg::coalesced_threads();
+  T    result  = cg::reduce(active, value, ripple_forward(pred));
+  active.sync();
+  return result;
 }
 
 /**
- * Perfroms a block reduction in shared memory over each of the dimensions,
- * putting the result into the \p results_it iterator for each block.
+ * Perfroms a block reduction of the data being iterated over, writing the
+ * result for each block to the results iterator, which can then be reduced
+ * further to get the final result.
  *
  * \param  it          The iterator over all data to reduce.
  * \param  results_it  The results iterator for each block.
  * \param  exec_params The parameters for the execution.
  * \param  pred        The predicate for the reduction.
- * \param  args        Arguments for the predicate.
  * \tparam Iterator    The type of the iterator over the reduction data.
  * \tparam ResIterator The type of the iterator for each block's results.
  * \tparam ExeImpl     The implementation of the execution param interface.
  * \tparam Pred        The type of the predicate.
- * \tparam Args        The type of the arguments for the invocation.
  */
-template <
-  typename Iterator,
-  typename ResIterator,
-  typename ExecImpl,
-  typename Pred,
-  typename... Args>
-ripple_global auto reduce_block_shared(
-  Iterator    it,
-  ResIterator results_it,
-  ExecImpl    exec_params,
-  Pred        pred,
-  Args... args) noexcept -> void {
-#if defined(__CUDACC__)
-  // Create the shared memory buffer and iterator over the data:
-  constexpr auto  dims       = iterator_traits_t<Iterator>::dimensions;
-  constexpr auto  alloc_size = exec_params.template allocation_size<dims>();
-  __shared__ char buffer[alloc_size];
-  auto            shared_it =
-    exec_params.template iterator<dims>(static_cast<void*>(buffer));
-
-  // Offset the iterators to the global and thread indices:
-  bool in_range = true;
-  unrolled_for<dims>([&](auto d) {
-    constexpr auto dim        = d;
-    const auto     idx        = global_idx(dim);
-    const auto     must_shift = idx < it.size(dim) && in_range;
-    if (must_shift) {
-      it.shift(dim, idx);
-      shared_it.shift(dim, thread_idx(dim) + shared_it.padding());
-    } else {
-      in_range = false;
-    }
+template <typename Iterator, typename ResIterator, typename Pred>
+ripple_global auto
+reduce_block(Iterator it, ResIterator results_it, Pred pred) -> void {
+  constexpr size_t dims     = iterator_traits_t<Iterator>::dimensions;
+  bool             in_range = true;
+  unrolled_for<dims>([&](auto dim) {
+    if (global_idx(dim) >= it.size(dim)) { in_range = false; }
   });
 
-  if (!in_range) {
-    return;
-  }
+  if (!in_range) { return; }
 
-  *shared_it = *it;
-  syncthreads();
-
-  // Reduce each dimension to get a single value per block:
-  unrolled_for<dims>([&](auto d) {
-    constexpr auto dim = dims - 1 - d;
-    reduce_block_for_dim<dim>(shared_it, it.size(dim), pred, args...);
-  });
+  unrolled_for<dims>([&](auto dim) { it.shift(dim, global_idx(dim)); });
+  auto result = *it;
+  result      = reduce_impl(result, ripple_forward(pred));
 
   // Copy the results to the output:
   if (first_thread_in_block()) {
-    unrolled_for<dims>([&](auto d) {
-      constexpr auto dim = d;
-      results_it.shift(dim, block_idx(dim));
-    });
-    *results_it = *shared_it;
+    unrolled_for<dims>(
+      [&](auto dim) { results_it.shift(dim, block_idx(dim)); });
+    *results_it = result;
   }
-#endif // __CUDACC__
 }
 
 } // namespace detail
@@ -163,24 +92,19 @@ ripple_global auto reduce_block_shared(
 /**
  * Reduces the \p block using the \p pred.
  *
- * \note This allocates a temporary buffer for the result of each block, which
- *       increases the cost of the overall reduction.
- *
- * \todo Add an option to provide a pre-allocated block for the result.
+ * \note This uses the global host device allocator which significanlty
+ *       improved performance.e
  *
  * \param  block     The block to invoke the callable on.
  * \param  pred      The predicate for the reduction.
- * \param  args      Arguments for the predicate.
  * \tparam T         The type of the data in the block.
  * \tparam Dims      The number of dimensions in the block.
  * \tparam Pred      The type of the predicate for the reduction.
- * \tparam Args      The type of the arguments for the invocation.
  */
-template <typename T, size_t Dims, typename Pred, typename... Args>
-auto reduce(const DeviceBlock<T, Dims>& block, Pred&& pred, Args&&... args) {
-#if defined(__CUDACC__)
-  using exec_params_t    = default_shared_exec_params_t<Dims, T>;
-  auto [threads, blocks] = get_exec_size(block, exec_params_t{});
+template <typename T, size_t Dims, typename Pred>
+auto reduce(const DeviceBlock<T, Dims>& block, Pred&& pred) {
+  using ExecParams       = default_shared_exec_params_t<Dims, T>;
+  auto [threads, blocks] = get_exec_size(block, ExecParams{});
 
   /*
    * NOTE: The allocator here is important. Without it, when performing the
@@ -190,28 +114,26 @@ auto reduce(const DeviceBlock<T, Dims>& block, Pred&& pred, Args&&... args) {
    * the synchronization required and allocation time.
    */
   DeviceBlock<T, Dims> results(block.stream(), &multiarch_allocator());
-  cudaSetDevice(block.device_id());
+  set_device(block.device_id());
   results.set_device_id(block.device_id());
 
-  unrolled_for<Dims>(
-    [&](auto dim, auto& blocks) {
-      results.resize_dim(
-        dim, dim == dim_x ? blocks.x : dim == dim_y ? blocks.y : blocks.z);
-    },
-    blocks);
+  // clang-format off
+  unrolled_for<Dims>([&](auto d, auto& blocks) {
+    results.resize_dim(d, 
+      d == dimx() ? blocks.x : d == dimy() ? blocks.y : blocks.z);
+  }, blocks);
+  // clang-format on
   results.reallocate();
 
-  detail::reduce_block_shared<<<blocks, threads, 0, block.stream()>>>(
-    block.begin(), results.begin(), exec_params_t(), pred, args...);
+  ripple_if_cuda(detail::reduce_block<<<blocks, threads, 0, block.stream()>>>(
+    block.begin(), results.begin(), pred));
 
-  // Reduce the results -- this will automatically sync with the previous
-  // operation, since we use synchronous operations in the host.
+  /* Reduce the results -- this will automatically sync with the previous
+   * operation, since we use synchronous operations in the host. */
   const auto res = results.as_host(BlockOpKind::synchronous);
-
-  return reduce(res, static_cast<Pred&&>(pred), static_cast<Args&&>(args)...);
-#endif // __CUDACC__
+  return reduce(res, ripple_forward(pred));
 }
 
-} // namespace ripple::kernel::cuda
+} // namespace ripple::kernel::gpu
 
 #endif // RIPPLE_ALGORITHM_KERNEL_REDUCE_CUDA__CUH

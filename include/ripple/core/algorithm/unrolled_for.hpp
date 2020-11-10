@@ -58,9 +58,10 @@ template <size_t Amount, typename Functor, typename... Args>
 ripple_host_device constexpr inline auto
 unrolled_for(Functor&& functor, Args&&... args) noexcept -> void {
   detail::Unroll<Amount> unrolled(
-    static_cast<Functor&&>(functor), static_cast<Args&&>(args)...);
+    ripple_forward(functor), ripple_forward(args)...);
 }
 
+// clang-format off
 /**
  * Applies the functor Amount times.
  *
@@ -83,14 +84,13 @@ unrolled_for(Functor&& functor, Args&&... args) noexcept -> void {
  * \tparam Args      The type of the functor arguments.
  */
 template <
-  size_t Amount,
-  typename Functor,
+  size_t      Amount,
+  typename    Functor,
   typename... Args,
   unroll_enabled_t<Amount> = 0>
 ripple_host_device constexpr inline auto
 unrolled_for_bounded(Functor&& functor, Args&&... args) noexcept -> void {
-  unrolled_for<Amount>(
-    static_cast<Functor&&>(functor), static_cast<Args&&>(args)...);
+  unrolled_for<Amount>(ripple_forward(functor), ripple_forward(args)...);
 }
 
 /**
@@ -115,8 +115,8 @@ unrolled_for_bounded(Functor&& functor, Args&&... args) noexcept -> void {
  * \tparam Args      The type of the functor arguments.
  */
 template <
-  size_t Amount,
-  typename Functor,
+  size_t      Amount,
+  typename    Functor,
   typename... Args,
   unroll_disabled_t<Amount> = 0>
 ripple_host_device constexpr inline auto
@@ -125,6 +125,7 @@ unrolled_for_bounded(Functor&& functor, Args&&... args) noexcept -> void {
     functor(i, static_cast<Args&&>(args)...);
   }
 }
+// clang-format on
 
 } // namespace ripple
 
