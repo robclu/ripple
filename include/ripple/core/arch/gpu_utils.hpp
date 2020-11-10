@@ -16,21 +16,30 @@
 #ifndef RIPPLE_ARCH_GPU_UTILS_HPP
 #define RIPPLE_ARCH_GPU_UTILS_HPP
 
-#include <ripple/core/utility/portability.hpp>
+#include "../utility/portability.hpp"
 
 namespace ripple {
-
-/// Sets the affinity of the thread by binding the context of the current
-/// process to thread \p thread_id.
-/// Returns false if the operation failed.
-/// \param thread_id The index of the thread to bind the context to.
 
 /**
  * Sets the current gpu device to the the device with the given index.
  * \param device_id The id of the device to the set as the current device.
  */
-auto set_device(uint32_t device_id) noexcept -> void {
+inline auto set_device(uint32_t device_id) noexcept -> void {
   ripple_if_cuda(cudaSetDevice(device_id));
+}
+
+/**
+ * Synchronizes the given stream.
+ *
+ * \note This requires that set_device is called prior to this call to ensure
+ *       the the correct device is set for the stream.
+ *
+ * \param  stream The stream to synchronize.
+ * \tparam Stream The type of the stream.
+ */
+template <typename Stream>
+inline auto synchronize_stream(Stream&& stream) noexcept -> void {
+  ripple_if_cuda(cudaStreamSynchronize(stream));
 }
 
 } // namespace ripple
