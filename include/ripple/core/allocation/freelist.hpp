@@ -61,20 +61,19 @@ class Freelist {
    * Move constructor to move the other freelist to this one.
    * \param other The other freelist to move.
    */
-  ripple_host_device Freelist(Freelist&& other) noexcept = default;
+  Freelist(Freelist&& other) noexcept = default;
 
   /**
    * Move assignment to move the other freelist to this one.
    * \param other The other freelist to move.
    */
-  ripple_host_device auto
-  operator=(Freelist&& other) noexcept -> Freelist& = default;
+  auto operator=(Freelist&& other) noexcept -> Freelist& = default;
 
   // clang-format off
   /** Copy constructor -- deleted since the freelist can't be copied. */
-  ripple_host_device Freelist(const Freelist&)       = delete;
+  Freelist(const Freelist&)       = delete;
   /** Copy assignment -- deleted since the freelist can't be copied. */
-  ripple_host_device auto operator=(const Freelist&) = delete;
+  auto operator=(const Freelist&) = delete;
   // clang-format on
 
   /*==--- [interface] ------------------------------------------------------==*/

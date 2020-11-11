@@ -97,7 +97,30 @@
   #define ripple_nodiscard
 #endif
 
-namespace ripple::cuda::debug {
+namespace ripple {
+
+/** Defines an alias for a cuda stream based on cuda availability. */
+using GpuStream =
+#if defined(ripple_cuda_available)
+  cudaStream_t;
+#else
+  int;
+#endif
+
+/** Defines an alias for a gpu error based on cuda availability. */
+using GpuError =
+#if defined(ripple_cuda_available)
+  cudaError_t;
+#else
+  int;
+#endif
+
+/** Defines the default gpu stream. */
+static constexpr GpuStream default_gpu_stream = 0;
+
+} // namespace ripple
+
+namespace ripple::gpu::debug {
 
 /**
  * Checks if a cuda error code was a success, and if not, prints the error
@@ -107,7 +130,8 @@ namespace ripple::cuda::debug {
  * \param line     The line in the file where the error was detected.
  */
 inline auto
-check_cuda_error(cudaError_t err_code, const char* file, int line) -> void {
+check_cuda_error(GpuError err_code, const char* file, int line) -> void {
+#if defined(ripple_cuda_available)
   if (err_code != cudaSuccess) {
     printf(
       "\nCuda Error : %s\nFile       : %s\nLine       :  %i\n\n",
@@ -116,9 +140,10 @@ check_cuda_error(cudaError_t err_code, const char* file, int line) -> void {
       line);
     std::terminate();
   }
+#endif
 }
 
-} // namespace ripple::cuda::debug
+} // namespace ripple::gpu::debug
 
 #if defined(NDEBUG)
   /**
@@ -129,8 +154,7 @@ check_cuda_error(cudaError_t err_code, const char* file, int line) -> void {
 #else
   /** Defines a macro to check the result of cuda calls in debug mode. */
   #define ripple_check_cuda_result(result) \
-    ripple_if_cuda(                        \
-      ::ripple::cuda::debug::check_cuda_error((result), __FILE__, __LINE__))
+    ::ripple::gpu::debug::check_cuda_error((result), __FILE__, __LINE__)
 #endif // NDEBUG
 
 #endif // RIPPLE_UTILITY_PORTABILITY_HPP

@@ -8,4 +8,5 @@
 
 
 add_executable(numa_arch numa_arch.cpp)
-target_link_libraries(numa_arch ripple::ripple -lcudart_static -ldl -lrt -lcudadevrt -pthread)
+target_link_libraries(
+  numa_arch ripple::ripple -lcudart_static -ldl -lrt -lcudadevrt -pthread)

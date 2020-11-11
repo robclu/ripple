@@ -16,8 +16,8 @@
 #ifndef RIPPLE_ALLOCATION_ARENA_HPP
 #define RIPPLE_ALLOCATION_ARENA_HPP
 
-#include <ripple/core/utility/cuda.hpp>
-#include <ripple/core/utility/memory.hpp>
+#include "../arch/gpu_utils.hpp"
+#include "../utility/memory.hpp"
 #include <type_traits>
 
 namespace ripple {
@@ -104,8 +104,8 @@ struct HeapArena {
    */
   explicit HeapArena(size_t size = 0) {
     if (size) {
-      start_ = malloc(size);
-      end_   = offset_ptr(start_, size);
+      cpu::allocate_host_pinned(&start_, size);
+      end_ = offset_ptr(start_, size);
     }
   }
 
@@ -114,7 +114,7 @@ struct HeapArena {
    */
   ~HeapArena() noexcept {
     if (start_ != nullptr) {
-      std::free(start_);
+      cpu::free_host_pinned(start_);
       start_ = nullptr;
       end_   = nullptr;
     }
@@ -127,7 +127,7 @@ struct HeapArena {
   HeapArena(HeapArena&&) noexcept = default;
 
   /** Copy assignment operator -- deleted. */
-  auto operator=(const HeapArena&)     = delete;
+  auto operator=(const HeapArena&)                   = delete;
   /** Move assignment operator -- deleted. */
   auto operator=(HeapArena&&) noexcept -> HeapArena& = default;
   // clang-format on
@@ -157,13 +157,12 @@ struct HeapArena {
    * \param size The new size of the area.
    */
   auto resize(size_t new_size) -> void {
-    if (new_size < size()) {
-      return;
-    }
-    void* new_ptr = malloc(new_size);
-    if (start_ != nullptr) {
+    if (new_size < size()) { return; }
+    void* new_ptr = nullptr;
+    cpu::allocate_host_pinned(&new_ptr, new_size);
+    if (start_) {
       memcpy(new_ptr, start_, size());
-      std::free(start_);
+      cpu::free_host_pinned(start_);
     }
     start_ = new_ptr;
     end_   = offset_ptr(start_, new_size);
@@ -205,8 +204,8 @@ struct GpuHeapArena {
    */
   explicit GpuHeapArena(size_t id, size_t size = 0) : id_{id} {
     if (size) {
-      cudaSetDevice(id_);
-      cuda::allocate_device(&start_, size);
+      gpu::set_device(id_);
+      gpu::allocate_device(&start_, size);
       end_ = offset_ptr(start_, size);
     }
   }
@@ -225,7 +224,7 @@ struct GpuHeapArena {
   GpuHeapArena(GpuHeapArena&&) noexcept = default;
 
   /** Copy assignment operator -- deleted. */
-  auto operator=(const GpuHeapArena&)     = delete;
+  auto operator=(const GpuHeapArena&)                      = delete;
   /** Move assignment operator -- defauled. */
   auto operator=(GpuHeapArena&&) noexcept -> GpuHeapArena& = default;
   // clang-format on
@@ -255,15 +254,13 @@ struct GpuHeapArena {
    * \param size The new size of the area.
    */
   auto resize(size_t new_size) -> void {
-    if (new_size < size()) {
-      return;
-    }
+    if (new_size < size()) { return; }
     void* new_ptr = nullptr;
-    cudaSetDevice(id_);
-    cuda::allocate_device(&new_ptr, new_size);
-    if (start_ != nullptr) {
-      cuda::memcpy_device_to_device_async(new_ptr, start_, size());
-      cuda::free_device(start_);
+    gpu::set_device(id_);
+    gpu::allocate_device(&new_ptr, new_size);
+    if (start_) {
+      gpu::memcpy_device_to_device_async(new_ptr, start_, size());
+      gpu::free_device(start_);
     }
     start_ = new_ptr;
     end_   = offset_ptr(start_, new_size);
@@ -287,8 +284,8 @@ struct GpuHeapArena {
    */
   auto cleanup() noexcept -> void {
     if (start_ != nullptr) {
-      cudaSetDevice(id_);
-      cuda::free_device(start_);
+      gpu::set_device(id_);
+      gpu::free_device(start_);
       start_ = nullptr;
       end_   = nullptr;
     }

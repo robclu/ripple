@@ -18,7 +18,7 @@
 
 #include "../utility/portability.hpp"
 
-namespace ripple {
+namespace ripple::gpu {
 
 /**
  * Sets the current gpu device to the the device with the given index.
@@ -26,6 +26,22 @@ namespace ripple {
  */
 inline auto set_device(uint32_t device_id) noexcept -> void {
   ripple_if_cuda(cudaSetDevice(device_id));
+}
+
+/**
+ * Creates a stream for the device.
+ * \param stream The stream to create.
+ */
+inline auto create_stream(GpuStream* stream) noexcept -> void {
+  ripple_if_cuda(cudaStreamCreate(stream));
+}
+
+/**
+ * Destroys a stream for the device.
+ * \param stream The stream to create.
+ */
+inline auto destroy_stream(GpuStream stream) noexcept -> void {
+  ripple_if_cuda(cudaStreamDestroy(stream));
 }
 
 /**
@@ -37,11 +53,17 @@ inline auto set_device(uint32_t device_id) noexcept -> void {
  * \param  stream The stream to synchronize.
  * \tparam Stream The type of the stream.
  */
-template <typename Stream>
-inline auto synchronize_stream(Stream&& stream) noexcept -> void {
+inline auto synchronize_stream(GpuStream stream) noexcept -> void {
   ripple_if_cuda(cudaStreamSynchronize(stream));
 }
 
-} // namespace ripple
+/**
+ * Synchronizes the device on the currently active context.
+ */
+inline auto synchronize_device() noexcept -> void {
+  ripple_if_cuda(cudaDeviceSynchronize());
+}
 
-#endif // RIPPLE_ARCH_CPU_UTILS_HPP
+} // namespace ripple::gpu
+
+#endif // RIPPLE_ARCH_GPU_UTILS_HPP
