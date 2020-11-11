@@ -10,6 +10,7 @@ AllowAllArgumentsOnNextLine: true
 AllowAllConstructorInitializersOnNextLine: true
 AllowAllParametersOfDeclarationOnNextLine: true
 AllowShortBlocksOnASingleLine: true
+AllowShortIfStatementsOnASingleLine : true
 AllowShortCaseLabelsOnASingleLine: true
 AllowShortLambdasOnASingleLine: Inline
 AllowShortLoopsOnASingleLine: 'false'

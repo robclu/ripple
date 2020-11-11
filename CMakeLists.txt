@@ -7,7 +7,7 @@
 #==--------------------------------------------------------------------------==#
 
 cmake_minimum_required(VERSION 3.8 FATAL_ERROR)
-project(ripple VERSION 0.1.0 LANGUAGES CXX CUDA)
+project(ripple VERSION 0.1.0 LANGUAGES NONE)
 
 #==--- [print options] ------------------------------------------------------==#
 
@@ -26,6 +26,7 @@ message("
 +| -DCMAKE_CXX_COMPILER       : Path to host compiler
 +| -DCMAKE_CUDA_HOST_COMPILER : Path to cuda host compiler
 +| -DCMAKE_INSTALL_PREFIX=    : Path to install to
++| -DBUILD_APPS=              : {ON, OFF}
 +| -DBUILD_TESTS=             : {ON, OFF}
 +| -DBUILD_BENCHMARKS=        : {ON, OFF}
 +| -DBUILD_DOCS=              : {ON, OFF}
@@ -40,10 +41,10 @@ endif()
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Build type not specified!")
 endif(NOT CMAKE_BUILD_TYPE)
+set(CMAKE_CXX_STANDARD 17)
 
 #==--- [Compiler setup] -----------------------------------------------------==#
 
-enable_language(CUDA)
 if (NOT EXISTS ${CUDA_PATH})
   message("-- CUDA : CUDA_PATH is not spefified. Please specify cuda path")
   message("          with -DCUDA_PATH."                                   )
@@ -51,7 +52,10 @@ if (NOT EXISTS ${CUDA_PATH})
 endif()
 
 set(CUDA_TOOLKIT_ROOT_DIR                  ${CUDA_PATH})
-set(CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES ${CUDA_PATH}/include)
+set(CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES ${CUDA_TOOLKIT_ROOT_DIR}/include)
+
+#enable_language(CUDA)
+#enable_language(CXX)
 
 # Execute cuda compiler to check what we are using:
 execute_process(
@@ -61,6 +65,8 @@ if (VERSION MATCHES "clang")
   message("-- CUDA : Clang found as cuda compiler.")
   message("-- CUDA : Clang set as host compiler.")
   set(CMAKE_CUDA_HOST_COMPILER ${CMAKE_CUDA_COMPILER})
+  set(CMAKE_CUDA_FLAGS "--cuda-path=${CUDA_TOOLKIT_ROOT_DIR}")
+
   set(USING_CLANG TRUE)
   set(CXX_CLANG   TRUE)
   set(CUDA_CLANG  TRUE)
@@ -68,6 +74,11 @@ else()
   if (VERSION MATCHES "V11")
     message("-- CUDA : Nvcc set as cuda compiler.")
     message("-- CUDA : Using default host compiler.")
+    set(CMAKE_CUDA_HOST_COMPILER ${CMAKE_CXX_COMPILER})
+
+    set(USING_CLANG 0)
+    set(CXX_CLANG   )
+    set(CUDA_CLANG  )
   else()
     message("-- CUDA : Only cuda version >= 11.0 if clang is not used as")
     message("          host and device compiler!")
@@ -75,7 +86,7 @@ else()
  endif()
 endif()
 
-set(CMAKE_CUDA_STANDARD          17)
+#set(CMAKE_CUDA_STANDARD          17)
 set(CMAKE_CUDA_STANDARD_REQUIRED OFF)
 
 #==--- [Compiler Flags] -----------------------------------------------------==#
@@ -96,29 +107,35 @@ list(LENGTH CUDA_ARCHS ARCH_COUNT)
 if (${ARCH_COUNT} EQUAL "0")
   message("-- CUDA : No architecture version is set for cuda, using 3.5.")
   message("          Set using -DCUDA_ARCH_VER=<version> when building." )
-  set(CUDA_ARCHS "35;70")
+  set(CUDA_ARCHS "80")
 endif()
 
 set(ARCH_LIST ${CUDA_ARCHS})
 separate_arguments(ARCH_LIST)
 
 foreach(ARCH IN LISTS ARCH_LIST)
+  if (ARCH MATCHES "80")
+    add_compile_definitions(RIPPLE_SM_80)
+  endif()
+
   list(APPEND CUDA_ARCH_FLAGS)
   message("-- CUDA: Architecture added : ${ARCH}")
   if (NOT ${USING_CLANG})
     set(NEXT_ARCH "-gencode=arch=compute_${ARCH},code=sm_${ARCH}")
   else()
-    set(NEXT_ARCH "--cuda-gpu-arch=sm_${ARCH}")
+    set(NEXT_ARCH "--cuda-gpu-arch=sm_${ARCH} ")
   endif()
   list(APPEND CUDA_ARCH_FLAGS ${NEXT_ARCH})
 
 endforeach()
-set(CUDA_ARCHITECTURES ${ARCH_LIST})
+set(CMAKE_CUDA_ARCHITECTURES ${ARCH_LIST})
+
+add_compile_definitions(__STRICT_ANSI__=)
 
 if (WIN32)
 
 else(APPLE)
-  set(FLAGS_ERRORS  "-Wpedantic -Wextra -Wall")
+  set(FLAGS_ERRORS  "-Wpedantic -Wextra -Wall -I${ripple_SOURCE_DIR}/include")
   set(FLAGS_PERF    "-O3 -std=c++17 -pthread -Wno-c++1z-extensions")
   set(FLAGS_DEBUG   "-g")
   set(DEBUG_FLAGS   "${FLAGS_PERF} ${FLAGS_ERRORS} ${FLAGS_DEBUG}")
@@ -130,8 +147,9 @@ else(APPLE)
   set(CMAKE_CXX_FLAGS_DEBUG   "${CMAKE_CXX_FLAGS_DEBUG} ${DEBUG_FLAGS}")
   set(CMAKE_CXX_FLAGS_DEBUG   "${CMAKE_CXX_FLAGS_DEBUG} ${WARN_FLAGS}")
   if (NOT ${USING_CLANG})
-    set(CUDA_EXP_FLAGS "-expt-relaxed-constexpr -expt-extended-lambda")
-    set(CUDA_FLAGS     "-use_fast_math -O3 -std=c++-17 ${CUDA_EXP_FLAGS}")
+    #set(CUDA_EXP_FLAGS "-expt-relaxed-constexpr -expt-extended-lambda")
+    set(CUDA_EXP_FLAGS "-expt-relaxed-constexpr --extended-lambda")
+    set(CUDA_FLAGS     "-use_fast_math -O3 --std c++17 ${CUDA_EXP_FLAGS}")
     set(CUDA_FLAGS     "${CUDA_FLAGS} ${CUDA_ARCH_FLAGS}")
     set(CUDA_FLAGS     "${CUDA_FLAGS} -lineinfo -Xptxas=-v")
     if (${MAX_REG_COUNT})
@@ -140,13 +158,14 @@ else(APPLE)
   else()
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -ffast-math")
     set(CUDA_FLAGS "--cuda-path=${CUDA_TOOLKIT_ROOT_DIR}") 
-    set(CUDA_FLAGS "${CUDA_FLAGS} ${CUDA_ARCH_FLAGS}")
+    set(CUDA_FLAGS "${CUDA_FLAGS}")
+    #set(CUDA_FLAGS "${CUDA_FLAGS} ${CUDA_ARCH_FLAGS}")
     set(CUDA_FLAGS 
       "${CUDA_FLAGS} -O3 -std=c++17 -ffast-math -ffp-contract=fast")
     if (CMAKE_BUILD_TYPE MATCHES Release)
       set(CUDA_FLAGS "${CUDA_FLAGS}")
     else()
-      set(CUDA_FLAGS "${CUDA_FLAGS} -g -Xcuda-ptxas -lineinfo -Xcuda-ptxas -v")
+      set(CUDA_FLAGS "${CUDA_FLAGS} -Xcuda-ptxas -lineinfo -Xcuda-ptxas -v")
     endif()
   endif()
 endif()
@@ -162,9 +181,16 @@ else()
     CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS_DEBUG}"
     CACHE STRING "CXX FLAGS" FORCE
   )
+  set(CUDA_FLAGS "${CUDA_FLAGS} -G")
 endif()
 
 set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} ${CUDA_FLAGS}")
+
+enable_language(CUDA)
+enable_language(CXX)
+
+include_directories(${ripple_SOURCE_DIR}/include)
+include_directories(${CUDA_TOOLKIT_ROOT_DIR}/include)
 
 #==--- [install] ------------------------------------------------------------==#
 
@@ -241,6 +267,11 @@ set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 #==--- [Subdirectories] -----------------------------------------------------==#
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+option(RIPPLE_BUILD_APPS "build apps" OFF)
+if (${RIPPLE_BUILD_APPS})
+  add_subdirectory(apps)
+endif()
+
 option(RIPPLE_BUILD_BENCHMARKS "build benchmark" OFF)
 if (${RIPPLE_BUILD_BENCHMARKS} OR 
   (CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR))
@@ -259,8 +290,7 @@ if (${RIPPLE_BUILD_EXAMPLES} OR
 endif()
 
 option(RIPPLE_BUILD_TESTS "build tests" OFF)
-if(${RIPPLE_BUILD_TESTS} OR 
-  (CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR))
+if(${RIPPLE_BUILD_TESTS})
   configure_file(
     CMakeLists-googletest.txt.in googletest-download/CMakeLists.txt
   )
@@ -308,10 +338,11 @@ message("
 +| CUDA INCLUDE       : ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}
 +| CUDA LIB           : ${CUDA_LIB_DIRS}
 +| CUDA ARCHS         : ${ARCH_LIST}
-+| BUILD_TESTS        : ${RIPPLE_BUILD_TESTS}
++| BUILD_APPS         : ${RIPPLE_BUILD_APPS}
 +| BUILD_BENCHMARKS   : ${RIPPLE_BUILD_BENCHMARKS}
 +| BUILD_DOCS         : ${RIPPLE_BUILD_DOCS}
 +| BUILD_EXAMPLES     : ${RIPPLE_BUILD_EXAMPLES}
++| BUILD_TESTS        : ${RIPPLE_BUILD_TESTS}
 +| CXX_FLAGS          : ${CXX_FLAG_STRING}
 +| CUDA_FLAGS         : ${CUDA_FLAG_STRING}
 +|

@@ -66,3 +66,4 @@ examples which illustrate the usage of the library. These can be found in the
 `benchmarks/` and `tests/` directories, and these can be build by specifying
 `-DRIPPLE_BUILD_BENCHMARKS=ON` and `-DRIPPLE_BUILD_TESTS=ON` to the build
 command with cmake, respectively.
+
