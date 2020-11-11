@@ -1,9 +1,8 @@
-//==--- ripple/core/container/host_block.hpp -------------------- -*- C++ -*-
-//---==//
+//==--- ripple/core/container/host_block.hpp -------------- -*- C++ -*- ---==//
 //
 //                                Ripple
 //
-//                      Copyright (c) 2019 Rob Clucas.
+//                      Copyright (c) 2019, 2020 Rob Clucas.
 //
 //  This file is distributed under the MIT License. See LICENSE for details.
 //
@@ -20,21 +19,23 @@
 #include "block_memory_properties.hpp"
 #include "block_traits.hpp"
 #include "device_block.hpp"
-#include <ripple/core/allocation/multiarch_allocator.hpp>
-#include <ripple/core/iterator/block_iterator.hpp>
-#include <ripple/core/utility/cuda.hpp>
+#include "../allocation/multiarch_allocator.hpp"
+#include "../iterator/block_iterator.hpp"
+#include "../utility/memory.hpp"
 #include <cstring>
 
 namespace ripple {
 
-/// Implementation of a host block class which stores multidimensional data on
-/// the host. This will store the data in a strided format if the type T
-/// implements the StriableLayout interface and the descriptor for the storage
-/// for the type has a StorageLayout::strided_view type, otherwise this will
-/// store the data in a contiguous format.
-///
-/// \tparam T          The type of the data stored in the tensor.
-/// \tparam Dimensions The number of dimensions in the tensor.
+/**
+ * Implementation of a host block class which stores multidimensional data on
+ * the host. This will store the data in a strided format if the type T
+ * implements the StriableLayout interface and the descriptor for the storage
+ * for the type has a StorageLayout::strided_view type, otherwise this will
+ * store the data in a contiguous format.
+ *
+ * \tparam T          The type of the data stored in the tensor.
+ * \tparam Dimensions The number of dimensions in the tensor.
+ */
 template <typename T, size_t Dimensions>
 class HostBlock {
   //==--- [traits] ---------------------------------------------------------==//
@@ -125,8 +126,7 @@ class HostBlock {
   template <
     typename... Sizes,
     all_arithmetic_size_enable_t<Dimensions, Sizes...> = 0>
-  HostBlock(Sizes&&... sizes) noexcept
-  : space_{static_cast<Sizes&&>(sizes)...} {
+  HostBlock(Sizes&&... sizes) noexcept : space_{ripple_forward(sizes)...} {
     allocate();
   }
 
@@ -150,7 +150,7 @@ class HostBlock {
     typename... Sizes,
     all_arithmetic_size_enable_t<Dimensions, Sizes...> = 0>
   HostBlock(Padding padding, Sizes&&... sizes)
-  : space_{padding, static_cast<Sizes&&>(sizes)...} {
+  : space_{padding, ripple_forward(sizes)...} {
     allocate();
   }
 
@@ -208,7 +208,7 @@ class HostBlock {
     typename... Sizes,
     all_arithmetic_size_enable_t<Dimensions, Sizes...> = 0>
   HostBlock(BlockOpKind op_kind, Sizes&&... sizes)
-  : space_{static_cast<Sizes&&>(sizes)...} {
+  : space_{ripple_forward(sizes)...} {
     set_op_kind(op_kind);
     allocate();
   }
@@ -230,7 +230,7 @@ class HostBlock {
     typename... Sizes,
     all_arithmetic_size_enable_t<Dimensions, Sizes...> = 0>
   HostBlock(BlockOpKind op_kind, size_t padding, Sizes&&... sizes)
-  : space_{padding, static_cast<Sizes&&>(sizes)...} {
+  : space_{padding, ripple_forward(sizes)...} {
     set_op_kind(op_kind);
     allocate();
   }
@@ -290,9 +290,9 @@ class HostBlock {
    */
   template <typename... Indices>
   auto operator()(Indices&&... is) noexcept -> Iter {
-    return Iter{Allocator::create(
-                  data_, space_, static_cast<Indices&&>(is) + padding()...),
-                space_};
+    return Iter{
+      Allocator::create(data_, space_, ripple_forward(is) + padding()...),
+      space_};
   }
 
   /**
@@ -306,8 +306,7 @@ class HostBlock {
   template <typename... Indices>
   auto operator()(Indices&&... is) const noexcept -> ConstIter {
     return ConstIter{
-      Allocator::create(
-        data_, space_, static_cast<Indices&&>(is) + padding()...),
+      Allocator::create(data_, space_, ripple_forward(is) + padding()...),
       space_};
   }
 
@@ -374,7 +373,7 @@ class HostBlock {
   template <typename... Args>
   auto reallocate_and_init(Args&&... args) -> void {
     cleanup();
-    allocate_and_init(static_cast<Args&&>(args)...);
+    allocate_and_init(ripple_forward(args)...);
   }
 
   /**
@@ -411,7 +410,7 @@ class HostBlock {
    */
   template <typename... Sizes>
   auto resize(Sizes&&... sizes) -> void {
-    space_.resize(static_cast<Sizes&&>(sizes)...);
+    space_.resize(ripple_forward(sizes)...);
     reallocate();
   }
 
@@ -439,7 +438,7 @@ class HostBlock {
    */
   template <typename Dim>
   auto size(Dim&& dim) const noexcept -> size_t {
-    return space_.internal_size(static_cast<Dim&&>(dim));
+    return space_.internal_size(ripple_forward(dim));
   }
 
   /**
@@ -453,7 +452,7 @@ class HostBlock {
    */
   template <typename Dim>
   constexpr auto pitch(Dim&& dim) const noexcept -> size_t {
-    return space_.size(static_cast<Dim&&>(dim));
+    return space_.size(ripple_forward(dim));
   }
 
   /**
@@ -516,8 +515,8 @@ class HostBlock {
    * Returns the stream used by the block.
    * \return The stream for the block.
    */
-  auto stream() const -> cudaStream_t {
-    return 0;
+  auto stream() const -> GpuStream {
+    return default_gpu_stream;
   }
 
   /**
@@ -547,7 +546,7 @@ class HostBlock {
         data_ = allocator_->cpu_allocator().alloc(
           mem_requirement(), Traits::alignment);
       } else if (mem_props_.pinned) {
-        cuda::allocate_host_pinned(
+        cpu::allocate_host_pinned(
           reinterpret_cast<void**>(&data_), mem_requirement());
       } else {
         data_ = malloc(mem_requirement());
@@ -570,9 +569,9 @@ class HostBlock {
       *this,
       [](auto&& it, auto&&... as) {
         using ItType = std::decay_t<decltype(*it)>;
-        new (&(*it)) ItType{static_cast<decltype(as)&&>(as)...};
+        new (&(*it)) ItType{ripple_forward(as)...};
       },
-      static_cast<Args&&>(args)...);
+      ripple_forward(args)...);
   }
 
   /**
@@ -583,7 +582,7 @@ class HostBlock {
       if (allocator_ != nullptr) {
         allocator_->cpu_allocator().free(data_);
       } else if (mem_props_.pinned) {
-        cuda::free_host_pinned(data_);
+        cpu::free_host_pinned(data_);
       } else {
         free(data_);
       }
@@ -599,8 +598,9 @@ class HostBlock {
    */
   auto copy_from_device(const DeviceBlock& other) noexcept -> void {
     const auto alloc_size = Allocator::allocation_size(space_.size());
-    cuda::memcpy_device_to_host_async(
+    gpu::memcpy_device_to_host_async(
       data_, other.data_, alloc_size, other.stream());
+    if (!mem_props_.async_copy) { gpu::synchronize_stream(other.stream()); }
   }
 
   /**

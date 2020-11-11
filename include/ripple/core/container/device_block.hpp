@@ -19,9 +19,9 @@
 #include "block_traits.hpp"
 #include "host_block.hpp"
 #include "block_memory_properties.hpp"
-#include <ripple/core/allocation/multiarch_allocator.hpp>
-#include <ripple/core/iterator/block_iterator.hpp>
-#include <ripple/core/utility/cuda.hpp>
+#include "../allocation/multiarch_allocator.hpp"
+#include "../iterator/block_iterator.hpp"
+#include "../utility/memory.hpp"
 
 namespace ripple {
 
@@ -64,7 +64,7 @@ class DeviceBlock {
   /** Defines the type of a host block with the same parameters. */
   using HostBlock = HostBlock<T, Dimensions>;
   /** Defines the type of the stream for the block. */
-  using Stream    = cudaStream_t;
+  using Stream    = GpuStream;
   // clang-format on
 
   /**
@@ -104,7 +104,7 @@ class DeviceBlock {
    * can be instanciated and then resized at runtime.
    */
   DeviceBlock() noexcept {
-    cudaStreamCreate(&stream_);
+    gpu::create_stream(&stream_);
   }
 
   /**
@@ -119,7 +119,7 @@ class DeviceBlock {
    * can be instanciated and then resized at runtime.
    */
   DeviceBlock(AllocatorPtr allocator) noexcept : allocator_{allocator} {
-    cudaStreamCreate(&stream_);
+    gpu::create_stream(&stream_);
   }
 
   /**
@@ -149,8 +149,8 @@ class DeviceBlock {
   template <
     typename... Sizes,
     all_arithmetic_size_enable_t<Dimensions, Sizes...> = 0>
-  DeviceBlock(Sizes&&... sizes) : space_{static_cast<Sizes&&>(sizes)...} {
-    cudaStreamCreate(&stream_);
+  DeviceBlock(Sizes&&... sizes) : space_{ripple_forward(sizes)...} {
+    gpu::create_stream(&stream_);
     allocate();
   }
 
@@ -174,8 +174,8 @@ class DeviceBlock {
     typename... Sizes,
     all_arithmetic_size_enable_t<Dimensions, Sizes...> = 0>
   DeviceBlock(Padding padding, Sizes&&... sizes)
-  : space_{padding, static_cast<Sizes&&>(sizes)...} {
-    cudaStreamCreate(&stream_);
+  : space_{padding, ripple_forward(sizes)...} {
+    gpu::create_stream(&stream_);
     allocate();
   }
 
@@ -185,7 +185,7 @@ class DeviceBlock {
    */
   DeviceBlock(const DeviceBlock& other)
   : space_{other.space_}, stream_{other.stream_} {
-    cudaStreamCreate(&stream_);
+    gpu::create_stream(&stream_);
     allocate();
     copy_from_device(other);
   }
@@ -215,7 +215,7 @@ class DeviceBlock {
    */
   DeviceBlock(const HostBlock& other)
   : allocator_{other.allocator_}, space_{other.space_} {
-    cudaStreamCreate(&stream_);
+    gpu::create_stream(&stream_);
     allocate();
     copy_from_host(other);
   }
@@ -249,7 +249,7 @@ class DeviceBlock {
   auto operator=(const HostBlock& other) -> DeviceBlock& {
     space_     = other._space;
     allocator_ = other.allocator_;
-    cudaStreamCreate(&stream_);
+    gpu::create_stream(&stream_);
     reallocate();
     copy_from_host(other);
     return *this;
@@ -267,7 +267,7 @@ class DeviceBlock {
   ripple_host_device auto operator()(Indices&&... is) noexcept -> Iter {
     return Iter{
       Allocator::create(
-        data_, space_, static_cast<Indices&&>(is) + space_.padding()...),
+        data_, space_, ripple_forward(is) + space_.padding()...),
       space_};
   }
 
@@ -284,7 +284,7 @@ class DeviceBlock {
   operator()(Indices&&... is) const noexcept -> ConstIter {
     return ConstIter{
       Allocator::create(
-        data_, space_, static_cast<Indices&&>(is) + space_.padding()...),
+        data_, space_, ripple_forward(is) + space_.padding()...),
       space_};
   }
 
@@ -380,7 +380,7 @@ class DeviceBlock {
    */
   template <typename... Sizes>
   auto resize(Sizes&&... sizes) -> void {
-    space_.resize(static_cast<Sizes&&>(sizes)...);
+    space_.resize(ripple_forward(sizes)...);
     reallocate();
   }
 
@@ -408,7 +408,7 @@ class DeviceBlock {
    */
   template <typename Dim>
   auto size(Dim&& dim) const -> size_t {
-    return space_.internal_size(static_cast<Dim&&>(dim));
+    return space_.internal_size(ripple_forward(dim));
   }
 
   /**
@@ -422,7 +422,7 @@ class DeviceBlock {
    */
   template <typename Dim>
   constexpr auto pitch(Dim&& dim) const noexcept -> size_t {
-    return space_.size(static_cast<Dim&&>(dim));
+    return space_.size(ripple_forward(dim));
   }
 
   /**
@@ -503,8 +503,8 @@ class DeviceBlock {
    * Destroys the stream for the block.
    */
   auto destroy_stream() noexcept -> void {
-    cudaSetDevice(device_id_);
-    cudaStreamDestroy(stream_);
+    gpu::set_device(device_id_);
+    gpu::destroy_stream(stream_);
   }
 
   /**
@@ -533,12 +533,12 @@ class DeviceBlock {
   auto allocate() -> void {
     // Can only allocate if the memory is not allocated, and if we own it.
     if (data_ == nullptr && !mem_props_.allocated) {
-      cudaSetDevice(device_id_);
+      gpu::set_device(device_id_);
       if (allocator_ != nullptr) {
         data_ = allocator_->gpu_allocator(device_id_)
                   .alloc(mem_requirement(), Traits::alignment);
       } else {
-        cuda::allocate_device(
+        gpu::allocate_device(
           reinterpret_cast<void**>(&data_), mem_requirement());
       }
       mem_props_.allocated = true;
@@ -551,11 +551,11 @@ class DeviceBlock {
    */
   auto cleanup() -> void {
     if (data_ != nullptr && mem_props_.must_free) {
-      cudaSetDevice(device_id_);
+      gpu::set_device(device_id_);
       if (allocator_ != nullptr) {
         allocator_->gpu_allocator(device_id_).free(data_);
       } else {
-        cuda::free_device(data_);
+        gpu::free_device(data_);
       }
       data_                = nullptr;
       mem_props_.must_free = false;
@@ -568,9 +568,9 @@ class DeviceBlock {
    * \param other The other block to copy data from.
    */
   auto copy_from_host(const HostBlock& other) noexcept -> void {
-    cudaSetDevice(device_id_);
     const auto alloc_size = Allocator::allocation_size(space_.size());
-    cuda::memcpy_host_to_device_async(data_, other.data_, alloc_size, stream_);
+    gpu::set_device(device_id_);
+    gpu::memcpy_host_to_device_async(data_, other.data_, alloc_size, stream_);
   }
 
   /**
@@ -578,45 +578,13 @@ class DeviceBlock {
    * \param other The other block to copy data from.
    */
   auto copy_from_device(const DeviceBlock& other) noexcept -> void {
-    cudaSetDevice(device_id_);
     const auto alloc_size = Allocator::allocation_size(space_.size());
-    cuda::memcpy_device_to_device_async(
+    gpu::set_device(device_id_);
+    gpu::memcpy_device_to_device_async(
       data_, other.data_, alloc_size, other.stream());
   }
 };
 
-/*
-//==--- [iterator extraction] ----------------------------------------------==//
-
-/// Extracts the iterator from the \p block.
-/// \param  block The block to extract the iterator from.
-/// \tparam T     Type type of the data for the block.
-/// \tparam Dims  The number of dimension for the block.
-template <typename T, size_t Dims>
-ripple_host_device auto iter_or_ref(DeviceBlock<T, Dims>& block) {
-  return block.begin();
-}
-
-/// Overload of the iterator extraction function for a type which does not have
-/// an iterator, returning a reference to the type which does not have an
-/// iterator.
-/// \param  non_block The non block type without an iterator.
-/// \tparam T         The type to return a reference to.
-template <typename T>
-ripple_host_device auto iter_or_ref(T& non_block) -> T& {
-  return non_block;
-}
-
-/// Overload of the iterator extraction function for a type which does not have
-/// an iterator, returning a constant  reference to the type which does not have
-/// an iterator.
-/// \param  non_block The non block type without an iterator.
-/// \tparam T         The type to return a reference to.
-template <typename T>
-ripple_host_device auto iter_or_ref(const T& non_block) -> const T& {
-  return non_block;
-}
-*/
 } // namespace ripple
 
 #endif // RIPPLE_CONTAINER_DEVICE_BLOCK_HPP
