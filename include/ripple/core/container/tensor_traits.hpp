@@ -49,9 +49,12 @@ template <typename T>
 struct TensorTraits {
   // clang-format off
   /** Defines the data type of the tensor data. */
-  using Value    = T;
-  /** Defines the type of the tensor host block iterator. */
-  using HostIter = std::void_t<>;
+  using Value          = T;
+  /** Defines the type of the tensor global data iterator. */
+  using Iterator       = std::void_t<>;
+  /** Defines the type of the tensor shared data iterator. */
+  using SharedIterator = std::void_t<>;
+
 
   // clang-format off
   /** Returns that the type T is not a tensor. */
@@ -72,9 +75,11 @@ template <typename T, size_t Dimensions>
 struct TensorTraits<Tensor<T, Dimensions>> {
   // clang-format off
   /** Defines the data type of the tensor data. */
-  using Value    = T;
-  /** Defines the type of the tensor host block iterator. */
-  using HostIter = typename Block<T, Dimensions>::HostIter;
+  using Value          = T;
+  /** Defines the type of the iterator over the tensor in global memory. */
+  using Iterator       = typename Block<T, Dimensions>::Iterator;
+  /** Defines the type of the iterator over the tensor in shared memory. */
+  using SharedIterator = typename Block<T, Dimensions>::SharedIterator;
 
   // clang-format off
   /** Returns that this is a Tensor. */

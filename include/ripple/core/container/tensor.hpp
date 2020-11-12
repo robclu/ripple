@@ -43,9 +43,6 @@ template <typename T, size_t Dimensions>
 class Tensor {
   /** Allow the splitter access to partition the work. */
   friend struct BlockExtractor;
-  /** Allow the reducer access to partition the work. */
-  // template <typename Type, size_t Dims>
-  // friend struct Reducer;
 
   // clang-format off
   /** Defines the type of the block for the grid. */
@@ -59,7 +56,7 @@ class Tensor {
   /** Defines the type of the space used by the grid. */
   using Space         = DynamicMultidimSpace<Dimensions>;
   /** Defines the type of teh host block iterator. */
-  using HostBlockIter = typename Block::HostIter;
+  using HostBlockIter = IndexedIterator<T, Space>;
 
   /** Defines the min threshold for which splitting to multiple gpus occurs. */
   static constexpr size_t   min_split_threshold          = 3e5;
@@ -83,12 +80,24 @@ class Tensor {
 
   /*==--- [friends] --------------------------------------------------------==*/
 
-  /// Swaps the two tensors.
-  /// \param lhs The left tensor to swap.
-  /// \param rhs The right tensor to swap.
+  /**
+   * Swaps the two tensors.
+   *
+   * \note this goes through each block and swaps the data for each block.
+   *
+   * \param lhs The left tensor to swap.
+   * \param rhs The right tensor to swap.
+   */
   friend auto swap(Tensor& lhs, Tensor& rhs) noexcept -> void {
-    using std::swap;
-    swap(lhs.blocks_, rhs.blocks_);
+    invoke_generic(
+      CpuExecutor(),
+      [&](auto&& left_it, auto&& right_it) {
+        using std::swap;
+        swap(left_it->host_data, right_it->host_data);
+        swap(left_it->device_data, right_it->device_data);
+      },
+      lhs.blocks_,
+      rhs.blocks_);
   }
 
   /*==--- [construction] ---------------------------------------------------==*/
@@ -474,9 +483,9 @@ class Tensor {
       blocks_.resize_dim(
         dim, math::div_then_ceil(space_.internal_size(dim), block_sizes_[dim]));
 
-      assert(
-        blocks_.size(dim) <= blocks_per_part_[dim] * partition_sizes_[dim] &&
-        "Inavlid number of blocks per gpu!");
+      // assert(
+      //  blocks_.size(dim) <= blocks_per_part_[dim] * partition_sizes_[dim] &&
+      //  "Inavlid number of blocks per gpu!");
     });
     blocks_.reallocate_and_init();
     allocate_data_for_blocks();
@@ -612,7 +621,7 @@ class Tensor {
       gpu.mem_alloc += device.mem_requirement();
       stream_id = (stream_id + 1) % gpu.streams.size();
 
-      block->data_state = BlockState::updated_device;
+      block->data_state = DataState::updated_device;
     });
   }
 };
