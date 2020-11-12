@@ -207,7 +207,7 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
         using Type                  = nth_element_value_t<i>;
         r.data_[i]                  = static_cast<void*>(
           static_cast<Type*>(storage.data_[i]) +
-          offset_to_soa(space, components_i, static_cast<Indices&&>(is)...));
+          offset_to_soa(space, components_i, ripple_forward(is)...));
       });
       return r;
     }
@@ -234,7 +234,8 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
         using Type = nth_element_value_t<i>;
         r.data_[i] = static_cast<void*>(
           static_cast<Type*>(storage.data_[i]) +
-          amount * space.step(dim) * offset_scale(i, dim));
+          amount * space.step(ripple_forward(dim)) *
+            offset_scale(i, ripple_forward(dim)));
       });
       return r;
     }
@@ -258,7 +259,8 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
         using Type       = nth_element_value_t<i>;
         storage.data_[i] = static_cast<void*>(
           static_cast<Type*>(storage.data_[i]) +
-          amount * space.step(dim) * offset_scale(i, dim));
+          amount * space.step(ripple_forward(dim)) *
+            offset_scale(i, ripple_forward(dim)));
       });
     }
 
@@ -310,7 +312,7 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
     create(void* ptr, const MultidimSpace<SpaceImpl>& space) noexcept
       -> Storage {
       Storage r;
-      r.stride_         = space.size(dim_x);
+      r.stride_         = space.size(dimx());
       r.data_[0]        = ptr;
       const auto size   = space.size();
       auto       offset = 0;
@@ -354,7 +356,7 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
   /**
    * Default constructor for the strided storage.
    */
-  ripple_host_device StridedStorageView() = default;
+  StridedStorageView() = default;
 
   /**
    * Constructor to set the strided storage from another StorageAccessor with a
@@ -441,7 +443,7 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
    * \return A pointer to the data for the storage.
    */
   ripple_host_device auto data() noexcept -> Ptr {
-    return data_;
+    return &data_[0];
   }
 
   /**
@@ -449,7 +451,7 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
    * \return A const pointer to the data for the storage.
    */
   ripple_host_device auto data() const noexcept -> const Ptr {
-    return data_;
+    return &data_[0];
   }
 
   /**

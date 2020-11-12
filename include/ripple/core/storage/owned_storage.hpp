@@ -85,7 +85,7 @@ class OwnedStorage : public StorageAccessor<OwnedStorage<Ts...>> {
   /**
    * Default constructor for the storage.
    */
-  ripple_host_device constexpr OwnedStorage() noexcept = default;
+  constexpr OwnedStorage() noexcept = default;
 
   /**
    * Constructor to set the owned storage from another type which implements the

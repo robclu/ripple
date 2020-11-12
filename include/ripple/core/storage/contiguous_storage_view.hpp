@@ -165,7 +165,7 @@ class ContiguousStorageView
       Storage r;
       r.data_ = static_cast<void*>(
         static_cast<char*>(storage.data_) +
-        amount * storage_byte_size * space.step(dim));
+        amount * storage_byte_size * space.step(ripple_forward(dim)));
       return r;
     }
 
@@ -190,7 +190,7 @@ class ContiguousStorageView
       int                             amount) noexcept -> void {
       storage.data_ = static_cast<void*>(
         static_cast<char*>(storage.data_) +
-        amount * storage_byte_size * space.step(dim));
+        amount * storage_byte_size * space.step(ripple_forward(dim)));
     }
 
     // clang-format off
@@ -264,7 +264,7 @@ class ContiguousStorageView
   /**
    * Default constructor for the contguous storage.
    */
-  ripple_host_device ContiguousStorageView() noexcept = default;
+  ContiguousStorageView() noexcept = default;
 
   /**
    * Set the contiguous storage from a type which implements the StorageAccess
@@ -286,14 +286,12 @@ class ContiguousStorageView
    * Copy constructor to set the storage from the other storage.
    * \param other The other storage to set this one from.
    */
-  ripple_host_device
   ContiguousStorageView(const ContiguousStorageView& other) noexcept = default;
 
   /**
    * Move constructor to move the other storage into this one.
    * \param other The other storage to move into this one.
    */
-  ripple_host_device
   ContiguousStorageView(ContiguousStorageView&& other) noexcept = default;
 
   /*==--- [operator overloads] ---------------------------------------------==*/
