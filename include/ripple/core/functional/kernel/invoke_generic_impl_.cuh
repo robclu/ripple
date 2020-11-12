@@ -19,6 +19,7 @@
 
 #include "invoke_utils.hpp"
 #include "invoke_utils.cuh"
+#include <ripple/core/arch/gpu_utils.hpp>
 #include <ripple/core/algorithm/max_element.hpp>
 #include <ripple/core/execution/dynamic_execution_params.hpp>
 #include <ripple/core/execution/execution_params.hpp>
@@ -34,9 +35,29 @@ namespace ripple::kernel::gpu {
  * Stream wrapper class which holds a cuda stream and a parameter which defines
  * if it is valid.
  */
-struct Stream {
-  bool         set = false; //!< If the stream has been set.
-  cudaStream_t stream;      //!< The stream being wrapped.
+struct StreamWrapper {
+  bool      set = false; //!< If the stream has been set.
+  GpuStream stream;
+
+  /** Creates the stream. */
+  auto create() noexcept -> void {
+    //    ::ripple::gpu::create_stream(&stream);
+    ripple_if_cuda(cudaStreamCreate(&stream));
+  }
+
+  /** Cleans up the stream. */
+  auto cleanup() noexcept -> void {
+    ::ripple::gpu::synchronize_stream(stream);
+    ::ripple::gpu::destroy_stream(stream);
+  }
+
+  /**
+   * Sets the stream using the other stream.
+   * \param s The other stream to set this stream from.
+   */
+  auto set_stream(GpuStream s) noexcept -> void {
+    stream = s;
+  }
 };
 
 /**
@@ -45,7 +66,7 @@ struct Stream {
  * \tparam SharedData The type of the data for the shared memory.
  * \tparam Space      The space which defines the shared memory.
  */
-template <size_t Dims, typename SharedData, typename Space>
+template <size_t Dims, typename SharedData, typename Space, typename Data>
 struct SharedMemInfo {
   // clang-format off
   /** Defines the type of the allocator for the shared data type. */
@@ -75,26 +96,41 @@ struct SharedMemInfo {
    */
   template <typename T>
   ripple_host_device auto make_iterator(T* data) const noexcept -> Iter {
-    return Iter{Alloc::create(
-                  static_cast<void*>(static_cast<char*>(data) + offset), space),
-                space};
+    return Iter{
+      Alloc::create(
+        static_cast<void*>(static_cast<char*>(data) + offset), space),
+      space};
   }
 
   size_t offset          = 0; //!< Offset into shared memory.
   size_t mem_requirement = 0; //!< Amount of mem required for the space.
   size_t padding         = 0; //!< Padding required for the iterator.
+  Data   data;                //!< Data for a kernel.
   Space  space;               //!< The space for the shared memory.
 };
 
 /**
  * Wrapper struct to represent void shared memory information.
  */
-struct VoidInfo {};
+template <typename T>
+struct VoidInfo {
+  T data; //!< Data for a kernel.
+};
+
+template <typename T>
+struct IsVoidInfo {
+  static constexpr bool value = false;
+};
+
+template <typename T>
+struct IsVoidInfo<VoidInfo<T>> {
+  static constexpr bool value = true;
+};
 
 /** True if the template parameter is VoidInfo. */
 template <typename T>
-static constexpr bool is_void_info_v =
-  std::is_same_v<VoidInfo, std::decay_t<T>>;
+static constexpr bool is_void_info_v = IsVoidInfo<std::decay_t<T>>::value;
+//  std::is_same_v<VoidInfo, std::decay_t<T>>;
 
 /*==--- [enables] ----------------------------------------------------------==*/
 
@@ -171,7 +207,7 @@ using non_void_info_enable_t = std::enable_if_t<!is_void_info_v<T>, int>;
  * \tparam T    The type to get a shared interator over.
  */
 template <typename T, void_info_enable_t<T> = 0>
-ripple_device_only auto make_shared_iterator(T& t, void* data) noexcept -> T& {
+ripple_device auto make_shared_iterator(T& t, void* data) noexcept -> T& {
   return t;
 }
 
@@ -187,7 +223,7 @@ ripple_device_only auto make_shared_iterator(T& t, void* data) noexcept -> T& {
  * \tparam T           The type to get a shared interator over.
  */
 template <typename T, non_void_info_enable_t<T> = 0>
-ripple_device_only auto
+ripple_device auto
 make_shared_iterator(T& shared_info, void* data) noexcept -> typename T::Iter {
   return shared_info.make_iterator(data);
 }
@@ -205,13 +241,17 @@ make_shared_iterator(T& shared_info, void* data) noexcept -> typename T::Iter {
  * \tparam Params The implementation type of the execution params.
  * \return Void information for the shared memory space.
  */
-template <size_t Dims, typename T, typename Params, non_block_enabled_t<T> = 0>
+template <
+  size_t Dims,
+  typename T,
+  typename Params,
+  non_multiblock_enable_t<T> = 0>
 auto create_shared_info(
   size_t&                   offset,
-  Stream&                   stream,
+  StreamWrapper&            stream,
   const ExecParams<Params>& params,
-  T&                        data) noexcept -> VoidInfo {
-  return VoidInfo{};
+  T&                        data) noexcept {
+  return VoidInfo<T>{data};
 }
 
 /**
@@ -228,16 +268,19 @@ auto create_shared_info(
  * \tparam ParamsImpl The implementation type of the execution params.
  * \return Void information for the shared memory space.
  */
-template <size_t Dims, typename T, typename Params, block_enabled_t<T> = 0>
+template <size_t Dims, typename T, typename Params, multiblock_enable_t<T> = 0>
 auto create_shared_info(
-  size_t& offset, Stream& stream, const ExecParams<Params>& params, T& data)
-  -> VoidInfo {
+  size_t&                   offset,
+  StreamWrapper&            stream,
+  const ExecParams<Params>& params,
+  T&                        data) {
   if (!stream.set) {
-    stream.stream = data.stream();
-    stream.set    = true;
-    cudaSetDevice(data.gpu_id);
+    stream.set_stream(data.stream());
+    stream.set = true;
+    ::ripple::gpu::set_device(data.gpu_id);
   }
-  return VoidInfo{};
+  return VoidInfo<decltype(util::block_iter_or_same(data))>{
+    util::block_iter_or_same(data)};
 }
 
 /**
@@ -255,10 +298,14 @@ auto create_shared_info(
  * \return Shared memory information for the type.
  */
 
-template <size_t Dims, typename T, typename Params, non_block_enabled_t<T> = 0>
+template <
+  size_t Dims,
+  typename T,
+  typename Params,
+  non_multiblock_enable_t<T> = 0>
 auto create_shared_info(
   size_t&                   offset,
-  const Stream&             stream,
+  const StreamWrapper&      stream,
   const ExecParams<Params>& params,
   SharedWrapper<T>&         data) noexcept {
   using Traits = layout_traits_t<T>;
@@ -279,8 +326,8 @@ auto create_shared_info(
   const size_t     size       = Alloc::allocation_size(elements);
   offset                      = start + size;
 
-  using SharedInfoType = SharedMemInfo<Dims, T, DynamicMultidimSpace<Dims>>;
-  SharedInfoType info{start, size, shared_pad};
+  using SharedInfoType = SharedMemInfo<Dims, T, DynamicMultidimSpace<Dims>, T>;
+  SharedInfoType info{start, size, shared_pad, data};
   info.set_space(params);
 
   return info;
@@ -299,21 +346,21 @@ auto create_shared_info(
  * \tparam ParamsImpl  The implementation type of the execution params.
  * \return Shared memory information for the type.
  */
-template <size_t Dims, typename T, typename Params, block_enabled_t<T> = 0>
+template <size_t Dims, typename T, typename Params, multiblock_enable_t<T> = 0>
 auto create_shared_info(
   size_t&                   offset,
-  Stream&                   stream,
+  StreamWrapper&            stream,
   const ExecParams<Params>& params,
   SharedWrapper<T>&         data) noexcept {
-  using BlockEnabledTraits = block_enabled_traits_t<T>;
-  using SharedType         = typename BlockEnabledTraits::Value;
-  using Traits             = layout_traits_t<SharedType>;
-  using Alloc              = typename Traits::Allocator;
+  using MultiblockTraits = multiblock_traits_t<T>;
+  using SharedType       = typename MultiblockTraits::Value;
+  using Traits           = layout_traits_t<SharedType>;
+  using Alloc            = typename Traits::Allocator;
 
   if (!stream.set) {
-    stream.stream = data.wrapped.stream();
-    stream.set    = true;
-    cudaSetDevice(data.wrapped.gpu_id);
+    stream.set_stream(data.wrapped.stream());
+    stream.set = true;
+    ::ripple::gpu::set_device(data.wrapped.gpu_id);
   }
 
   /**
@@ -335,9 +382,10 @@ auto create_shared_info(
    * Shared memory type is the value type, we keep the same layout even if it's
    * possible to change it, since this has shown to be more performant!
    */
+  using DataType = decltype(util::block_iter_or_same(data));
   using SharedInfoType =
-    SharedMemInfo<Dims, SharedType, DynamicMultidimSpace<Dims>>;
-  SharedInfoType info{start, size, shared_pad};
+    SharedMemInfo<Dims, SharedType, DynamicMultidimSpace<Dims>, DataType>;
+  SharedInfoType info{start, size, shared_pad, util::block_iter_or_same(data)};
   info.set_space(params);
   return info;
 }
@@ -360,12 +408,12 @@ auto get_execution_sizes(
   -> std::tuple<dim3, dim3> {
   auto threads = dim3(1, 1, 1), blocks = dim3(1, 1, 1);
 
-  threads.x = get_dim_num_threads(dim_sizes[dim_x], params.size(dim_x));
-  threads.y = get_dim_num_threads(dim_sizes[dim_y], params.size(dim_y));
-  threads.z = get_dim_num_threads(dim_sizes[dim_z], params.size(dim_z));
-  blocks.x  = get_dim_num_blocks(dim_sizes[dim_x], threads.x);
-  blocks.y  = get_dim_num_blocks(dim_sizes[dim_y], threads.y);
-  blocks.z  = get_dim_num_blocks(dim_sizes[dim_z], threads.z);
+  threads.x = get_dim_num_threads(dim_sizes[dimx()], params.size(dimx()));
+  threads.y = get_dim_num_threads(dim_sizes[dimy()], params.size(dimy()));
+  threads.z = get_dim_num_threads(dim_sizes[dimz()], params.size(dimz()));
+  blocks.x  = get_dim_num_blocks(dim_sizes[dimx()], threads.x);
+  blocks.y  = get_dim_num_blocks(dim_sizes[dimy()], threads.y);
+  blocks.z  = get_dim_num_blocks(dim_sizes[dimz()], threads.z);
 
   return std::make_tuple(threads, blocks);
 }
@@ -400,20 +448,20 @@ ripple_host_device auto offset_if_iterator(
   uint8_t& iter_count,
   uint8_t& valid_count) noexcept -> Tuple<Shared, Global&> {
   iter_count++;
-  bool valid = true;
-  unrolled_for<iterator_traits_t<Shared>::dimensions>([&](auto dim) {
+  bool             valid = true;
+  constexpr size_t dims  = iterator_traits_t<Shared>::dimensions;
+  unrolled_for<dims>([&](auto dim) {
     if (!global.is_valid(dim) || thread_idx(dim) >= shared.size(dim)) {
       valid = false;
-    } else {
-      shared.shift(dim, thread_idx(dim) + shared.padding());
-      global.shift(dim, global_idx(dim));
     }
   });
   if (valid) {
     *shared = *global;
-    if (shared.padding() != 0) {
-      gpu::util::set_iter_boundary(global, shared);
-    }
+    unrolled_for<dims>([&](auto dim) {
+      shared.shift(dim, thread_idx(dim) + shared.padding());
+      global.shift(dim, global_idx(dim));
+    });
+    if (shared.padding() != 0) { gpu::util::set_iter_boundary(global, shared); }
     valid_count++;
   }
   return Tuple<Shared, Global&>{shared, global};
@@ -444,16 +492,15 @@ ripple_host_device auto offse_if_iterator(
   uint8_t& iter_count,
   uint8_t& valid_count) noexcept -> Tuple<Shared, Other&> {
   iter_count++;
-  bool valid = true;
-  unrolled_for<iterator_traits_t<Shared>::dimensions>([&](auto dim) {
-    if (thread_idx(dim) >= shared.size(dim)) {
-      valid = false;
-    } else {
-      shared.shift(dim, thread_idx(dim) + shared.padding());
-    }
+  bool             valid = true;
+  constexpr size_t dims  = iterator_traits_t<Shared>::dimensions;
+  unrolled_for<dims>([&](auto dim) {
+    if (thread_idx(dim) >= shared.size(dim)) { valid = false; }
   });
 
   if (valid) {
+    unrolled_for<dims>(
+      [&](auto dim) { shared.shift(dim, thread_idx(dim) + shared.padding()); });
     *shared = other;
     valid_count++;
   }
@@ -479,22 +526,20 @@ template <
   typename Global,
   only_second_iter_enable_t<Void, Global> = 0>
 ripple_host_device auto offset_if_iterator(
-  Void, Global& global, uint8_t& iter_count, uint8_t& valid_count) noexcept
-  -> Tuple<Global&, Void> {
+  Void& v, Global& global, uint8_t& iter_count, uint8_t& valid_count) noexcept
+  -> Tuple<Global&, Void&> {
   iter_count++;
-  bool valid = true;
-  unrolled_for<iterator_traits_t<Global>::dimensions>([&](auto dim) {
-    if (!global.is_valid(dim)) {
-      valid = false;
-    } else {
-      global.shift(dim, global_idx(dim));
-    }
+  bool             valid = true;
+  constexpr size_t dims  = iterator_traits_t<Global>::dimensions;
+  unrolled_for<dims>([&](auto dim) {
+    if (!global.is_valid(dim)) { valid = false; }
   });
 
   if (valid) {
     valid_count += 1;
+    unrolled_for<dims>([&](auto dim) { global.shift(dim, global_idx(dim)); });
   }
-  return Tuple<Global&, Void>{global, Void()};
+  return Tuple<Global&, Void&>{global, v};
 }
 
 /**
@@ -514,9 +559,9 @@ template <
   typename Other,
   neither_iters_enable_t<Void, Other> = 0>
 ripple_host_device auto offset_if_iterator(
-  Void, Other&& other, uint8_t& iter_count, uint8_t& valid_count) noexcept
-  -> Tuple<Other&, Void> {
-  return Tuple<Other&, Void>{other, Void()};
+  Void& v, Other&& other, uint8_t& iter_count, uint8_t& valid_count) noexcept
+  -> Tuple<Other&, Void&> {
+  return Tuple<Other&, Void&>{other, v};
 }
 
 /*==--- [shared memory copying] --------------------------------------------==*/
@@ -532,8 +577,7 @@ ripple_host_device auto offset_if_iterator(
  * \tparam To   The type of the to iterator.
  */
 template <typename From, typename To, both_iters_enable_t<From, To> = 0>
-ripple_device_only auto
-copy_iterator_data(From&& from, To&& to) noexcept -> void {
+ripple_device auto copy_iterator_data(From&& from, To&& to) noexcept -> void {
   *to = *from;
 }
 
@@ -550,8 +594,7 @@ copy_iterator_data(From&& from, To&& to) noexcept -> void {
  *
  */
 template <typename From, typename To, not_both_iters_enable_t<From, To> = 0>
-ripple_device_only auto
-copy_iterator_data(From&& from, To&& to) noexcept -> void {}
+ripple_device auto copy_iterator_data(From&& from, To&& to) noexcept -> void {}
 
 /*==--- [invoke implementation] --------------------------------------------==*/
 
@@ -566,15 +609,14 @@ copy_iterator_data(From&& from, To&& to) noexcept -> void {}
  * \tparam Args            The types of the arguments.
  */
 template <typename Invocable, typename... Args>
-ripple_device_only auto execute_invocable(
+ripple_device auto execute_invocable(
   Invocable&& invocable,
   uint8_t&    iters,
   uint8_t&    valid,
   Args&&... args) noexcept -> void {
   // Sync needed here because of shared to global load:
-  if (valid > 0) {
-    syncthreads();
-  }
+  if (valid <= 0) { return; }
+  syncthreads();
   invocable(get<0>(args)...);
 
   // For any argument which are shared memory iterators, we need to copy
@@ -582,6 +624,7 @@ ripple_device_only auto execute_invocable(
   (copy_iterator_data(get<0>(args), get<1>(args)), ...);
 }
 
+// clang-format off
 /**
  * Expands the arguments and wrapped arguments into the invocable so that it
  * can be executed.
@@ -596,13 +639,13 @@ ripple_device_only auto execute_invocable(
  * \tparam Args         The type of the arguments.
  * \tparam I            The indices of the arguments to expand.
  */
-template <typename Invocable, typename... Ts, typename... Args, size_t... I>
-ripple_device_only auto expand_into_invocable(
-  Invocable&&   invocable,
-  void*         data,
-  Tuple<Ts...>& wrapped_args,
-  std::index_sequence<I...>,
-  Args&&... args) noexcept -> void {
+template <typename Invocable, typename... Ts, size_t... I>
+ripple_device auto expand_into_invocable(
+  Invocable&&               invocable,
+  void*                     data,
+  Tuple<Ts...>&             wrapped_args,
+  std::index_sequence<I...>) noexcept -> void {
+  // clang-format on
   // Count total number of iterators, and how many are valid.
   uint8_t iter_count = 0, valid_count = 0;
 
@@ -610,12 +653,12 @@ ripple_device_only auto expand_into_invocable(
   // shared memory and offset them appropriately, copy data between global
   // and shared where necessary, and synchronize those operations.
   execute_invocable(
-    static_cast<Invocable&&>(invocable),
+    ripple_forward(invocable),
     iter_count,
     valid_count,
     offset_if_iterator(
       make_shared_iterator(get<I>(wrapped_args), data),
-      static_cast<Args&&>(args),
+      get<I>(wrapped_args).data,
       iter_count,
       valid_count)...);
 }
@@ -634,17 +677,20 @@ ripple_device_only auto expand_into_invocable(
  * \tparam Ts           The types of the wrapped arguments.
  * \tparam Args         The type of the arguments.
  */
-template <typename Invocable, typename... Ts, typename... Args>
-ripple_global auto invoke_impl(
-  Invocable invocable, Tuple<Ts...> wrapped_args, Args... args) noexcept
-  -> void {
+template <typename Invocable, typename... Ts>
+ripple_global auto
+invoke_impl(Invocable invocable, Tuple<Ts...> wrapped_args) -> void {
+#if ripple_cuda_available
   extern __shared__ char buffer[];
+#else
+  static char buffer[];
+#endif
+
   expand_into_invocable(
     invocable,
     static_cast<void*>(buffer),
     wrapped_args,
-    std::make_index_sequence<sizeof...(Ts)>(),
-    args...);
+    std::make_index_sequence<sizeof...(Ts)>());
 }
 
 /**
@@ -669,15 +715,13 @@ ripple_global auto invoke_impl(
 template <typename Invocable, typename... Args>
 auto invoke_generic_impl(Invocable&& invocable, Args&&... args) noexcept
   -> void {
-#if defined(__CUDACC__)
-  constexpr size_t dims =
-    max_element(block_enabled_traits_t<Args>::dimensions...);
+  constexpr size_t dims = max_element(any_block_traits_t<Args>::dimensions...);
 
   // Find the grid size:
-  const auto sizes =
-    DimSizes{max_element(size_t{1}, get_size_if_block(args, dim_x)...),
-             max_element(size_t{1}, get_size_if_block(args, dim_y)...),
-             max_element(size_t{1}, get_size_if_block(args, dim_z)...)};
+  const auto sizes = DimSizes{
+    max_element(size_t{1}, get_size_if_block(args, dimx())...),
+    max_element(size_t{1}, get_size_if_block(args, dimy())...),
+    max_element(size_t{1}, get_size_if_block(args, dimz())...)};
 
   /*
    * Gets the size of the grid to run on the gpu. Currently this only uses
@@ -687,31 +731,31 @@ auto invoke_generic_impl(Invocable&& invocable, Args&&... args) noexcept
   const auto exec_params = dynamic_params<dims>();
   auto [threads, blocks] = get_execution_sizes(exec_params, sizes);
 
+  // static_assert(Tuple<Args...>::fsdfsd, "");
+
   /*
    * Create a stream, incase we dont have one to run on. Also get any other
    * types which may have been requested to be passed in shared memory, and
    * compute the amount of shared memory.
    */
-  Stream stream;
-  size_t shared_mem = 0;
-  auto   all_params = make_tuple(
+  StreamWrapper stream;
+  size_t        shared_mem = 0;
+  auto          all_params = make_tuple(
     create_shared_info<dims>(shared_mem, stream, exec_params, args)...);
 
   // If there are no streams, then we need to create one.
-  if (!stream.set) {
-    cudaStreamCreate(&stream.stream);
-  }
+  if (!stream.set) { stream.create(); }
 
   // Run the kernel. For any parameters which are Block types, we convert the
   // block to an iterator over the block.
-  invoke_impl<<<blocks, threads, shared_mem, stream.stream>>>(
-    invocable, all_params, util::block_iter_or_same(args)...);
+  // ripple_if_cuda(invoke_impl<<<blocks, threads, shared_mem,
+  // stream.stream>>>(
+  //  invocable, all_params, util::block_iter_or_same(args)...));
 
-  if (!stream.set) {
-    cudaStreamSynchronize(stream.stream);
-    cudaStreamDestroy(stream.stream);
-  }
-#endif
+  ripple_if_cuda(invoke_impl<<<blocks, threads, shared_mem, stream.stream>>>(
+    invocable, all_params));
+
+  if (!stream.set) { stream.cleanup(); }
 }
 
 } // namespace ripple::kernel::gpu

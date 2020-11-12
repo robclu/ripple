@@ -45,20 +45,30 @@ namespace ripple {
  * \tparam Invocable   The type of the invocable.
  * \tparam Args        The type of the arguments.
  */
-template <ExecutionKind Kind, typename Invocable, typename... Args>
+template <
+  ExecutionKind Kind,
+  typename Invocable,
+  typename... Args,
+  std::enable_if_t<Kind == ExecutionKind::gpu, int> = 0>
 auto invoke_generic(
   Execution<Kind> exec_kind, Invocable&& invocable, Args&&... args) noexcept
   -> void {
-  if constexpr (Kind == ExecutionKind::gpu) {
-    kernel::gpu::invoke_generic_impl(
-      static_cast<Invocable&&>(invocable), static_cast<Args&&>(args)...);
-    return;
-  }
-  if constexpr (Kind == ExecutionKind::cpu) {
-    kernel::cpu::invoke_generic_impl(
-      static_cast<Invocable&&>(invocable), static_cast<Args&&>(args)...);
-    return;
-  }
+  kernel::gpu::invoke_generic_impl(
+    ripple_forward(invocable), ripple_forward(args)...);
+  return;
+}
+
+template <
+  ExecutionKind Kind,
+  typename Invocable,
+  typename... Args,
+  std::enable_if_t<Kind == ExecutionKind::cpu, int> = 0>
+auto invoke_generic(
+  Execution<Kind> exec_kind, Invocable&& invocable, Args&&... args) noexcept
+  -> void {
+  kernel::cpu::invoke_generic_impl(
+    ripple_forward(invocable), ripple_forward(args)...);
+  return;
 }
 
 /**
@@ -86,35 +96,15 @@ auto invoke_generic(
   switch (exec_kind) {
     case ExecutionKind::gpu:
       invoke_generic(
-        GpuExecutor(),
-        static_cast<Invocable&&>(invocable),
-        static_cast<Args&&>(args)...);
+        GpuExecutor(), ripple_forward(invocable), ripple_forward(args)...);
       break;
     case ExecutionKind::cpu:
       invoke_generic(
-        CpuExecutor(),
-        static_cast<Invocable&&>(invocable),
-        static_cast<Args&&>(args)...);
+        CpuExecutor(), ripple_forward(invocable), ripple_forward(args)...);
       break;
     default: assert(false && "Invalid execution ");
   }
 }
-
-/**
- * Invokes the invocable on the block, on the gpu.
- *
- * \todo refactor this into invoke_generic.
- *
- * \param  invocable   The invocable to execute.
- * \param  args        The arguments for the invocable.
- * \tparam Invocable   The type of the invocable.
- * \tparam Args        The type of the arguments
- */
-// template <typename Invocable, typename... Args>
-// auto block_invoke(Invocable&& invocable, Args&&... args) noexcept -> void {
-//  kernel::block_invoke(
-//    static_cast<Invocable&&>(invocable), static_cast<Args&&>(args)...);
-//}
 
 //==--- [simple invoke] ----------------------------------------------------==//
 
@@ -145,10 +135,10 @@ template <
 auto invoke(
   HostBlock<T, Dims>& block, Callable&& callable, Args&&... args) noexcept
   -> void {
-  kernel::invoke(
-    block, static_cast<Callable&&>(callable), static_cast<Args&&>(args)...);
+  kernel::invoke(block, ripple_forward(callable), ripple_forward(args)...);
 }
 
+// clang-format off
 /**
  * This forwards the callable and the block to the gpu implemtation to
  * invoke the callable on each element of the block.
@@ -168,94 +158,16 @@ auto invoke(
  * \tparam Args      The type of the arguments for the invocation.
  */
 template <
-  typename T,
-  size_t Dims,
-  typename Callable,
+  typename    T,
+  size_t      Dims,
+  typename    Callable,
   typename... Args,
   non_exec_param_enable_t<Callable> = 0>
 auto invoke(
   DeviceBlock<T, Dims>& block, Callable&& callable, Args&&... args) noexcept
   -> void {
-  kernel::gpu::invoke(
-    block, static_cast<Callable&&>(callable), static_cast<Args&&>(args)...);
-}
-
-/*==--- [invoke with exec params] ------------------------------------------==*/
-
-/**
- * This forwards the callable and the block to the cpp implemtation to invoke
- * the callable on each element of the block, with the execution parameters
- * specified by the params.
- *
- * \note This overload is for host blocks, and will run on the CPU.
- *
- * \param  block       The block to invoke the callable on.
- * \param  exec_params The parameters which define the execution space.
- * \param  callabble   The callable object.
- * \param  args        Arguments for the callable.
- * \tparam T           The type of the data in the block.
- * \tparam Dims        The number of dimensions in the block.
- * \tparam ExecParams  The type of the execution paramters.
- * \tparam Callable    The callable object to invoke.
- * \tparam Args        The type of the arguments for the invocation.
- */
-template <
-  typename T,
-  size_t Dims,
-  typename ExecImpl,
-  typename Callable,
-  typename... Args,
-  exec_param_enable_t<ExecImpl> = 0>
-auto invoke(
-  HostBlock<T, Dims>& block,
-  ExecImpl&&          exec_params,
-  Callable&&          callable,
-  Args&&... args) noexcept -> void {
-  kernel::invoke(
-    block,
-    exec_params,
-    static_cast<Callable&&>(callable),
-    static_cast<Args&&>(args)...);
-}
-
-/**
- * This forwards the callable and the block to the gpu implemtation to
- * invoke the callable on each element of the block, with the execution
- * parameters specified by the params.
- *
- * This will pass an iterator to the block as the first argument to the
- * callable, where the iterator has been offset to index i,[j,[k]] in the
- * block, and the params as the second argument.
- *
- * \note This overload is for device blocks, and will run on the GPU.
- *
- * \param  block       The block to invoke the callable on.
- * \param  exec_params The parameters which define the execution space.
- * \param  callabble   The callable object.
- * \param  args        Arguments for the callable.
- * \tparam T           The type of the data in the block.
- * \tparam Dims        The number of dimensions in the block.
- * \tparam ExecImpl    The type of the execution implementation.
- * \tparam Callable    The callable object to invoke.
- * \tparam Args        The type of the arguments for the invocation.
- */
-template <
-  typename T,
-  size_t Dims,
-  typename ExecImpl,
-  typename Callable,
-  typename... Args,
-  exec_param_enable_t<ExecImpl> = 0>
-auto invoke(
-  DeviceBlock<T, Dims>& block,
-  ExecImpl&&            exec_params,
-  Callable&&            callable,
-  Args&&... args) noexcept -> void {
-  kernel::gpu::invoke(
-    block,
-    exec_params,
-    static_cast<Callable&&>(callable),
-    static_cast<Args&&>(args)...);
+  // clang-format on
+  kernel::gpu::invoke(block, ripple_forward(callable), ripple_forward(args)...);
 }
 
 } // namespace ripple

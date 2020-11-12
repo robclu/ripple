@@ -22,44 +22,6 @@
 
 namespace ripple::kernel::cpu {
 
-/*==--- [iterator offsetting] ----------------------------------------------==*/
-
-/**
- * Overload of iterator offsetting for the case that the input type is a block.
- * This gets an iterator from the block and offsets it using the offsets.
- *
- * \param  block     The block type to get the iterator from.
- * \param  offsets   The offsets for the iterator.
- * \tparam T         The type of the non-block.
- * \tparam Offsets   The type of the offsets.
- */
-
-// template <typename T, typename... Offsets, block_enabled_t<T> = 0>
-// auto shift_if_iterator(T& block, Offsets&&... offsets) noexcept
-//  -> decltype(block.begin()) {
-//  auto iter = block.begin();
-//  auto offs = make_tuple(static_cast<Offsets&&>(offsets)...);
-//  unrolled_for<sizeof...(Offsets)>(
-//    [&](auto i) { iter.shift(Dimension<i>(), get<i>(offs)); });
-//  return iter;
-//}
-
-/**
- * Overload of iterator offsetting for the case that the input type is not
- * a block. This just forwards the input type back.
- *
- * \param  non_block The non block type to return.
- * \param  offsets   The offsets for the iterator.
- * \tparam T         The type of the non-block.
- * \tparam Offsets   The type of the offsets.
- */
-// template <typename T, typename... Offsets, non_block_enabled_t<T> = 0>
-// decltype(auto) shift_if_iterator(T&& non_block, Offsets&&... offsets)
-// noexcept {
-//  return static_cast<T&&>(non_block);
-//}
-//
-
 /**
  * Gets an iterator from the host block.
  *
@@ -80,10 +42,26 @@ auto get_iterator(T&& host_block) noexcept {
  *
  * \param block The blocks to get the iterator from.
  */
-template <typename T, non_block_enable_t<T> = 0>
+template <typename T, multiblock_enable_t<T> = 0>
 auto get_iterator(T&& block) noexcept {
   return block.host_iterator();
 }
+
+template <typename T>
+using block_shared_enable_t =
+  std::enable_if_t<is_shared_wrapper_v<T> && is_any_block_v<T>, int>;
+
+template <typename T>
+using block_non_shared_enable_t =
+  std::enable_if_t<!is_shared_wrapper_v<T> && is_any_block_v<T>, int>;
+
+template <typename T>
+using non_block_shared_enable_t =
+  std::enable_if_t<is_shared_wrapper_v<T> && !is_any_block_v<T>, int>;
+
+template <typename T>
+using non_any_block_or_shared_enable_t =
+  std::enable_if_t<!is_any_block_v<T> && !is_shared_wrapper_v<T>, int>;
 
 /**
  * Overload of iterator offsetting for the case that the input type is a block.
@@ -96,8 +74,8 @@ auto get_iterator(T&& block) noexcept {
  * \tparam T         The type of the non-block.
  * \tparam Offsets   The type of the offsets.
  */
-template <typename T, typename... Offsets, block_enabled_t<T> = 0>
-auto shift_if_iterator(T&& block, Offsets&&... offsets) noexcept {
+template <typename T, typename... Offsets, any_block_enable_t<T> = 0>
+decltype(auto) shift_if_iterator(T&& block, Offsets&&... offsets) noexcept {
   auto iter = get_iterator(block);
   auto offs = make_tuple(static_cast<Offsets&&>(offsets)...);
   unrolled_for<sizeof...(Offsets)>(
@@ -116,9 +94,9 @@ auto shift_if_iterator(T&& block, Offsets&&... offsets) noexcept {
  * \tparam T         The type of the non-block.
  * \tparam Offsets   The type of the offsets.
  */
-template <typename T, typename... Offsets, block_enabled_t<T> = 0>
-auto shift_if_iterator(
-  SharedWrapper<T>& wrapper, Offsets&&... offsets) noexcept {
+template <typename T, typename... Offsets, any_block_enable_t<T> = 0>
+decltype(auto)
+shift_if_iterator(SharedWrapper<T>& wrapper, Offsets&&... offsets) noexcept {
   auto iter = get_iterator(wrapper.wrapped);
   auto offs = make_tuple(static_cast<Offsets&&>(offsets)...);
   unrolled_for<sizeof...(Offsets)>(
@@ -137,7 +115,10 @@ auto shift_if_iterator(
  * \tparam T         The type of the non-block.
  * \tparam Offsets   The type of the offsets.
  */
-template <typename T, typename... Offsets, non_block_enabled_t<T> = 0>
+template <
+  typename T,
+  typename... Offsets,
+  non_any_block_or_shared_enable_t<T> = 0>
 decltype(auto) shift_if_iterator(T&& non_block, Offsets&&... offsets) noexcept {
   return static_cast<T&&>(non_block);
 }
@@ -153,9 +134,9 @@ decltype(auto) shift_if_iterator(T&& non_block, Offsets&&... offsets) noexcept {
  * \tparam T       The type being wrapped.
  * \tparam Offsets The type of the offsets.
  */
-template <typename T, typename... Offsets, non_block_enabled_t<T> = 0>
+template <typename T, typename... Offsets, non_any_block_enable_t<T> = 0>
 decltype(auto)
-shift_if_iterator(SharedWrapper<T>&& wrapper, Offsets&&... offsets) noexcept {
+shift_if_iterator(SharedWrapper<T>& wrapper, Offsets&&... offsets) noexcept {
   return wrapper.wrapped;
 }
 
@@ -184,9 +165,9 @@ struct InvokeGenericImpl<2> {
   template <typename Callable, typename... Args>
   static auto
   invoke(Callable&& callable, const DimSizes& sizes, Args&&... args) -> void {
-    for (size_t k = 0; k < sizes[dim_z]; ++k) {
-      for (size_t j = 0; j < sizes[dim_y]; ++j) {
-        for (size_t i = 0; i < sizes[dim_x]; ++i) {
+    for (size_t k = 0; k < sizes[dimz()]; ++k) {
+      for (size_t j = 0; j < sizes[dimy()]; ++j) {
+        for (size_t i = 0; i < sizes[dimx()]; ++i) {
           callable(shift_if_iterator(static_cast<Args&&>(args), i, j, k)...);
         }
       }
@@ -195,7 +176,7 @@ struct InvokeGenericImpl<2> {
 };
 
 /// Implementation struct to invoke a callable in a blocked manner,
-/// \tparam I The index of the dimension to invoke for.
+/// \tparam I The index of the dimension: to invoke for.
 template <>
 struct InvokeGenericImpl<1> {
   /// Invokes the \p callable on the \p it iterator with the \p args, and the
@@ -214,8 +195,8 @@ struct InvokeGenericImpl<1> {
   static auto
   invoke(Callable&& callable, const DimSizes& sizes, Args&&... args) -> void {
     //    Tuple<Args...> t(static_cast<Args&&>(args)...);
-    for (size_t j = 0; j < sizes[dim_y]; ++j) {
-      for (size_t i = 0; i < sizes[dim_x]; ++i) {
+    for (size_t j = 0; j < sizes[dimy()]; ++j) {
+      for (size_t i = 0; i < sizes[dimx()]; ++i) {
         callable(shift_if_iterator(static_cast<Args&&>(args), i, j)...);
       }
     }
@@ -241,7 +222,7 @@ struct InvokeGenericImpl<0> {
   template <typename Callable, typename... Args>
   static auto
   invoke(Callable&& callable, const DimSizes& sizes, Args&&... args) -> void {
-    for (size_t i = 0; i < sizes[dim_x]; ++i) {
+    for (size_t i = 0; i < sizes[dimx()]; ++i) {
       callable(shift_if_iterator(static_cast<Args&&>(args), i)...);
     }
   }
@@ -265,14 +246,13 @@ struct InvokeGenericImpl<0> {
 template <typename Invocable, typename... Args>
 auto invoke_generic_impl(Invocable&& invocable, Args&&... args) noexcept
   -> void {
-  constexpr size_t dims =
-    max_element(block_enabled_traits_t<Args>::dimensions...);
+  constexpr size_t dims = max_element(any_block_traits_t<Args>::dimensions...);
 
   // Find the grid sizes:
-  const auto sizes =
-    DimSizes{max_element(size_t{1}, get_size_if_block(args, dim_x)...),
-             max_element(size_t{1}, get_size_if_block(args, dim_y)...),
-             max_element(size_t{1}, get_size_if_block(args, dim_z)...)};
+  const auto sizes = DimSizes{
+    max_element(size_t{1}, get_size_if_block(args, dimx())...),
+    max_element(size_t{1}, get_size_if_block(args, dimy())...),
+    max_element(size_t{1}, get_size_if_block(args, dimz())...)};
 
   InvokeGenericImpl<dims - 1>::invoke(
     static_cast<Invocable&&>(invocable), sizes, static_cast<Args>(args)...);
