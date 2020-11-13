@@ -41,16 +41,16 @@ ripple_host_device auto
   // clang-format on
   const auto pad      = static_cast<int>(it_to.padding());
   const auto dim_size = static_cast<int>(std::min(
-    it_to.size(dim_x),
-    it_from.size(dim_x) - block_idx(dim_x) * block_size(dim_x)));
+    it_to.size(dimx()),
+    it_from.size(dimx()) - block_idx(dimx()) * block_size(dimx())));
 
   // Number of iterations for the dimension. Here, this is essentially the ceil
   // of (size + pad) / size:
-  const auto iters        = (2 * (dim_size + pad) - 1) / dim_size;
-  const auto shift_amount = std::min(dim_size, 2 * pad);
-  for (auto i : range(iters)) {
-    *it_to.offset(dim_x, i * shift_amount) =
-      *it_from.offset(dim_x, i * shift_amount);
+  const int iters        = (2 * (dim_size + pad) - 1) / dim_size;
+  const int shift_amount = std::min(dim_size, 2 * pad);
+  for (int i : range(iters)) {
+    *it_to.offset(dimx(), i * shift_amount) =
+      *it_from.offset(dimx(), i * shift_amount);
   }
 }
 
@@ -73,17 +73,18 @@ template <
   size_t Dims, typename ItFrom, typename ItTo, not_dim_1d_enable_t<Dims> = 0>
 ripple_host_device auto
 load_internal(ItFrom&& it_from, ItTo&& it_to) noexcept -> void {
+  // clang-format on
   // Has to be 2d or 3d:
-  constexpr auto dim      = Dims == 3 ? dim_z : dim_y;
+  constexpr auto dim      = Dims == 3 ? dimz() : dimy();
   const auto     pad      = static_cast<int>(it_to.padding());
   const auto     dim_size = static_cast<int>(std::min(
     it_to.size(dim), it_from.size(dim) - block_idx(dim) * block_size(dim)));
 
   // Number of iterations for the dimension. Here, this is essentially the ceil
   // of (size + pad) / size:
-  const auto iters        = (2 * (dim_size + pad) - 1) / dim_size;
-  const auto shift_amount = std::min(dim_size, 2 * pad);
-  for (auto i : range(iters)) {
+  const int iters        = (2 * (dim_size + pad) - 1) / dim_size;
+  const int shift_amount = std::min(dim_size, 2 * pad);
+  for (int i : range(iters)) {
     load_internal<Dims - 1>(
       it_from.offset(dim, i * shift_amount),
       it_to.offset(dim, i * shift_amount));

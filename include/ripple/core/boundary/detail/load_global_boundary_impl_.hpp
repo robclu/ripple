@@ -48,15 +48,25 @@ ripple_host_device auto load_global_boundary_for_dim(
   Dim&&                   dim,
   Loader&&                loader,
   Args&&... args) noexcept -> void {
+  // clang-format on
   if (indices.is_front(dim)) {
     loader.load_front(
-      it.offset(dim, -it.padding()), indices.index(dim), dim, args...);
+      it.offset(dim, -it.padding()),
+      indices.index(dim),
+      dim,
+      ripple_forward(args)...);
+    *it = *it.offset(dim, -it.padding());
   } else if (indices.is_back(dim)) {
     loader.load_back(
-      it.offset(dim, it.padding()), indices.index(dim), dim, args...);
+      it.offset(dim, it.padding()),
+      indices.index(dim),
+      dim,
+      ripple_forward(args)...);
+  } else {
   }
 }
 
+// clang-format off
 /**
  * Loads the boundary data for the x dimension. This simply forwards to the
  * loading implementation for the x dimension.
@@ -74,17 +84,17 @@ ripple_host_device auto load_global_boundary_for_dim(
  */
 template <typename It, size_t Dims, typename Loader, typename... Args>
 ripple_host_device auto load_global_boundary(
-  dimx_t                  dimx,
+  dimx_t                  dim,
   It&&                    it,
   const GhostIndex<Dims>& indices,
   Loader&&                loader,
   Args&&... args) noexcept -> void {
   load_global_boundary_for_dim(
-    static_cast<It&&>(it),
+    it,
     indices,
-    dimx,
-    static_cast<Loader&&>(loader),
-    static_cast<Args&&>(args)...);
+    dim,
+    ripple_forward(loader),
+    ripple_forward(args)...);
 }
 
 /**
@@ -114,31 +124,29 @@ ripple_host_device auto load_global_boundary(
   Args&&... args) noexcept -> void {
   // Load x boundary:
   load_global_boundary_for_dim(
-    static_cast<It&&>(it),
+    it,
     indices,
-    dim_x,
-    static_cast<Loader&&>(loader),
-    static_cast<Args&&>(args)...);
-
+    dimx(),
+    ripple_forward(loader),
+    ripple_forward(args)...);
   // Load y boundary:
   load_global_boundary_for_dim(
-    static_cast<It&&>(it),
+    it,
     indices,
-    dim_y,
-    static_cast<Loader&&>(loader),
-    static_cast<Args&&>(args)...);
-
+    dimy(),
+    ripple_forward(loader),
+    ripple_forward(args)...);
   // Load corner boundaries, first offset into y padding, then load x
   // boundaries using the padding data for y. The sign of the index is opposite
   // to the direction in which we need to offset because the index normal points
   // into the domain, and here we need to walk out the domaim.
-  const auto step = -math::sign(indices.index(dim_y)) * it.padding();
+  const auto step = -math::sign(indices.index(dimy())) * it.padding();
   load_global_boundary_for_dim(
-    it.offset(dim_y, step),
+    it.offset(dimy(), step),
     indices,
-    dim_x,
-    static_cast<Loader&&>(loader),
-    static_cast<Args&&>(args)...);
+    dimx(),
+    ripple_forward(loader),
+    ripple_forward(args)...);
 }
 
 /**
@@ -173,32 +181,32 @@ ripple_host_device auto load_global_boundary(
   Args&&... args) noexcept -> void {
   // Load boundaries for 2D plane from cell:
   load_global_boundary(
-    dim_y,
-    static_cast<It&&>(it),
+    dimy(),
+    it,
     indices,
-    static_cast<Loader&&>(loader),
-    static_cast<Args&&>(args)...);
+    ripple_forward(loader),
+    ripple_forward(args)...);
 
   // Set the z boundary for the cell:
   load_global_boundary_for_dim(
-    static_cast<It&&>(it),
+    it,
     indices,
-    dim_z,
-    static_cast<Loader&&>(loader),
-    static_cast<Args&&>(args)...);
+    dimz(),
+    ripple_forward(loader),
+    ripple_forward(args)...);
 
   /* Offset in the z dimension and then load the boundaries for the 2D plane
    * from the offset cell. As in the 2D case, the direction to offset in is
    * opposite to the sign of the index since the index normal points into the
    * domain, and here we are moving out of it.
    */
-  const auto step = -math::sign(indices.index(dim_z)) * it.padding();
+  const auto step = -math::sign(indices.index(dimz())) * it.padding();
   load_global_boundary(
-    dim_y,
-    it.offset(dim_z, step),
+    dimy(),
+    it.offset(dimz(), step),
     indices,
-    static_cast<Loader&&>(loader),
-    static_cast<Args&&>(args)...);
+    ripple_forward(loader),
+    ripple_forward(args)...);
 }
 
 } // namespace ripple::detail
