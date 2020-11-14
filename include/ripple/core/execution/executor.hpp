@@ -105,9 +105,8 @@ class Executor {
       }
     }
 
-    bool  requires_gpu = false;
-    auto& cpu_queue    = cpu_queues_[thread_id];
-    auto& gpu_queue    = gpu_queues_[thread_id];
+    auto& cpu_queue = cpu_queues_[thread_id];
+    auto& gpu_queue = gpu_queues_[thread_id];
     for (auto& node : graph.nodes_) {
       auto& queue = node->execution_kind() == ExecutionKind::gpu ? gpu_queue
                                                                  : cpu_queue;
@@ -418,11 +417,11 @@ class Executor {
 
   // clang-format off
   /** Defines the container type for the threads. */
-  using Threads       = std::vector<std::thread>;
+  using Threads      = std::vector<std::thread>;
   /** Defines the container type for thread states. */
   using ThreadStates = std::vector<ThreadState>;
   /** Defines the type of the stealer for work stealing. */
-  using Stealer       = std::variant<
+  using Stealer      = std::variant<
     RandomStealer, NeighbourStealer, TopoStealer>;
 
   /**
@@ -620,8 +619,9 @@ class Executor {
  * \return A reference to the global executor.
  */
 inline auto executor() -> Executor& {
-  static Executor exec(
-    topology().num_cores() - topology().num_gpus(), topology().num_gpus());
+  static Executor exec(13, 3);
+  // topology().num_cores() - topology().num_gpus(), topology().num_gpus());
+
   return exec;
 }
 

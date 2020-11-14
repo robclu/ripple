@@ -45,10 +45,11 @@ static thread_local Dim3   grid_dim_;
 static thread_local Dim3   grid_elements_;
 // clang-format on
 
-#if defined(__CUDA__) && defined(__CUDA_ARCH__)
-
 /** The number of elements in each dimension. */
-ripple_device_only size_t _global_elements[3];
+ripple_device size_t global_elements_for_device_[3];
+
+#if (defined(__CUDA__) && defined(__CUDA_ARCH__)) || \
+  (defined(__CUDACC__) && defined(__CUDA_ARCH__))
 
 /**
  * Gets the number of elements in the dimension, globally, for a single
@@ -61,7 +62,7 @@ ripple_device_only size_t _global_elements[3];
  */
 template <typename Dim>
 ripple_host_device inline auto global_elements(Dim&& dim) noexcept -> size_t& {
-  return _global_elements[dim];
+  return global_elements_for_device_[dim];
 }
 
 /*==--- [thread idx] -------------------------------------------------------==*/
@@ -93,11 +94,10 @@ ripple_host_device inline auto thread_idx(dimz_t) noexcept -> size_t {
  * \return The index of the the thread in the block for the given dimension.
  */
 ripple_host_device inline auto thread_idx(size_t dim) noexcept -> size_t {
-  return dim == dimx_t::value
-           ? thread_idx(dim_x)
-           : dim == dimy_t::value
-               ? thread_idx(dim_y)
-               : dim == dimz_t::value ? thread_idx(dim_z) : 0;
+  return dim == dimx_t::value   ? thread_idx(dimx())
+         : dim == dimy_t::value ? thread_idx(dimy())
+         : dim == dimz_t::value ? thread_idx(dimz())
+                                : 0;
 }
 
 /*==--- [block idx] --------------------------------------------------------==*/
@@ -129,10 +129,10 @@ ripple_host_device inline auto block_idx(dimz_t) noexcept -> size_t {
  * \return The index of the block in the grid in the given dimension.
  */
 ripple_host_device inline auto block_idx(size_t dim) noexcept -> size_t {
-  return dim == dimx_t::value
-           ? block_idx(dim_x)
-           : dim == dimy_t::value ? block_idx(dim_y)
-                                  : dim == dimz_t::value ? block_idx(dim_z) : 0;
+  return dim == dimx_t::value   ? block_idx(dimx())
+         : dim == dimy_t::value ? block_idx(dimy())
+         : dim == dimz_t::value ? block_idx(dimz())
+                                : 0;
 }
 
 /*==--- [global idx] -------------------------------------------------------==*/
@@ -140,6 +140,7 @@ ripple_host_device inline auto block_idx(size_t dim) noexcept -> size_t {
 /**
  * \return The index of the thread in the grid for the x dimension.
  */
+
 ripple_host_device inline auto global_idx(dimx_t) noexcept -> size_t {
   return threadIdx.x + blockIdx.x * blockDim.x;
 }
@@ -163,11 +164,10 @@ ripple_host_device inline auto global_idx(dimz_t) noexcept -> size_t {
  * \param dim The dimension to get grid index for.
  */
 ripple_host_device inline auto global_idx(size_t dim) noexcept -> size_t {
-  return dim == dimx_t::value
-           ? global_idx(dim_x)
-           : dim == dimy_t::value
-               ? global_idx(dim_y)
-               : dim == dimz_t::value ? global_idx(dim_z) : 0;
+  return dim == dimx_t::value   ? global_idx(dimx_t())
+         : dim == dimy_t::value ? global_idx(dimy_t())
+         : dim == dimz_t::value ? global_idx(dimz_t())
+                                : 0;
 }
 
 /*==--- [block size] -------------------------------------------------------==*/
@@ -199,11 +199,10 @@ ripple_host_device inline auto block_size(dimz_t) noexcept -> size_t {
  * \return The size of the block in the grid in the given dimension.
  */
 ripple_host_device inline auto block_size(size_t dim) noexcept -> size_t {
-  return dim == dimx_t::value
-           ? block_size(dim_x)
-           : dim == dimy_t::value
-               ? block_size(dim_y)
-               : dim == dimz_t::value ? block_size(dim_z) : 0;
+  return dim == dimx_t::value   ? block_size(dimx())
+         : dim == dimy_t::value ? block_size(dimy())
+         : dim == dimz_t::value ? block_size(dimz())
+                                : 0;
 }
 
 /*==--- [grid size] --------------------------------------------------------==*/
@@ -235,10 +234,10 @@ ripple_host_device inline auto grid_size(dimz_t) noexcept -> size_t {
  * \return The number of blocks in the grid in the given dimension.
  */
 ripple_host_device inline auto grid_size(size_t dim) noexcept -> size_t {
-  return dim == dimx_t::value
-           ? grid_size(dim_x)
-           : dim == dimy_t::value ? grid_size(dim_y)
-                                  : dim == dimz_t::value ? grid_size(dim_z) : 0;
+  return dim == dimx_t::value   ? grid_size(dimx())
+         : dim == dimy_t::value ? grid_size(dimy())
+         : dim == dimz_t::value ? grid_size(dimz())
+                                : 0;
 }
 
 #elif !defined(__CUDA__) || !defined(__CUDA_ARCH__) // __CUDA_ARCH__
@@ -272,11 +271,10 @@ ripple_host_device inline auto thread_idx(dimz_t) noexcept -> size_t {
  * \return The index of the thread in the block in the given dimension.
  */
 ripple_host_device inline auto thread_idx(size_t dim) noexcept -> size_t {
-  return dim == dimx_t::value
-           ? thread_idx(dim_x)
-           : dim == dimy_t::value
-               ? thread_idx(dim_y)
-               : dim == dimz_t::value ? thread_idx(dim_z) : 0;
+  return dim == dimx_t::value   ? thread_idx(dimx())
+         : dim == dimy_t::value ? thread_idx(dimy())
+         : dim == dimz_t::value ? thread_idx(dimz())
+                                : 0;
 }
 
 /*==--- [block idx] -------------------------------------------------------==*/
@@ -308,10 +306,10 @@ ripple_host_device inline auto block_idx(dimz_t) noexcept -> size_t {
  * \return The index of the block in the grid in the given dimension.
  */
 ripple_host_device inline auto block_idx(size_t dim) noexcept -> size_t {
-  return dim == dimx_t::value
-           ? block_idx(dim_x)
-           : dim == dimy_t::value ? block_idx(dim_y)
-                                  : dim == dimz_t::value ? block_idx(dim_z) : 0;
+  return dim == dimx_t::value   ? block_idx(dimx())
+         : dim == dimy_t::value ? block_idx(dimy())
+         : dim == dimz_t::value ? block_idx(dimz())
+                                : 0;
 }
 
 /*==--- [grid idx] ---------------------------------------------------------==*/
@@ -343,11 +341,10 @@ ripple_host_device inline auto global_idx(dimz_t) noexcept -> size_t {
  * \return The index of the thread in the grid in the given dimension.
  */
 ripple_host_device inline auto global_idx(size_t dim) noexcept -> size_t {
-  return dim == dimx_t::value
-           ? global_idx(dim_x)
-           : dim == dimy_t::value
-               ? global_idx(dim_y)
-               : dim == dimz_t::value ? global_idx(dim_z) : 0;
+  return dim == dimx_t::value   ? global_idx(dimx())
+         : dim == dimy_t::value ? global_idx(dimy())
+         : dim == dimz_t::value ? global_idx(dimz())
+                                : 0;
 }
 
 /*==--- [block size] -------------------------------------------------------==*/
@@ -379,11 +376,10 @@ ripple_host_device inline auto block_size(dimz_t) noexcept -> size_t {
  * \return The size of the block in the grid in the given dimension.
  */
 ripple_host_device inline auto block_size(size_t dim) noexcept -> size_t {
-  return dim == dimx_t::value
-           ? block_size(dim_x)
-           : dim == dimy_t::value
-               ? block_size(dim_y)
-               : dim == dimz_t::value ? block_size(dim_z) : 0;
+  return dim == dimx_t::value   ? block_size(dimx())
+         : dim == dimy_t::value ? block_size(dimy())
+         : dim == dimz_t::value ? block_size(dimz())
+                                : 0;
 }
 
 /*==--- [grid size] --------------------------------------------------------==*/
@@ -415,10 +411,10 @@ ripple_host_device inline auto grid_size(dimz_t) noexcept -> size_t {
  * \return The number of blocks in the grid in the given dimension.
  */
 ripple_host_device inline auto grid_size(size_t dim) noexcept -> size_t {
-  return dim == dimx_t::value
-           ? grid_size(dim_x)
-           : dim == dimy_t::value ? grid_size(dim_y)
-                                  : dim == dimz_t::value ? grid_size(dim_z) : 0;
+  return dim == dimx_t::value   ? grid_size(dimx())
+         : dim == dimy_t::value ? grid_size(dimy())
+         : dim == dimz_t::value ? grid_size(dimz())
+                                : 0;
 }
 
 /**
@@ -432,9 +428,9 @@ ripple_host_device inline auto grid_size(size_t dim) noexcept -> size_t {
  */
 template <typename Dim>
 ripple_host_device inline auto global_elements(Dim&& dim) noexcept -> size_t& {
-  return dim == dimx_t::value
-           ? grid_elements_.x
-           : dim == dimy_t::value ? grid_elements_.y : grid_elements_.z;
+  return dim == dimx_t::value   ? grid_elements_.x
+         : dim == dimy_t::value ? grid_elements_.y
+                                : grid_elements_.z;
 }
 
 #endif // __CUDACC__

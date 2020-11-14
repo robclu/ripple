@@ -73,19 +73,16 @@ auto get_dim_num_threads(T elements, U max_threads) noexcept -> size_t {
  * \tparam ExeImpl     The type of the execution parameter implementation.
  * \return A tuple with { num threads (3d), num blocks (3d) }.
  */
-template <
-  typename Block,
-  typename ExeImpl,
-  block_enabled_1d_enable_t<Block> = 0>
+template <typename Block, typename ExeImpl, any_block_1d_enable_t<Block> = 0>
 auto get_exec_size(
   const Block& block, const ExecParams<ExeImpl>& exec_params) noexcept
   -> std::tuple<dim3, dim3> {
-  const auto elems_x = block.size(dim_x);
+  const auto elems_x = block.size(dimx());
 
   auto threads = dim3(1, 1, 1);
   auto blocks  = dim3(1, 1, 1);
 
-  threads.x = get_dim_num_threads(elems_x, exec_params.size(dim_x));
+  threads.x = get_dim_num_threads(elems_x, exec_params.size(dimx()));
   blocks.x  = get_dim_num_blocks(elems_x, threads.x);
 
   return std::make_tuple(threads, blocks);
@@ -103,21 +100,18 @@ auto get_exec_size(
  * \tparam ExeImpl     The type of the execution parameter implementation.
  * \return A tuple with { num threads (3d), num blocks (3d) }.
  */
-template <
-  typename Block,
-  typename ExeImpl,
-  block_enabled_2d_enable_t<Block> = 0>
+template <typename Block, typename ExeImpl, any_block_2d_enable_t<Block> = 0>
 auto get_exec_size(
   const Block& block, const ExecParams<ExeImpl>& exec_params) noexcept
   -> std::tuple<dim3, dim3> {
-  const auto elems_x = block.size(dim_x);
-  const auto elems_y = block.size(dim_y);
+  const auto elems_x = block.size(dimx());
+  const auto elems_y = block.size(dimy());
 
   auto threads = dim3(1, 1, 1);
   auto blocks  = dim3(1, 1, 1);
 
-  threads.x = get_dim_num_threads(elems_x, exec_params.size(dim_x));
-  threads.y = get_dim_num_threads(elems_y, exec_params.size(dim_y));
+  threads.x = get_dim_num_threads(elems_x, exec_params.size(dimx()));
+  threads.y = get_dim_num_threads(elems_y, exec_params.size(dimy()));
   blocks.x  = get_dim_num_blocks(elems_x, threads.x);
   blocks.y  = get_dim_num_blocks(elems_y, threads.y);
 
@@ -136,22 +130,19 @@ auto get_exec_size(
  * \tparam ExeImpl     The type of the execution parameter implementation.
  * \return A tuple with { num threads (3d), num blocks (3d) }.
  */
-template <
-  typename Block,
-  typename ExeImpl,
-  block_enabled_3d_enable_t<Block> = 0>
+template <typename Block, typename ExeImpl, any_block_3d_enable_t<Block> = 0>
 auto get_exec_size(const Block& block, const ExecParams<ExeImpl>& exec_params)
   -> std::tuple<dim3, dim3> {
-  const auto elems_x = block.size(dim_x);
-  const auto elems_y = block.size(dim_y);
-  const auto elems_z = block.size(dim_z);
+  const auto elems_x = block.size(dimx());
+  const auto elems_y = block.size(dimy());
+  const auto elems_z = block.size(dimz());
 
   auto threads = dim3(1, 1, 1);
   auto blocks  = dim3(1, 1, 1);
 
-  threads.x = get_dim_num_threads(elems_x, exec_params.size(dim_x));
-  threads.y = get_dim_num_threads(elems_y, exec_params.size(dim_y));
-  threads.z = get_dim_num_threads(elems_z, exec_params.size(dim_z));
+  threads.x = get_dim_num_threads(elems_x, exec_params.size(dimx()));
+  threads.y = get_dim_num_threads(elems_y, exec_params.size(dimy()));
+  threads.z = get_dim_num_threads(elems_z, exec_params.size(dimz()));
   blocks.x  = get_dim_num_blocks(elems_x, threads.x);
   blocks.y  = get_dim_num_blocks(elems_y, threads.y);
   blocks.z  = get_dim_num_blocks(elems_z, threads.z);

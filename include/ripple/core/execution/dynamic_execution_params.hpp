@@ -103,7 +103,7 @@ struct DynamicExecParams : public ExecParams<DynamicExecParams<Shared>> {
   ripple_host_device constexpr auto size() const noexcept -> Step {
     static_assert(
       Dims <= 3, "Execution space can't be more than 3 dimensions!");
-    Step total_size = space_.size(dim_x);
+    Step total_size = space_.size(dimx());
     unrolled_for<Dims - 1>([&](auto d) {
       constexpr auto dim = d + 1;
       total_size *= space_.size(dim);
@@ -127,7 +127,7 @@ struct DynamicExecParams : public ExecParams<DynamicExecParams<Shared>> {
     static_assert(
       Dims <= 3, "Execution space can't be more than 3 dimensions!");
     const size_t pad        = padding * 2;
-    Step         total_size = space_.internal_size(dim_x) + pad;
+    Step         total_size = space_.internal_size(dimx()) + pad;
     unrolled_for<Dims - 1>([&](auto d) {
       constexpr auto dim = d + 1;
       total_size *= space_.internal_size(dim) + pad;
