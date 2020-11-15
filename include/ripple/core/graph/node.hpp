@@ -17,9 +17,11 @@
 #define RIPPLE_GRAPH_NODE_HPP
 
 #include <ripple/core/container/tuple.hpp>
+#include <ripple/core/execution/execution_traits.hpp>
 #include <ripple/core/functional/invocable.hpp>
 #include <ripple/core/math/math.hpp>
 #include <ripple/core/utility/forward.hpp>
+#include <ripple/core/utility/range.hpp>
 #include <array>
 #include <atomic>
 #include <cassert>
@@ -91,9 +93,9 @@ struct NodeExecutorImpl final : public NodeExecutor {
  private:
   // clang-format off
   /** Defines an alias for the type of the invocable for the node. */
-  using Invocable    = Invocable<std::decay_t<Callable>>;
+  using InvocableType = Invocable<std::decay_t<Callable>>;
   /** Defines the type of the argument contianer. */
-  using ArgContainer = Tuple<Args...>;
+  using ArgContainer  = Tuple<Args...>;
 
   /** The number of arguments for the execution. */
   static constexpr size_t num_args = sizeof...(Args);
@@ -102,13 +104,13 @@ struct NodeExecutorImpl final : public NodeExecutor {
  public:
   /**
    * Constructor to store the invocable and args for the executor.
-   * \param  invocable     The invocable object to store.
-   * \param  args          The arguments for the invocable.
-   * \tparam InvocableType The type of the invocable.
-   * \tparam ArgTypes      The types of the arguments.
+   * \param  invocable The invocable object to store.
+   * \param  args      The arguments for the invocable.
+   * \tparam InvType   The type of the invocable.
+   * \tparam ArgTypes  The types of the arguments.
    */
-  template <typename InvocableType, typename... ArgTypes>
-  NodeExecutorImpl(InvocableType&& invocable, ArgTypes&&... args) noexcept
+  template <typename InvType, typename... ArgTypes>
+  NodeExecutorImpl(InvType&& invocable, ArgTypes&&... args) noexcept
   : invocable_{ripple_forward(invocable)}, args_{ripple_forward(args)...} {}
 
   /** Destuctor -- defaulted. */
@@ -174,8 +176,8 @@ struct NodeExecutorImpl final : public NodeExecutor {
   }
 
  private:
-  Invocable    invocable_; //!< The object to be invoked.
-  ArgContainer args_;      //!< Args for the invocable.
+  InvocableType invocable_; //!< The object to be invoked.
+  ArgContainer  args_;      //!< Args for the invocable.
 
   /**
    * Implementation of execution of the invocable, expanding the args into it.
@@ -219,18 +221,7 @@ struct NodeInfo {
    */
   template <size_t Size>
   static auto
-  id_from_indices(const std::array<uint32_t, Size>& indices) -> uint64_t {
-    using namespace math;
-    static_assert(Size <= 3, "Node id only valid for up to 3 dimensions!");
-    return Size == 1
-             ? indices[0]
-             : Size == 2
-                 ? hash_combine(indices[0], indices[1])
-                 : Size == 3
-                     ? hash_combine(
-                         indices[2], hash_combine(indices[0], indices[1]))
-                     : 0;
-  }
+  id_from_indices(const std::array<uint32_t, Size>& indices) -> uint64_t;
 
   /**
    * Creates a name for a node from the indices.
@@ -240,14 +231,7 @@ struct NodeInfo {
    */
   template <size_t Size>
   static auto
-  name_from_indices(const std::array<uint32_t, Size>& indices) noexcept
-    -> Name {
-    Name name = Size == 0 ? "" : std::to_string(indices[0]);
-    for (auto i : range(Size - 1)) {
-      name += "_" + std::to_string(indices[i + 1]);
-    }
-    return name;
-  }
+  name_from_indices(const std::array<uint32_t, Size>& indices) noexcept -> Name;
 
   /*==--- [construction] ---------------------------------------------------==*/
 
