@@ -30,7 +30,7 @@ namespace ripple::detail {
  */
 template <typename T>
 constexpr size_t dims_from_block =
-  block_enabled_traits_t<typename modification_traits_t<T>::Value>::dimensions;
+  any_block_traits_t<typename modification_traits_t<T>::Value>::dimensions;
 
 /*==--- [iterator deref] ---------------------------------------------------==*/
 
@@ -80,7 +80,7 @@ auto copy_face_padding(ExecutionKind exec_kind, Iterator&& it) noexcept
   static_assert(
     is_iterator_v<Iterator>, "Friend node adding requires iterator!");
   static_assert(
-    is_block_enabled_v<decltype(*it)>, "Iterator must be over block type!");
+    is_multiblock_v<decltype(*it)>, "Iterator must be over block type!");
   unrolled_for<iterator_traits_t<Iterator>::dimensions>([&](auto dim) {
     if (!it->first_in_dim(dim)) {
       it->fill_padding(
@@ -110,7 +110,7 @@ auto add_friend_nodes(Node<Align>& node, Iterator&& it) noexcept -> void {
   static_assert(
     is_iterator_v<Iterator>, "Friend node adding requires iterator!");
   static_assert(
-    is_block_enabled_v<decltype(*it)>, "Iterator must be over block type!");
+    is_multiblock_v<decltype(*it)>, "Iterator must be over block type!");
   auto ids = it->indices;
   unrolled_for<iterator_traits_t<Iterator>::dimensions>([&](auto dim) {
     if (!it->first_in_dim(dim)) {
@@ -152,7 +152,7 @@ auto add_padding_op_nodes_for_iter(
   Iterator&&    it,
   bool          is_exclusive) noexcept -> void {
   using IterValue = std::decay_t<decltype(*it)>;
-  if constexpr (is_block_enabled_v<IterValue>) {
+  if constexpr (is_multiblock_v<IterValue>) {
     if (it->padding()) {
       const auto name = NodeInfo::name_from_indices(it->indices);
       const auto id   = NodeInfo::id_from_indices(it->indices);
