@@ -23,7 +23,7 @@ target_link_libraries(particle_update ripple::ripple)
 add_executable(
   reinitialization 
   ${ripple_SOURCE_DIR}/benchmarks/reinitialization/reinitialization.cu)
-target_link_libraries(reinitialization ripple::ripple)
+target_link_libraries(reinitialization atomic ripple::ripple)
 
 #==--- [saxpy ---------------------------------------------------------------==#
 

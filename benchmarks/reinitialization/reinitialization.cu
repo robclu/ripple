@@ -40,14 +40,13 @@ using Tensor  = ripple::Tensor<Element, dims>;
  * \param elements The number of elements per dimension.
  * \param padding  The number of padding elements per side of the dimension.
  */
+template <size_t Dims>
 auto make_tensor(size_t elements, uint32_t padding = 0) noexcept {
-  if constexpr (dims == 1) {
+  if constexpr (Dims == 1) {
     return ripple::Tensor<Element, 1>{{1}, padding, elements};
-  }
-  if constexpr (dims == 2) {
+  } else if constexpr (Dims == 2) {
     return ripple::Tensor<Element, 2>{{1, 1}, padding, elements, elements};
-  }
-  if constexpr (dims == 3) {
+  } else if constexpr (Dims == 3) {
     return ripple::Tensor<Element, 3>{
       {1, 1, 1}, padding, elements, elements, elements};
   }
@@ -63,13 +62,34 @@ int main(int argc, char** argv) {
   if (argc > 2) {
     iters = std::atol(argv[2]);
   }
-  auto data = make_tensor(elements, padding);
 
-  ripple::Graph init;
+  /*
+   * NOTE: NVCC does *not* allow generic extended lambdas, so we need the type
+   *       of the iterator if we want to pass lanmbdas to the methods to create
+   *       the graph.
+   *
+   *       This is restrictive in that we need different iterators to global
+   *       and shared data, and hence if we use ripple::in_shared() on the
+   *       tensor data then we *also* need to change the iterator type, which is
+   *       annoying.
+   *
+   *       We can get around this by defining the lamdas as functors with
+   *       generic templates, i,e
+   *
+   *          template <typename It>
+   *          ripple_host_device auto operator()(It&& it) const -> void {}
+   *
+   *       But for a simple case like this, the lamdas are nice.
+   */
+  auto data            = make_tensor<dims>(elements, padding);
+  using Traits         = ripple::tensor_traits_t<decltype(data)>;
+  using Iterator       = typename Traits::Iterator;
+  using SharedIterator = typename Traits::SharedIterator;
+
+  ripple::Graph init(ripple::ExecutionKind::gpu);
   init
     .split(
-      [] ripple_host_device(auto&& it) {
-        /* Set the very first cell in the space as the source node. */
+      [] ripple_host_device(Iterator it) {
         if (it.first_in_global_space()) {
           it->value() = 0;
           it->state() = State::source;
@@ -80,7 +100,7 @@ int main(int argc, char** argv) {
       },
       data)
     .then_split(
-      [] ripple_host_device(auto&& it) {
+      [] ripple_host_device(Iterator it) {
         ripple::load_boundary(it, ripple::FOExtrapLoader());
       },
       data);
@@ -90,7 +110,7 @@ int main(int argc, char** argv) {
   ripple::Graph solve;
   Real          dh = 0.1;
   solve.split(
-    [] ripple_host_device(auto&& it, Real dh, size_t iters) {
+    [] ripple_host_device(SharedIterator it, Real dh, size_t iters) {
       constexpr auto fim_solve = FimSolver();
       fim_solve(it, dh, iters);
     },
@@ -106,6 +126,15 @@ int main(int argc, char** argv) {
   std::cout << "Size: " << elements << "x" << elements
             << " elements, Iters: " << iters << ", Time: " << elapsed
             << " ms\n";
+
+  if (elements < 15) {
+    for (size_t j = 0; j < elements; ++j) {
+      for (size_t i = 0; i < elements; ++i) {
+        printf("%5.5f ", data(i, j)->value());
+      }
+      printf("\n");
+    }
+  }
 
   return 0;
 }

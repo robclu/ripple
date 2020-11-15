@@ -43,7 +43,7 @@ struct Upwinder<1> {
   ripple_host_device auto operator()(It&& it, T dh, F&& f) const noexcept -> T {
     using namespace ripple;
     return std::min(
-             it.offset(dim_x, -1)->value(), it.offset(dim_x, 1)->value()) +
+             it.offset(dimx(), -1)->value(), it.offset(dimx(), 1)->value()) +
            (f + dh);
   }
 };
@@ -67,9 +67,9 @@ struct Upwinder<2> {
   ripple_host_device auto operator()(It&& it, T dh, F&& f) const noexcept -> T {
     using namespace ripple;
     const T a =
-      std::min(it.offset(dim_x, -1)->value(), it.offset(dim_x, 1)->value());
+      std::min(it.offset(dimx(), -1)->value(), it.offset(dimx(), 1)->value());
     const T b =
-      std::min(it.offset(dim_y, -1)->value(), it.offset(dim_y, 1)->value());
+      std::min(it.offset(dimy(), -1)->value(), it.offset(dimy(), 1)->value());
 
     const T fh  = f * dh;
     const T amb = a - b;
@@ -98,11 +98,11 @@ struct Upwinder<3> {
   ripple_host_device auto operator()(It&& it, T dh, F&& f) const noexcept -> T {
     using namespace ripple;
     const T aa =
-      std::min(it.offset(dim_x, -1)->value(), it.offset(dim_x, 1)->value());
+      std::min(it.offset(dimx(), -1)->value(), it.offset(dimx(), 1)->value());
     const T bb =
-      std::min(it.offset(dim_y, -1)->value(), it.offset(dim_y, 1)->value());
+      std::min(it.offset(dimy(), -1)->value(), it.offset(dimy(), 1)->value());
     const T cc =
-      std::min(it.offset(dim_z, -1)->value(), it.offset(dim_z, 1)->value());
+      std::min(it.offset(dimz(), -1)->value(), it.offset(dimz(), 1)->value());
 
     const T a = std::min(aa, std::min(bb, cc));
     const T b = std::max(std::min(aa, bb), std::min(std::max(aa, bb), cc));
