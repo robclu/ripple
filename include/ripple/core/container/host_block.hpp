@@ -88,6 +88,9 @@ class HostBlock {
   friend auto swap(HostBlock& lhs, HostBlock& rhs) noexcept -> void {
     using std::swap;
     swap(lhs.data_, rhs.data_);
+    swap(lhs.allocator_, rhs.allocator_);
+    swap(lhs.mem_props_, rhs.mem_props_);
+    swap(lhs.space_, rhs.space_);
   }
 
   /*==--- [construction] ---------------------------------------------------==*/

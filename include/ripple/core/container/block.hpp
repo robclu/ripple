@@ -26,10 +26,41 @@
 
 namespace ripple {
 
-/**
- * Defines the state of the block data.
+/*==--- [Multiblock traits specialization] ---------------------------------==*/
+
+/*
+ * Specialization of the block enabled traits for a block.
+ * \param  T          The type of the data in the block.
+ * \tparam Dimensions The number of dimensions in the block.
  */
-enum class BlockState : uint8_t {
+template <typename T, size_t Dimensions>
+struct MultiBlockTraits<Block<T, Dimensions>> {
+ private:
+  // clang-format off
+  /** Defines the type of the host block for the block. */
+  using LayoutTraits = layout_traits_t<T>;
+  /** Defines the value type of the block data. */
+  using IterValue    = typename LayoutTraits::Value;
+  /** Defines the type of the space used by the block. */
+  using Space        = DynamicMultidimSpace<Dimensions>;
+
+ public:
+  /** The number of dimensions in the block. */
+  static constexpr size_t dimensions = Dimensions;
+
+  // clang-format off
+  /** Defines the value type of the block data. */
+  using Value          = T;
+  /** Defines the type of the iterator over global block data. */
+  using Iterator       = IndexedIterator<IterValue, Space>;
+  /** Defines the type of  the iterator over shared block data. */
+  using SharedIterator = BlockIterator<IterValue, Space>;
+};
+
+/**
+ * Defines the state of the data for a parition.
+ */
+enum class DataState : uint8_t {
   invalid          = 0, //!< Data is not valid.
   updated_host     = 1, //!< Data is on the host and is updated.
   submitted_host   = 2, //!< Data has been submitted on the host.
@@ -39,35 +70,33 @@ enum class BlockState : uint8_t {
 
 /**
  * Defines a type which wraps a host and device block into a single type, and
- * which has a state for the different regions of data in the block.
+ * which has a state for the different regions of data in the parition.
  *
  * This class is designed to partition both the computational space as well
  * as the memory spaces, and to be used as a building block for the Tensor
  * class.
  *
- *
  * \tparam T          The type of the data for the block.
  * \tparam Dimensions The number of dimensions for the block.
  */
 template <typename T, size_t Dimensions>
-struct Block : public BlockEnabled<Block<T, Dimensions>> {
+struct Block : MultiBlock<Block<T, Dimensions>> {
+  /** Defines the traits for the block. */
+  using Traits = MultiBlockTraits<Block<T, Dimensions>>;
+ public:
   // clang-format off
   /** Defines the type of the type for the block index. */
-  using Index        = std::array<uint32_t, Dimensions>;
+  using Index          = std::array<uint32_t, Dimensions>;
   /** Defines the type of the host block for the block. */
-  using HostBlock   = HostBlock<T, Dimensions>;
+  using HostBlock      = HostBlock<T, Dimensions>;
   /** Defines the type of the device block for the block. */
-  using DeviceBlock = DeviceBlock<T, Dimensions>;
-  /** Defines the type of the space used by the host block. */
-  using HostSpace   = typename block_traits_t<HostBlock>::Space;
-  /** Defines the type of the space used by the device block. */
-  using DeviceSpace = typename block_traits_t<DeviceBlock>::Space;
+  using DeviceBlock    = DeviceBlock<T, Dimensions>;
   /** Defines the type of the host iterator. */
-  using HostIter    = IndexedIterator<T, HostSpace>;
-  /** Defines the type of the device iterator. */
-  using DeviceIter  = IndexedIterator<T, DeviceSpace>;
+  using Iterator       = typename Traits::Iterator;
+  /** Defines the type of the iterator over shared memory. */
+  using SharedIterator = typename Traits::SharedIterator;
   /** Defines the type of the stream. */
-  using Stream       = typename DeviceBlock::Stream;
+  using Stream         = typename DeviceBlock::Stream;
   // clang-format on
 
   /** Defines the number of dimension for the block. */
@@ -94,9 +123,9 @@ struct Block : public BlockEnabled<Block<T, Dimensions>> {
    *       already on the device.
    */
   auto ensure_device_data_available() noexcept -> void {
-    if (data_state == BlockState::updated_host) {
+    if (data_state == DataState::updated_host) {
       device_data.copy_data(host_data);
-      data_state = BlockState::updated_device;
+      data_state = DataState::updated_device;
     }
   }
 
@@ -107,9 +136,9 @@ struct Block : public BlockEnabled<Block<T, Dimensions>> {
    *       already on the host.
    */
   auto ensure_host_data_available() noexcept -> void {
-    if (data_state == BlockState::updated_device) {
+    if (data_state == DataState::updated_device) {
       host_data.copy_data(device_data);
-      data_state = BlockState::updated_host;
+      data_state = DataState::updated_host;
     }
   }
 
@@ -157,8 +186,8 @@ struct Block : public BlockEnabled<Block<T, Dimensions>> {
    * Gets an iterator to the device data for the block.
    * \return An iterator to the first valid (non-padding) element in the block.
    */
-  auto device_iterator() const noexcept -> DeviceIter {
-    auto iter = DeviceIter{device_data.begin()};
+  auto device_iterator() const noexcept -> Iterator {
+    auto iter = Iterator{device_data.begin()};
     set_iter_properties(iter);
     return iter;
   }
@@ -167,8 +196,8 @@ struct Block : public BlockEnabled<Block<T, Dimensions>> {
    * Gets an iterator to the host data.
    * \return An iterator to the first valid (non-padding) element in the block.
    */
-  auto host_iterator() const noexcept -> HostIter {
-    auto iter = HostIter{host_data.begin()};
+  auto host_iterator() const noexcept -> Iterator {
+    auto iter = Iterator{host_data.begin()};
     set_iter_properties(iter);
     return iter;
   }
@@ -177,9 +206,9 @@ struct Block : public BlockEnabled<Block<T, Dimensions>> {
    * Gets an iterator to the beginning of the device data.
    * \return An iterator to the beginning of the device data.
    */
-  decltype(auto) begin() noexcept {
-    return device_data.begin();
-  }
+  // decltype(auto) begin() noexcept {
+  //  return device_data.begin();
+  //}
 
   /**
    * Returns the stream for this block.
@@ -195,8 +224,8 @@ struct Block : public BlockEnabled<Block<T, Dimensions>> {
    * \todo Change this to sync both compute and copy streams.
    */
   auto synchronize() noexcept -> void {
-    cudaSetDevice(gpu_id);
-    cudaStreamSynchronize(stream());
+    gpu::set_device(gpu_id);
+    gpu::synchronize_stream(stream());
   }
 
   /**
@@ -208,7 +237,7 @@ struct Block : public BlockEnabled<Block<T, Dimensions>> {
    */
   template <typename Dim>
   auto size(Dim&& dim) const noexcept -> size_t {
-    return device_data.size(static_cast<Dim&&>(dim));
+    return device_data.size(ripple_forward(dim));
   }
 
   /**
@@ -276,8 +305,8 @@ struct Block : public BlockEnabled<Block<T, Dimensions>> {
   auto reduce(ExecutionKind exec, Pred&& pred, As&&... as) noexcept -> T {
     // clang-format off
     return exec == ExecutionKind::gpu
-      ? reduce_on_device(static_cast<Pred&&>(pred), static_cast<As&&>(as)...)
-      : reduce_on_host(static_cast<Pred&&>(pred), static_cast<As>(as)...);
+      ? reduce_on_device(ripple_forward(pred), ripple_forward(as)...)
+      : reduce_on_host(ripple_forward(pred), ripple_forward(as)...);
     // clang-format on
   }
 
@@ -297,7 +326,7 @@ struct Block : public BlockEnabled<Block<T, Dimensions>> {
   auto reduce_on_device(Pred&& pred, Args&&... args) noexcept -> T {
     ensure_device_data_available();
     return ::ripple::reduce(
-      device_data, static_cast<Pred&&>(pred), static_cast<Args&&>(args)...);
+      device_data, ripple_forward(pred), ripple_forward(args)...);
   }
 
   /**
@@ -316,7 +345,7 @@ struct Block : public BlockEnabled<Block<T, Dimensions>> {
   auto reduce_on_host(Pred&& pred, Args&&... args) noexcept -> T {
     ensure_host_data_available();
     return ::ripple::reduce(
-      host_data, static_cast<Pred&&>(pred), static_cast<Args&&>(args)...);
+      host_data, ripple_forward(pred), ripple_forward(args)...);
   }
 
   //==--- [members] --------------------------------------------------------==//
@@ -328,7 +357,7 @@ struct Block : public BlockEnabled<Block<T, Dimensions>> {
   Index       global_sizes = {}; //!< Global sizes.
   Index       max_indices  = {}; //!< Max indices for each dimension.
   uint32_t    gpu_id       = 0;  //!< Device index.
-  BlockState  data_state   = BlockState::invalid; //!< Data state.
+  DataState   data_state   = DataState::invalid; //!< Data state.
 
  private:
   /**
@@ -403,7 +432,7 @@ struct Block : public BlockEnabled<Block<T, Dimensions>> {
     // If we are on the same gpu, then we can do the device to device copy,
     // otherwise we need to go through the host:
     if (topology().device_to_device_available(gpu_id, other.gpu_id)) {
-      cudaSetDevice(other.gpu_id);
+      gpu::set_device(other.gpu_id);
       memcopy_padding(
         other.device_data,
         device_data,
@@ -411,14 +440,14 @@ struct Block : public BlockEnabled<Block<T, Dimensions>> {
         dst_face,
         other.device_data.stream());
       if (other.gpu_id == gpu_id) {
-        cudaStreamSynchronize(other.device_data.stream());
+        gpu::synchronize_stream(other.device_data.stream());
       }
       return;
     }
 
     // Here we can't do a device -> device copy, so go through the host:
     // First copy from the other block's device data to this block's host data:
-    cudaSetDevice(other.gpu_id);
+    gpu::set_device(other.gpu_id);
     memcopy_padding(
       other.device_data,
       host_data,
@@ -427,10 +456,10 @@ struct Block : public BlockEnabled<Block<T, Dimensions>> {
       other.device_data.stream());
 
     // Have to wait for the copy to finish ...
-    cudaStreamSynchronize(other.device_data.stream());
+    gpu::synchronize_stream(other.device_data.stream());
 
     // Then copy from this block's host data to this blocks device data:
-    cudaSetDevice(gpu_id);
+    gpu::set_device(gpu_id);
     memcopy_padding(
       host_data, device_data, src_face, dst_face, device_data.stream());
   }
@@ -465,22 +494,6 @@ struct Block : public BlockEnabled<Block<T, Dimensions>> {
     // Then copy from this block's host data to this blocks device data:
     memcopy_padding(host_data, device_data, src_face, dst_face);
   }
-};
-
-/*==--- [Block enabled traits specialization] ------------------------------==*/
-
-/**
- * Specialization of the block enabled traits for a block.
- * \param  T          The type of the data in the block.
- * \tparam Dimensions The number of dimensions in the block.
- */
-template <typename T, size_t Dimensions>
-struct BlockEnabledTraits<Block<T, Dimensions>> {
-  /** The number of dimensions in the block. */
-  static constexpr size_t dimensions = Dimensions;
-
-  /** Defines the value type of the block data. */
-  using Value = T;
 };
 
 } // namespace ripple

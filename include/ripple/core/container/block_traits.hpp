@@ -55,6 +55,20 @@ class DeviceBlock;
 template <typename T, size_t Dimensions>
 class HostBlock;
 
+/**
+ * Defines a type which wraps a host and device block into a single type, and
+ * which has a state for the different regions of data in the parition.
+ *
+ * This class is designed to partition both the computational space as well
+ * as the memory spaces, and to be used as a building block for the Tensor
+ * class.
+ *
+ * \tparam T          The type of the data for the block.
+ * \tparam Dimensions The number of dimensions for the block.
+ */
+template <typename T, size_t Dimensions>
+struct Block;
+
 /*==--- [block traits] -----------------------------------------------------==*/
 
 /**
@@ -163,15 +177,54 @@ struct BlockTraits<DeviceBlock<T, Dimensions>> {
   // clang-format on
 };
 
-/*==--- [block enabled] ----------------------------------------------------==*/
+/**
+ * Traits for block enabled type. This should be specialized for types which
+ * implement the BlockEnabled interface.
+ * \tparam T The type which is block enabled.
+ */
+template <typename T>
+struct MultiBlockTraits {
+  // clang-format off
+  /** The value type for the block enabled type. */
+  using Value      = void*;
+  /** Defines the type if the iterator for the block. */
+  using Iterator   = void*;
+
+  /** The number of dimensions for the block enabled type. */
+  static constexpr size_t dimensions = 0;
+  // clang-format on
+};
 
 /**
- * An interface for types which should support block functionality, which is
- * essentially an interface for providing a size and an iterator over the block.
+ * Defines traits common to types which are either blocks or multiblocks.
+ * \param T The type to get the traits for.
+ */
+template <typename T>
+struct AnyBlockTraits {
+ private:
+  // clang-format off
+  /** The traits to use to get the other properties. */
+  using Traits = std::conditional_t<
+    BlockTraits<T>::is_block, BlockTraits<T>, MultiBlockTraits<T>>;
+  // clang-format on
+
+ public:
+  /** The value type for the block enabled type. */
+  using Value = typename Traits::Value;
+
+  /** The number of dimensions for the block enabled type. */
+  static constexpr size_t dimensions = Traits::dimensions;
+};
+
+/*==--- [multi block] ------------------------------------------------------==*/
+
+/**
+ * An interface for types which should support contain block data for both the
+ * host and device.
  * \tparam Impl The implementation of the interface.
  */
 template <typename Impl>
-struct BlockEnabled {
+struct MultiBlock {
   /**
    * Gets a const pointer to the implementation.
    * \return A const pointer to the implementation type.
@@ -190,11 +243,19 @@ struct BlockEnabled {
 
  public:
   /**
-   * Gets an iterator to the beginning of the block.
-   * \return An iterator to the beginning of the block.
+   * Gets an iterator to the beginning of the block device data.
+   * \return An iterator to the beginning of the block device data.
    */
-  auto begin() noexcept -> typename BlockTraits<Impl>::Iter {
-    return impl()->begin();
+  auto device_iterator() noexcept -> typename MultiBlockTraits<Impl>::Iterator {
+    return impl()->device_iterator();
+  }
+
+  /**
+   * Gets an iterator to the beginning of the block device data.
+   * \return An iterator to the beginning of the block device data.
+   */
+  auto host_iterator() noexcept -> typename MultiBlockTraits<Impl>::Iterator {
+    return impl()->host_iterator();
   }
 
   /**
@@ -214,60 +275,18 @@ struct BlockEnabled {
    */
   template <typename Dim>
   auto size(Dim&& dim) const noexcept -> size_t {
-    return impl()->size(static_cast<Dim&&>(dim));
+    return impl()->size(ripple_forward(dim));
   }
-};
-
-/**
- * Traits for block enabled type. This should be specialized for types which
- * implement the BlockEnabled interface.
- * \tparam T The type which is block enabled.
- */
-template <typename T>
-struct BlockEnabledTraits {
-  /** The value type for the block enabled type. */
-  using Value = void*;
-
-  /** The number of dimensions for the block enabled type. */
-  static constexpr size_t dimensions = 0;
-};
-
-/**
- * Specialization of the traits for a host block.
- * \tparam T    The data type for the block.
- * \tparam Dims The number of dimensions for the block.
- */
-template <typename T, size_t Dims>
-struct BlockEnabledTraits<HostBlock<T, Dims>> {
-  /** The number of dimensions for the block enabled type. */
-  static constexpr size_t dimensions = Dims;
-
-  /** The value type for the block enabled type. */
-  using Value = T;
-};
-
-/**
- * Specialization of the traits for a device block.
- * \tparam T    The data type for the block.
- * \tparam Dims The number of dimensions for the block.
- */
-template <typename T, size_t Dims>
-struct BlockEnabledTraits<DeviceBlock<T, Dims>> {
-  /** The number of dimensions for the block enabled type. */
-  static constexpr size_t dimensions = Dims;
-
-  /** The value type for the block enabled type. */
-  using Value = T;
 };
 
 /*==--- [aliases] ----------------------------------------------------------==*/
 
 /**
- * Alias for block enabled traits with a decayed type.
- * \tparam T The type to get the block enabled traits for.
+ * Alias for the traits for a multiblock.
+ * \tparam T The type to get the multiblock traits for.
  */
 template <typename T>
-using block_enabled_traits_t = BlockEnabledTraits<std::decay_t<T>>;
+using multiblock_traits_t = MultiBlockTraits<std::decay_t<T>>;
 
 /**
  * Defines the block traits for a type T after decaying the type T.
@@ -275,6 +294,13 @@ using block_enabled_traits_t = BlockEnabledTraits<std::decay_t<T>>;
  */
 template <typename T>
 using block_traits_t = BlockTraits<std::decay_t<T>>;
+
+/**
+ * Defines traits common to any kind of block.
+ * \tparam T The type to get the traits for.
+ */
+template <typename T>
+using any_block_traits_t = AnyBlockTraits<std::decay_t<T>>;
 
 /**
  * Alias for a 1-dimensional host block.
@@ -346,8 +372,15 @@ static constexpr auto is_device_block_v = block_traits_t<T>::is_device_block;
  * \tparam T The type to determine if is block enabled.
  */
 template <typename T>
-static constexpr bool is_block_enabled_v =
-  std::is_base_of_v<BlockEnabled<std::decay_t<T>>, std::decay_t<T>>;
+static constexpr bool is_multiblock_v =
+  std::is_base_of_v<MultiBlock<std::decay_t<T>>, std::decay_t<T>>;
+
+/**
+ * Returns true if the type T is any kind of block.
+ * \tparam T The type to base the enable on.
+ */
+template <typename T>
+static constexpr bool is_any_block_v = is_block_v<T> || is_multiblock_v<T>;
 
 /**
  * Defines a valid type if T is a block.
@@ -364,20 +397,34 @@ template <typename T>
 using non_block_enable_t = std::enable_if_t<!is_block_v<T>, int>;
 
 /**
- * Defines a valid type if T is block enabled.
+ * Defines a valid type if T is any kind of block.
  * \tparam T The type to base the enable on.
  */
 template <typename T>
-using block_enabled_t =
-  std::enable_if_t<is_block_enabled_v<T> || is_block_v<T>, int>;
+using multiblock_enable_t = std::enable_if_t<is_multiblock_v<T>, int>;
 
 /**
  * Defines a valid type if T is not block enabled.
  * tparam T The type to base the enable on.
  */
 template <typename T>
-using non_block_enabled_t =
-  std::enable_if_t<!is_block_enabled_v<T> && !is_block_v<T>, int>;
+using non_multiblock_enable_t = std::enable_if_t<!is_multiblock_v<T>, int>;
+
+/**
+ * Defines a valid type if T is any kind of block.
+ * \tparam T The type to base the enable on.
+ */
+template <typename T>
+using any_block_enable_t =
+  std::enable_if_t<is_multiblock_v<T> || is_block_v<T>, int>;
+
+/**
+ * Defines a valid type if T is not block enabled.
+ * tparam T The type to base the enable on.
+ */
+template <typename T>
+using non_any_block_enable_t =
+  std::enable_if_t<!is_multiblock_v<T> && !is_block_v<T>, int>;
 
 /**
  * Defines a valid type if T is a 1 dimensional block.
@@ -408,9 +455,9 @@ using block_3d_enable_t =
  * \tparam T The type to base the enable on.
  */
 template <typename T>
-using block_enabled_1d_enable_t = std::enable_if_t<
+using any_block_1d_enable_t = std::enable_if_t<
   (is_block_v<T> && block_traits_t<T>::dimensions == 1) ||
-    (is_block_enabled_v<T> && block_enabled_traits_t<T>::dimensions == 1),
+    (is_multiblock_v<T> && multiblock_traits_t<T>::dimensions == 1),
   int>;
 
 /**
@@ -418,9 +465,9 @@ using block_enabled_1d_enable_t = std::enable_if_t<
  * \tparam T The type to base the enable on.
  */
 template <typename T>
-using block_enabled_2d_enable_t = std::enable_if_t<
+using any_block_2d_enable_t = std::enable_if_t<
   (is_block_v<T> && block_traits_t<T>::dimensions == 2) ||
-    (is_block_enabled_v<T> && block_enabled_traits_t<T>::dimensions == 2),
+    (is_multiblock_v<T> && multiblock_traits_t<T>::dimensions == 2),
   int>;
 
 /**
@@ -428,9 +475,9 @@ using block_enabled_2d_enable_t = std::enable_if_t<
  * \tparam T The type to base the enable on.
  */
 template <typename T>
-using block_enabled_3d_enable_t = std::enable_if_t<
+using any_block_3d_enable_t = std::enable_if_t<
   (is_block_v<T> && block_traits_t<T>::dimensions == 3) ||
-    (is_block_enabled_v<T> && block_enabled_traits_t<T>::dimensions == 3),
+    (is_multiblock_v<T> && multiblock_traits_t<T>::dimensions == 3),
   int>;
 
 } // namespace ripple
