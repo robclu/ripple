@@ -114,7 +114,7 @@ auto reduce(const DeviceBlock<T, Dims>& block, Pred&& pred) {
    * the synchronization required and allocation time.
    */
   DeviceBlock<T, Dims> results(block.stream(), &multiarch_allocator());
-  set_device(block.device_id());
+  ::ripple::gpu::set_device(block.device_id());
   results.set_device_id(block.device_id());
 
   // clang-format off
