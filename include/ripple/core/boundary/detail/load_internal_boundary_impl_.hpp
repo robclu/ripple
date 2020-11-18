@@ -17,6 +17,7 @@
 #ifndef RIPPLE_BOUNDARY_DETAIL_LOAD_INTERNAL_BOUNDARY_IMPL__HPP
 #define RIPPLE_BOUNDARY_DETAIL_LOAD_INTERNAL_BOUNDARY_IMPL__HPP
 
+#include <ripple/core/utility/range.hpp>
 #include <ripple/core/utility/type_traits.hpp>
 
 namespace ripple::detail {

@@ -106,14 +106,14 @@ class GenericLoader : public BoundaryLoader<GenericLoader> {
   ripple_host_device constexpr auto
   load_front(Iterator&& it, int index, Dim&& dim) const noexcept -> void {
     static_assert_iterator(it);
-    *it = *it.offset(dim, index);
+    *it = *it.offset(ripple_forward(dim), index);
     switch (get_boundary_type(dim, BoundaryLocation::front)) {
       case BoundaryType::reflective: {
-        it->set_v(dim, -1 * it->v(dim));
+        it->set_v(ripple_forward(dim), -1 * it->v(ripple_forward(dim)));
         return;
       }
       case BoundaryType::zero: {
-        it->set_v(dim, 0);
+        it->set_v(ripple_forward(dim), 0);
         return;
       }
       default: return;
@@ -133,14 +133,14 @@ class GenericLoader : public BoundaryLoader<GenericLoader> {
   ripple_host_device constexpr auto
   load_back(Iterator&& it, int index, Dim&& dim) const noexcept -> void {
     static_assert_iterator(it);
-    *it = *it.offset(dim, index);
+    *it = *it.offset(ripple_forward(dim), index);
     switch (get_boundary_type(dim, BoundaryLocation::back)) {
       case BoundaryType::reflective: {
-        it->set_v(dim, -1 * it->v(dim));
+        it->set_v(ripple_forward(dim), -1 * it->v(ripple_forward(dim)));
         return;
       }
       case BoundaryType::zero: {
-        it->set_v(dim, 0);
+        it->set_v(ripple_forward(dim), 0);
         return;
       }
       default: return;

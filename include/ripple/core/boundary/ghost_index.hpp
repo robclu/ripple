@@ -99,11 +99,11 @@ struct GhostIndex {
    */
   template <typename Iterator, typename Dim>
   ripple_host_device constexpr auto init_dim(
-    Iterator&&  it,
-    std::size_t idx,
-    Dim&&       dim,
-    size_t      size,
-    bool&       valid_cell) noexcept -> void {
+    Iterator&& it,
+    size_t     idx,
+    Dim&&      dim,
+    size_t     size,
+    bool&      valid_cell) noexcept -> void {
     // Set the value, and make sure that there is no overflow if the index
     // is too big, otherwise indices in the middle of a domain will think that
     // they need to load data!

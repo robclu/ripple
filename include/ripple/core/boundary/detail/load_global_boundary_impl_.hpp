@@ -55,7 +55,6 @@ ripple_host_device auto load_global_boundary_for_dim(
       indices.index(dim),
       dim,
       ripple_forward(args)...);
-    *it = *it.offset(dim, -it.padding());
   } else if (indices.is_back(dim)) {
     loader.load_back(
       it.offset(dim, it.padding()),

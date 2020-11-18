@@ -48,7 +48,6 @@ struct ConstLoader : public BoundaryLoader<ConstLoader<T>> {
   template <typename Iterator, typename Dim>
   ripple_host_device constexpr auto
   load_front(Iterator&& it, int index, Dim&& dim) const noexcept -> void {
-    static_assert_iterator(it);
     *it = value;
   }
 
@@ -64,7 +63,6 @@ struct ConstLoader : public BoundaryLoader<ConstLoader<T>> {
   template <typename Iterator, typename Dim>
   ripple_host_device constexpr auto
   load_back(Iterator&& it, int index, Dim&& dim) const noexcept -> void {
-    static_assert_iterator(it);
     *it = value;
   }
 };
