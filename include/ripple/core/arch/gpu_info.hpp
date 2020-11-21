@@ -16,9 +16,10 @@
 #ifndef RIPPLE_ARCH_GPU_INFO_HPP
 #define RIPPLE_ARCH_GPU_INFO_HPP
 
-#include <ripple/core/storage/storage_traits.hpp>
-#include <ripple/core/utility/range.hpp>
-#include <ripple/core/utility/portability.hpp>
+#include "gpu_utils.hpp"
+#include "../storage/storage_traits.hpp"
+#include "../utility/range.hpp"
+#include "../utility/portability.hpp"
 #include <array>
 #include <vector>
 
@@ -29,34 +30,57 @@ namespace ripple {
  */
 struct GpuInfo {
   /** The number of streams for the cpu. */
-  static constexpr size_t streams_per_device = 2;
+  static constexpr size_t streams_per_device = 1;
+
+  /**
+   * Wrapper for a gpu stream and if it has been set.
+   */
+  struct Stream {
+    GpuStream stream; //!< The actual stream.
+    bool      set = false;
+
+    /**
+     * Creates a non-blocking stream.
+     */
+    auto create() noexcept -> void {
+      if (set) { return; }
+      gpu::create_nonblocking_stream(&stream);
+    }
+
+    /** Destroys the stream. */
+    auto destroy() noexcept -> void {
+      if (!set) { return; }
+
+      gpu::destroy_stream(stream);
+      set = false;
+    }
+  };
 
   /*==--- [aliases] --------------------------------------------------------==*/
 
   // clang-format off
   /** Type used for the device index. */
-  using index_t            = uint32_t;
+  using Index           = uint32_t;
   /** Type of container used to store peer access indices. */
-  using peer_container_t   = std::vector<index_t>;
-  /** Type of the stream for the device. */
-  using stream_t           = cudaStream_t;
+  using PeerContainer   = std::vector<Index>;
   /** Type of container for streams for the device. */
-  using stream_container_t = std::array<stream_t, streams_per_device>;
+  using StreamContainer = std::array<Stream, streams_per_device>;
   // clang-format on
 
   /*==--- [constants] ------------------------------------------------------==*/
 
   /** Value for invalid processor information. */
-  static constexpr index_t invalid = 0xFFFFFFFF;
+  static constexpr Index invalid = 0xFFFFFFFF;
 
   // clang-format off
   /** The amount of padding to avoid false sharing. */
   static constexpr size_t padding_size = avoid_false_sharing_size - ((
-    sizeof(peer_container_t) + 
-    sizeof(index_t)          + 
-    sizeof(uint64_t)         +
-    sizeof(uint64_t)         +
-    sizeof(stream_container_t)
+    sizeof(PeerContainer) + 
+    sizeof(Index)         + 
+    sizeof(uint64_t)      +
+    sizeof(uint64_t)      +
+    sizeof(uint8_t)       +
+    sizeof(StreamContainer)
   ) % avoid_false_sharing_size);
   // clang-format on
 
@@ -66,10 +90,10 @@ struct GpuInfo {
    * Constructor to initialise the info with a specific index.
    * \param idx The index of the gpu for the info.
    */
-  GpuInfo(index_t idx) noexcept : index{idx}, peers{idx} {
-    cudaSetDevice(index);
+  GpuInfo(Index idx) noexcept : peers{idx}, index{idx} {
+    gpu::set_device(index);
     for (auto& stream : streams) {
-      cudaStreamCreateWithFlags(&stream, cudaStreamNonBlocking);
+      stream.create();
     }
   }
 
@@ -79,9 +103,10 @@ struct GpuInfo {
   ~GpuInfo() noexcept {
     // Currently causing a segfault, so we can't clean up the streams ...
     // cudaSetDevice(index);
-    // for (auto& stream : streams) {
-    //  cudaStreamDestroy(stream);
-    //}
+    gpu::set_device(index);
+    for (auto& stream : streams) {
+      stream.destroy();
+    }
   }
 
   /*==--- [interface] ------------------------------------------------------==*/
@@ -91,23 +116,22 @@ struct GpuInfo {
    * \return A vector of information for all the system gpus.
    */
   static auto create_for_all_devices() -> std::vector<GpuInfo> {
-    index_t num_devices = device_count();
-    auto    devices     = std::vector<GpuInfo>();
+    Index num_devices = device_count();
+    auto  devices     = std::vector<GpuInfo>();
 
+#if defined(ripple_cuda_available)
     cudaDeviceProp device_props;
     int            can_access_peer;
     for (auto dev : range(num_devices)) {
       // Constructor sets the device to the current device.
-      cudaSetDevice(dev);
+      gpu::set_device(dev);
       auto& info = devices.emplace_back(dev);
       cudaGetDeviceProperties(&device_props, dev);
       info.mem_size = device_props.totalGlobalMem;
 
       // Determine if peer to peer is supported:
-      for (index_t i = 0; i < num_devices; ++i) {
-        if (i == dev) {
-          continue;
-        }
+      for (Index i = 0; i < num_devices; ++i) {
+        if (i == dev) { continue; }
         cudaDeviceCanAccessPeer(&can_access_peer, dev, i);
         if (can_access_peer) {
           info.peers.emplace_back(i);
@@ -115,6 +139,7 @@ struct GpuInfo {
         }
       }
     }
+#endif
     return devices;
   }
 
@@ -124,7 +149,7 @@ struct GpuInfo {
    */
   static auto device_count() noexcept -> uint32_t {
     int count;
-    cudaGetDeviceCount(&count);
+    ripple_if_cuda(cudaGetDeviceCount(&count));
     return static_cast<uint32_t>(count);
   }
 
@@ -150,11 +175,9 @@ struct GpuInfo {
    * \param other_id The index of the other gpu to check peer access with.
    * \return true if this gpu can directly access the other gpu's memory.
    */
-  auto peer_to_peer_available(index_t other_id) const noexcept -> bool {
+  auto peer_to_peer_available(Index other_id) const noexcept -> bool {
     for (auto& peer_id : peers) {
-      if (peer_id == other_id) {
-        return true;
-      }
+      if (peer_id == other_id) { return true; }
     }
     return false;
   }
@@ -172,23 +195,46 @@ struct GpuInfo {
   }
 
   /**
-   * Synchronizes the gpu.
+   * Gets the next stream for the device.
+   * \return The next stream for the device.
    */
-  auto synchronize() const noexcept -> void {
-    if (index == invalid) {
-      return;
-    }
-
-    cudaSetDevice(index);
-    cudaDeviceSynchronize();
+  auto next_stream_id() noexcept -> uint8_t {
+    auto id   = stream_id;
+    stream_id = (stream_id + 1) % streams_per_device;
+    return id;
   }
 
-  stream_container_t streams   = {};      //!< Streams for the device.
-  peer_container_t   peers     = {};      //!< Default to no peers.
-  index_t            index     = invalid; //!< Index of the gpu in the system.
-  uint64_t           mem_size  = 0;       //!< Amount of memory for the device.
-  uint64_t           mem_alloc = 0;       //!< Amount of device  memory.
-  uint8_t            pad[padding_size];   //!< Padding for false sharing.
+  /**
+   * Synchronizes the streams for the gpu.
+   */
+  auto synchronize() const noexcept -> void {
+    if (index == invalid) { return; }
+
+    gpu::set_device(index);
+    for (auto& stream : streams) {
+      if (!stream.set) { continue; }
+      gpu::synchronize_stream(stream.stream);
+    }
+    //    gpu::synchronize_device();
+  }
+
+  /**
+   * Creates a fence on the gpu, blocking until the device is synchronized.
+   */
+  auto fence() const noexcept -> void {
+    if (index == invalid) { return; }
+
+    gpu::set_device(index);
+    gpu::synchronize_device();
+  }
+
+  StreamContainer streams   = {};      //!< Streams for the device.
+  PeerContainer   peers     = {};      //!< Default to no peers.
+  Index           index     = invalid; //!< Index of the gpu in the system.
+  uint64_t        mem_size  = 0;       //!< Amount of memory for the device.
+  uint64_t        mem_alloc = 0;       //!< Amount of device  memory.
+  uint8_t         stream_id = 0;       //!< Id of the current stream.
+  uint8_t         pad[padding_size];   //!< Padding for false sharing.
 };
 
 } // namespace ripple

@@ -37,6 +37,13 @@ inline auto create_stream(GpuStream* stream) noexcept -> void {
 }
 
 /**
+ * Ctreates a non-blocking stream for the device.
+ */
+inline auto create_nonblocking_stream(GpuStream* stream) noexcept -> void {
+  ripple_if_cuda(cudaStreamCreateWithFlags(stream, cudaStreamNonBlocking));
+}
+
+/**
  * Destroys a stream for the device.
  * \param stream The stream to create.
  */
@@ -62,6 +69,13 @@ inline auto synchronize_stream(GpuStream stream) noexcept -> void {
  */
 inline auto synchronize_device() noexcept -> void {
   ripple_if_cuda(cudaDeviceSynchronize());
+}
+
+/**
+ * Checks the last gpu error.
+ */
+inline auto check_last_error() noexcept -> void {
+  ripple_check_cuda_result(ripple_if_cuda(cudaGetLastError()));
 }
 
 } // namespace ripple::gpu
