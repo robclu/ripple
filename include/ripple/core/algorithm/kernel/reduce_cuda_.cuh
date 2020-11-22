@@ -113,8 +113,8 @@ auto reduce(const DeviceBlock<T, Dims>& block, Pred&& pred) {
    * significantly reduces the performance of the reduction because of both
    * the synchronization required and allocation time.
    */
-  DeviceBlock<T, Dims> results(block.stream(), &multiarch_allocator());
   ::ripple::gpu::set_device(block.device_id());
+  DeviceBlock<T, Dims> results(block.stream(), &multiarch_allocator());
   results.set_device_id(block.device_id());
 
   // clang-format off
@@ -127,6 +127,7 @@ auto reduce(const DeviceBlock<T, Dims>& block, Pred&& pred) {
 
   ripple_if_cuda(detail::reduce_block<<<blocks, threads, 0, block.stream()>>>(
     block.begin(), results.begin(), pred));
+  ::ripple::gpu::check_last_error();
 
   /* Reduce the results -- this will automatically sync with the previous
    * operation, since we use synchronous operations in the host. */
