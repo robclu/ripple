@@ -1,8 +1,8 @@
-//==--- ripple/core/multidim/multidim_space.hpp ----------------- -*- C++ -*- ---==//
-//            
+//==--- ripple/core/multidim/multidim_space.hpp ------------ -*- C++ -*- ---==//
+//
 //                                Ripple
-// 
-//                      Copyright (c) 2019 Rob Clucas.
+//
+//                      Copyright (c) 2019, 2020 Rob Clucas.
 //
 //  This file is distributed under the MIT License. See LICENSE for details.
 //
@@ -17,93 +17,126 @@
 #define RIPPLE_MULTIDIM_MULTIDIM_SPACE_HPP
 
 #include "space_traits.hpp"
+#include <ripple/core/utility/forward.hpp>
 #include <ripple/core/utility/type_traits.hpp>
 
 namespace ripple {
 
-/// The MultidimSpace defines an interface for classes when define a
-/// multidimensional space.
-/// \tparam Impl The implementation of the interface.
+/**
+ * The MultidimSpace defines an interface for classes when define a
+ * multidimensional space.
+ * \tparam Impl The implementation of the interface.
+ */
 template <typename Impl>
 struct MultidimSpace {
  private:
-  /// Defines the type of the implementation.
-  using impl_t = std::decay_t<Impl>;
-
-  /// Returns a const pointer to the implementation.
-  ripple_host_device constexpr auto impl() const -> const impl_t* {
-    return static_cast<const impl_t*>(this);
+  /**
+   * Gets a const pointer to the implementation.
+   * \return A const pointer to the implementation.
+   */
+  ripple_host_device constexpr auto impl() const noexcept -> const Impl* {
+    return static_cast<const Impl*>(this);
   }
 
-  /// Returns a pointer to the implementation.
-  ripple_host_device constexpr auto impl() -> impl_t* {
-    return static_cast<impl_t*>(this);
+  /**
+   * Gets a pointer to the implemenation.
+   * \return A pointer to the implementation.
+   */
+  ripple_host_device constexpr auto impl() noexcept -> Impl* {
+    return static_cast<Impl*>(this);
   }
 
  public:
-  /// Returns a reference to the amount of padding for each side of each
-  /// dimension in the space.
-  ripple_host_device constexpr auto padding() -> std::size_t& {
+  /**
+   * Gets a reference to the amount of padding for each side of each
+   * dimension in the space.
+   * \return A reference to the amount of padding for a side of the dimension.
+   */
+  ripple_host_device constexpr auto padding() noexcept -> size_t& {
     return impl()->padding();
   }
 
-  /// Returns the amount of padding for each side of each dimension in the
-  /// space.
-  ripple_host_device constexpr auto padding() const -> std::size_t {
+  /**
+   * Gets the amount of padding for each side of each dimension in the
+   * space.
+   * \return The amount of padding per side of the size.
+   */
+  ripple_host_device constexpr auto padding() const noexcept -> size_t {
     return impl()->padding();
   }
 
-  /// Returns the total amount of padding for each dimension, which is the sum
-  /// of the padding on each side of the dimension.
-  ripple_host_device constexpr auto dim_padding() const -> std::size_t {
+  /**
+   * Gets the total amount of padding for each dimension, which is the sum
+   * of the padding on each side of the dimension.
+   * \return The amount of padding per dimension.
+   */
+  ripple_host_device constexpr auto dim_padding() const noexcept -> size_t {
     return impl()->dim_padding();
   }
 
-  /// Returns the number of dimensions in the space.
-  ripple_host_device constexpr auto dimensions() const -> std::size_t {
+  /**
+   * Gets the number of dimensions in the space.
+   * \return The number of dimensions in the space.
+   */
+  ripple_host_device constexpr auto dimensions() const noexcept -> size_t {
     return SpaceTraits<Impl>::dimensions;
   }
 
-  /// Returns the size of the \p dim dimension, including the padding.
-  /// \param  dim  The dimension to get the size of.
-  /// \tparam Dim  The type of the dimension.
+  /**
+   * Gets the size of the given dimension, including the padding.
+   * \param  dim  The dimension to get the size of.
+   * \tparam Dim  The type of the dimension.
+   * \return The total number of elements in the dimension, including padding.
+   */
   template <typename Dim>
-  ripple_host_device constexpr auto size(Dim&& dim) const -> std::size_t {
-    return impl()->size(std::forward<Dim>(dim));
+  ripple_host_device constexpr auto size(Dim&& dim) const noexcept -> size_t {
+    return impl()->size(ripple_forward(dim));
   }
 
-  /// Returns the total size of the N dimensional space i.e the total number of
-  /// elements in the space, including the padding for each of the dimensions.
-  ripple_host_device constexpr auto size() const -> std::size_t {
+  /**
+   * Gets the total size of the N dimensional space i.e the total number of
+   * elements in the space, including the padding for each of the dimensions.
+   * \return The total number of elements in the space, including padding
+   *         elements.
+   */
+  ripple_host_device constexpr auto size() const noexcept -> size_t {
     return impl()->size();
   }
 
-  /// Returns the size of the \p dim dimension, without padding.
-  /// \param  dim  The dimension to get the size oAf.
-  /// \tparam Dim  The type of the dimension.
+  /**
+   * Gets the size of the given dimension, excluding padded elements.
+   * \param  dim  The dimension to get the size oAf.
+   * \tparam Dim  The type of the dimension.
+   * \return The number of elements in the dimension, excluding padding
+   *         elements.
+   */
   template <typename Dim>
-  ripple_host_device constexpr auto internal_size(Dim&& dim) const 
-  -> std::size_t {
-    return impl()->internal_size(std::forward<Dim>(dim));
+  ripple_host_device constexpr auto
+  internal_size(Dim&& dim) const noexcept -> size_t {
+    return impl()->internal_size(ripple_forward(dim));
   }
 
-  /// Returns the total internal size of the N dimensional space i.e the total
-  /// number of elements in the space without padding.A
-  ripple_host_device constexpr auto internal_size() const -> std::size_t {
+  /**
+   * Gets the total internal size of the N dimensional space i.e the total
+   * number of elements in the space, exluding any padding elements.
+   */
+  ripple_host_device constexpr auto internal_size() const noexcept -> size_t {
     return impl()->internal_size();
   }
 
-  /// Returns the step size to from one element in \p dim to the next element in
-  /// \p dim.
-  /// \param  dim   The dimension to get the step size in.
-  /// \tparam Dim   The type of the dimension.
+  /**
+   * Gets the step size to from one element in given dimension to the next
+   * element in the same dimension.
+   * \param  dim   The dimension to get the step size in.
+   * \tparam Dim   The type of the dimension.
+   * \return The step size between successive elements in the same dimension.
+   */
   template <typename Dim>
-  ripple_host_device constexpr auto step(Dim&& dim) const -> std::size_t {
-    return impl()->step(std::forward<Dim>(dim));
+  ripple_host_device constexpr auto step(Dim&& dim) const noexcept -> size_t {
+    return impl()->step(ripple_forward(dim));
   }
 };
 
 } // namespace ripple
 
 #endif // RIPPLE_MULTIDIM_MULTIDIM_SPACE_HPP
-

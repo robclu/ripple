@@ -41,7 +41,7 @@ struct StaticMultidimSpace
 
  public:
   /** Default constructor. */
-  ripple_host_device constexpr StaticMultidimSpace() = default;
+  constexpr StaticMultidimSpace() = default;
 
   /**
    * Constructor to set the padding for the space.
