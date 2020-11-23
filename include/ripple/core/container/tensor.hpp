@@ -95,6 +95,10 @@ class Tensor {
         using std::swap;
         swap(left_it->host_data, right_it->host_data);
         swap(left_it->device_data, right_it->device_data);
+
+        auto st = left_it->stream();
+        left_it->device_data.set_stream(right_it->stream());
+        right_it->device_data.set_stream(st);
       },
       lhs.blocks_,
       rhs.blocks_);
@@ -571,8 +575,6 @@ class Tensor {
    * blocks.
    */
   auto allocate_data_for_blocks() -> void {
-    std::vector<size_t> stream_ids(partitions(), size_t{0});
-
     invoke(blocks_, [&](auto block) {
       auto& host   = block->host_data;
       auto& device = block->device_data;
@@ -605,22 +607,20 @@ class Tensor {
 
       // Set all the gpu data:
       auto& gpu       = topology().gpus[id];
-      auto& stream_id = stream_ids[id];
+      auto  stream_id = gpu.next_stream_id();
       block->set_device_id(gpu.index);
-      cudaSetDevice(gpu.index);
+      gpu::set_device(gpu.index);
 
       // Allocate the host memory:
       host.reallocate();
 
       // Now alloate device data:
-      device.set_stream(gpu.streams[stream_id]);
+      device.set_stream(gpu.streams[stream_id].stream);
       device.reallocate();
-      cudaStreamSynchronize(gpu.streams[stream_id]);
+      gpu::synchronize_stream(gpu.streams[stream_id].stream);
 
       // Update global gpu memory data:
       gpu.mem_alloc += device.mem_requirement();
-      stream_id = (stream_id + 1) % gpu.streams.size();
-
       block->data_state = DataState::updated_device;
     });
   }
