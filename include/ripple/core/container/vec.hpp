@@ -309,32 +309,50 @@ struct VecImpl : public PolymorphicLayout<VecImpl<T, Size, Layout>>,
    * \tparam I The index of the element to get.
    * \return A reference to the element at position index.
    */
-  template <typename Index>
+  template <typename Index, dim_enable_t<Index> = 0>
   ripple_host_device constexpr auto at(Index&& index) noexcept -> Value& {
-    if constexpr (is_dimension_v<Index>) {
-      constexpr size_t i = std::decay_t<Index>::value;
-      return at<i>();
-    } else {
-      return this->operator[](index);
-    }
+    constexpr size_t i = std::decay_t<Index>::value;
+    return at<i>();
   }
 
   /**
    * Gets the element at \p index , where the offset to the element is computed
    * at compile time if Index is a Dimension, and therefore the value is known
    * at compile time, otherwise the offset is computed at runtime.
+   *
    * \tparam I The index of the element to get.
-   * \return A const reference to the element at position index.
+   * \return A reference to the element at position index.
    */
-  template <typename Index>
+  template <typename Index, non_dim_enable_t<Index> = 0>
+  ripple_host_device constexpr auto at(Index&& index) noexcept -> Value& {
+    return this->operator[](index);
+  }
+
+  /**
+   * Gets the element at \p index , where the offset to the element is
+   * computed at compile time if Index is a Dimension, and therefore the
+   * value is known at compile time, otherwise the offset is computed at
+   * runtime. \tparam I The index of the element to get. \return A const
+   * reference to the element at position index.
+   */
+  template <typename Index, dim_enable_t<Index> = 0>
   ripple_host_device constexpr auto
   at(Index&& index) const noexcept -> const Value& {
-    if constexpr (is_dimension_v<Index>) {
-      constexpr size_t i = std::decay_t<Index>::value;
-      return at<i>();
-    } else {
-      return this->operator[](index);
-    }
+    constexpr size_t i = std::decay_t<Index>::value;
+    return at<i>();
+  }
+
+  /**
+   * Gets the element at \p index , where the offset to the element is
+   * computed at compile time if Index is a Dimension, and therefore the
+   * value is known at compile time, otherwise the offset is computed at
+   * runtime. \tparam I The index of the element to get. \return A const
+   * reference to the element at position index.
+   */
+  template <typename Index, non_dim_enable_t<Index> = 0>
+  ripple_host_device constexpr auto
+  at(Index&& index) const noexcept -> const Value& {
+    return this->operator[](index);
   }
 
   /**
