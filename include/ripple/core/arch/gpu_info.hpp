@@ -215,7 +215,6 @@ struct GpuInfo {
       if (!stream.set) { continue; }
       gpu::synchronize_stream(stream.stream);
     }
-    //    gpu::synchronize_device();
   }
 
   /**

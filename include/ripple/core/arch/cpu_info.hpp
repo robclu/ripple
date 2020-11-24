@@ -26,20 +26,25 @@
 
 namespace ripple {
 
-/// Defines the max number of subleaves for cache info.
+/** Defines the max number of subleaves for cache info. */
 static constexpr uint32_t max_cache_subleaves = 16;
 
-/// Provides funtionality for cpu related information, such as the properties of
-/// the caches, number of available cores, packages, cores per package, and the
-/// indices of the package, core and thread which hardware threads should use
-/// for improved performance.
+/**
+ * Provides funtionality for cpu related information, such as the properties of
+ * the caches, number of available cores, packages, cores per package, and the
+ * indices of the package, core and thread which hardware threads should use
+ * for improved performance.
+ */
 struct CpuInfo {
  private:
-  //==--- [aliases] --------------------------------------------------------==//
-  /// Defines the type of container for caches.
-  using cache_container_t = std::vector<Cache>;
-  /// Defines the type of container for processor information.
-  using proc_info_container_t = std::vector<ProcInfo>;
+  /*==--- [aliases] --------------------------------------------------------==*/
+
+  // clang-format off
+  /** Defines the type of container for caches. */
+  using CacheContainer    = std::vector<Cache>;
+  /** Defines the type of container for processor information. */
+  using ProcInfoContainer = std::vector<ProcInfo>;
+  // clang-format on
 
  public:
   //==--- [construction] ---------------------------------------------------==//
@@ -48,7 +53,6 @@ struct CpuInfo {
   CpuInfo() {
     // Determine the max supported function:
     _regs.eax = CpuidFunction::MaxFunction;
-    ;
     cpuid();
     _max_func = _regs.eax;
 
@@ -81,12 +85,12 @@ struct CpuInfo {
   }
 
   /// Returns a reference to the container of caches.
-  auto cache_info() -> cache_container_t& {
+  auto cache_info() -> CacheContainer& {
     return _caches;
   }
 
   /// Returns a reference to the container of processor information.
-  auto processor_info() -> proc_info_container_t& {
+  auto processor_info() -> ProcInfoContainer& {
     return _proc_info;
   }
 
@@ -113,11 +117,11 @@ struct CpuInfo {
   /// Struct to store registers for CPUID.
   struct Regs {
     /// Defines the type of a register.
-    using reg_t = uint32_t;
-    reg_t eax   = 0; //!< EAX register.
-    reg_t ebx   = 0; //!< EBX register.
-    reg_t ecx   = 0; //!< ECX register.
-    reg_t edx   = 0; //!< EDX register.
+    using Reg = uint32_t;
+    Reg eax   = 0; //!< EAX register.
+    Reg ebx   = 0; //!< EBX register.
+    Reg ecx   = 0; //!< ECX register.
+    Reg edx   = 0; //!< EDX register.
   };
 
   //==--- [constants] ------------------------------------------------------==//
@@ -135,18 +139,16 @@ struct CpuInfo {
   uint32_t _cores_per_package = 0; //!< Number of cores in each package.
   uint32_t _threads_per_core  = 0; //!< Number of logical threads per core.
 
-  cache_container_t     _caches;    //!< Container of cpu caches.
-  proc_info_container_t _proc_info; //!< Container of processor information.
+  CacheContainer    _caches;    //!< Container of cpu caches.
+  ProcInfoContainer _proc_info; //!< Container of processor information.
 
   //==--- [methods] --------------------------------------------------------==//
 
   /// Creates cache information for the cpu, filling the cache container, and
   /// ordering it from L1 cache upwards.
-  auto create_cache_info() -> void {
+  auto create_cache_info() noexcept -> void {
     // CPU does not support cache information, none can be returned.
-    if (_max_func < CpuidFunction::CoreAndCacheInfo) {
-      return;
-    }
+    if (_max_func < CpuidFunction::CoreAndCacheInfo) { return; }
 
     uint32_t subleaf = 0;
     while (subleaf < max_cache_subleaves) {
@@ -199,18 +201,10 @@ struct CpuInfo {
 
     // Find max index for package, core and thred from all procsessors.
     for (auto& info : _proc_info) {
-      if (info.is_invalid()) {
-        continue;
-      }
-      if (info.package > _num_packages) {
-        _num_packages = info.package;
-      }
-      if (info.core > _cores_per_package) {
-        _cores_per_package = info.core;
-      }
-      if (info.thread > _threads_per_core) {
-        _threads_per_core = info.thread;
-      }
+      if (info.is_invalid()) { continue; }
+      if (info.package > _num_packages) { _num_packages = info.package; }
+      if (info.core > _cores_per_package) { _cores_per_package = info.core; }
+      if (info.thread > _threads_per_core) { _threads_per_core = info.thread; }
     }
     _num_packages += 1;
     _cores_per_package += 1;
@@ -220,9 +214,7 @@ struct CpuInfo {
   /// Create processor information for the processor with index \p proc_index.
   /// \p proc_index The index of the processor to creat the info for.
   auto create_proc_info_for_proc(uint32_t proc_index) -> void {
-    if (proc_index > _max_cores) {
-      return;
-    }
+    if (proc_index > _max_cores) { return; }
     set_affinity(proc_index);
     auto& info = _proc_info.emplace_back();
 

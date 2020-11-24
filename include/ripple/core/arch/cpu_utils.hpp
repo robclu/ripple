@@ -34,10 +34,12 @@
 
 namespace ripple {
 
-/// Sets the affinity of the thread by binding the context of the current
-/// process to thread \p thread_id.
-/// Returns false if the operation failed.
-/// \param thread_id The index of the thread to bind the context to.
+/**
+ * Sets the affinity of the thread by binding the context of the current
+ * process to thread id.
+ * \param thread_id The index of the thread to bind the context to.
+ * \return true if the operation succeeded.
+ */
 auto set_affinity(uint32_t thread_id) -> bool {
   cpu_set_t current_thread;
   ripple_cpu_zero(&current_thread);

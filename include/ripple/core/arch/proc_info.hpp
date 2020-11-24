@@ -21,14 +21,16 @@
 
 namespace ripple {
 
-/// The ProcInfo struct stores information about the processor based on where
-/// it is in the system topology.
+/**
+ * The ProcInfo struct stores information about the processor based on where
+ * it is in the system topology.
+ */
 struct ProcInfo {
-  /// Defines an invalid value for processor information.
+  /** Defines an invalid value for processor information. */
   static constexpr uint32_t invalid = 0xFFFFFFFF;
 
-  /// Returns true if any field in the information is invalid.
-  auto is_invalid() const -> bool {
+  /** Returns true if any field in the information is invalid. */
+  constexpr auto is_invalid() const -> bool {
     return package == invalid || core == invalid || thread == invalid;
   }
 

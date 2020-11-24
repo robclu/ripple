@@ -27,7 +27,7 @@ namespace ripple {
  * the prefetcher likes to keep pairs of cache lines in the L2 cache, unless
  * the size is defined as a compiler flag.
  */
-static constexpr std::size_t avoid_false_sharing_size =
+static constexpr size_t avoid_false_sharing_size =
 #if defined(RIPPLE_AVOID_FALSE_SHARING_SIZE)
   RIPPLE_AVOID_FALSE_SHARING_SIZE;
 #else
