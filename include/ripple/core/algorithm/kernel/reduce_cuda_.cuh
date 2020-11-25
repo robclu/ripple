@@ -70,7 +70,7 @@ reduce_block(Iterator it, ResIterator results_it, Pred pred) -> void {
   constexpr size_t dims     = iterator_traits_t<Iterator>::dimensions;
   bool             in_range = true;
   unrolled_for<dims>([&](auto dim) {
-    if (global_idx(dim) >= it.size(dim)) { in_range = false; }
+    if (!it.is_valid(dim)) { in_range = false; }
   });
 
   if (!in_range) { return; }

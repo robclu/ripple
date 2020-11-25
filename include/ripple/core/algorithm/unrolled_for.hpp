@@ -19,6 +19,7 @@
 #define RIPPLE_ALGORITHM_UNROLLED_FOR_HPP
 
 #include "detail/unrolled_for_impl_.hpp"
+#include <ripple/core/utility/type_traits.hpp>
 
 namespace ripple {
 
