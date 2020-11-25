@@ -83,12 +83,12 @@ auto copy_face_padding(ExecutionKind exec_kind, Iterator&& it) noexcept
     is_multiblock_v<decltype(*it)>, "Iterator must be over block type!");
   unrolled_for<iterator_traits_t<Iterator>::dimensions>([&](auto dim) {
     if (!it->first_in_dim(dim)) {
-      it->fill_padding(
-        *it.offset(dim, -1), FaceSpecifier<dim, Face::start>(), exec_kind);
+      constexpr auto specifier = CopySpecifier<dim, FaceLocation::start>();
+      it->fill_padding(*it.offset(dim, -1), specifier, exec_kind);
     }
     if (!it->last_in_dim(dim)) {
-      it->fill_padding(
-        *it.offset(dim, 1), FaceSpecifier<dim, Face::end>(), exec_kind);
+      constexpr auto specifier = CopySpecifier<dim, FaceLocation::end>();
+      it->fill_padding(*it.offset(dim, 1), specifier, exec_kind);
     }
   });
 }
