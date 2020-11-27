@@ -54,7 +54,7 @@ namespace ripple::math {
  * This implementation uses the more numerically stable implementation
  * which is $ (1 - t) * v0 + t * v1 $, where $t$ is the weight, and $v0, v1$
  * are the two interpolation values, such that in the case that $w = 1$, the
- * returned value is `*it.offset(dim_x, 1)` and in the case that $w = 0$, the
+ * returned value is `*it.offset(dimx(), 1)` and in the case that $w = 0$, the
  * the returned value is `*it`. Other implementations may not produce such a
  * result due to
  * [loss of significance](https://en.wikipedia.org/wiki/Loss_of_significance).
@@ -70,20 +70,20 @@ template <
   typename Weights,
   array_size_enable_t<Weights, 1> = 0>
 ripple_host_device auto lerp(Iterator&& it, const Weights& weights) noexcept ->
-  typename iterator_traits_t<Iterator>::copy_t {
+  typename iterator_traits_t<Iterator>::CopyType {
   static_assert(
     is_iterator_v<Iterator>, "Linear interpolation requires an iterator.");
   using value_t = std::decay_t<decltype(weights[0])>;
 
   // Comptute values used for the interpolation:
-  const auto sign    = math::sign(weights[dim_x]);
-  const auto abs_w   = std::abs(weights[dim_x]);
+  const auto sign    = math::sign(weights[dimx()]);
+  const auto abs_w   = std::abs(weights[dimx()]);
   const auto abs_off = std::floor(abs_w);
   const auto off     = sign * abs_off;
   const auto factor  = abs_w - abs_off;
 
-  return (*it.offset(dim_x, off)) * (value_t(1) - factor) +
-         (*it.offset(dim_x, off + sign)) * factor;
+  return (*it.offset(dimx(), off)) * (value_t(1) - factor) +
+         (*it.offset(dimx(), off + sign)) * factor;
 }
 
 /*==--- [2d lerp] ----------------------------------------------------------==*/
@@ -142,7 +142,7 @@ template <
   typename Weights,
   array_size_enable_t<Weights, 2> = 0>
 ripple_host_device auto lerp(Iterator&& it, const Weights& weights) noexcept ->
-  typename iterator_traits_t<Iterator>::copy_t {
+  typename iterator_traits_t<Iterator>::CopyType {
   static_assert(
     is_array_v<Weights>, "Linear interpolation requires a weight array.");
   constexpr auto elems = array_traits_t<Weights>::size;
@@ -152,12 +152,12 @@ ripple_host_device auto lerp(Iterator&& it, const Weights& weights) noexcept ->
   using value_t = double;
 
   // Compute offset params:
-  const auto sign_x  = math::sign(value_t{weights[dim_x]});
-  const auto absx    = std::abs(value_t{weights[dim_x]});
+  const auto sign_x  = math::sign(value_t{weights[dimx()]});
+  const auto absx    = std::abs(value_t{weights[dimx()]});
   const auto fl_absx = std::floor(absx);
   const auto offx    = sign_x * fl_absx;
-  const auto sign_y  = math::sign(value_t{weights[dim_y]});
-  const auto absy    = std::abs(value_t{weights[dim_y]});
+  const auto sign_y  = math::sign(value_t{weights[dimy()]});
+  const auto absy    = std::abs(value_t{weights[dimy()]});
   const auto fl_absy = std::floor(absy);
   const auto offy    = sign_y * fl_absy;
 
@@ -167,14 +167,15 @@ ripple_host_device auto lerp(Iterator&& it, const Weights& weights) noexcept ->
   const auto fx = value_t{1} - wx;
   const auto fy = value_t{1} - wy;
 
-  auto a = it.offset(dim_x, offx).offset(dim_y, offy);
+  auto a = it.offset(dimx(), offx).offset(dimy(), offy);
 
   // clang-format off
-  return (*a)                     * (fx * fy)
-    + (*a.offset(dim_x, sign_x))  * (wx * fy)
-    + (*a.offset(dim_y, sign_y))  * (wy * fx)
-    + (*a.offset(dim_x, sign_x)
-         .offset(dim_y, sign_y))  * (wx * wy);
+  return 
+      (*a)                         * (fx * fy)
+    + (*a.offset(dimx(), sign_x))  * (wx * fy)
+    + (*a.offset(dimy(), sign_y))  * (wy * fx)
+    + (*a.offset(dimx(), sign_x)
+         .offset(dimy(), sign_y))  * (wx * wy);
   // clang-format on
 }
 
@@ -226,52 +227,56 @@ template <
   typename Weights,
   array_size_enable_t<Weights, 3> = 0>
 ripple_host_device auto lerp(Iterator&& it, const Weights& weights) ->
-  typename iterator_traits_t<Iterator>::copy_t {
+  typename iterator_traits_t<Iterator>::CopyType {
   static_assert(
     is_array_v<Weights>, "Linear interpolation requires a weight array.");
   constexpr auto elems = array_traits_t<Weights>::size;
   static_assert(
     elems == 3, "Iterator dimensionality must match size of weight array.");
-  using value_t = std::decay_t<decltype(weights[0])>;
+  using Value = std::decay_t<decltype(weights[0])>;
 
   // Compute offset params:
-  const auto sign_x  = math::sign(weights[dim_x]);
-  const auto absx    = std::abs(weights[dim_x]);
-  const auto fl_absx = std::floor(absx);
-  const auto offx    = sign_x * fl_absx;
-  const auto sign_y  = math::sign(weights[dim_y]);
-  const auto absy    = std::abs(weights[dim_y]);
-  const auto fl_absy = std::floor(absy);
-  const auto offy    = sign_y * fl_absy;
-  const auto sign_z  = math::sign(weights[dim_z]);
-  const auto absz    = std::abs(weights[dim_z]);
-  const auto fl_absz = std::floor(absz);
-  const auto offz    = sign_z * fl_absz;
+  const int   sign_x  = math::sign(weights[dimx()]);
+  const Value absx    = std::abs(weights[dimx()]);
+  const Value fl_absx = std::floor(absx);
+  const int   offx    = sign_x * static_cast<int>(fl_absx);
+  const int   sign_y  = math::sign(weights[dimy()]);
+  const Value absy    = std::abs(weights[dimy()]);
+  const Value fl_absy = std::floor(absy);
+  const int   offy    = sign_y * static_cast<int>(fl_absy);
+  const int   sign_z  = math::sign(weights[dimz()]);
+  const Value absz    = std::abs(weights[dimz()]);
+  const Value fl_absz = std::floor(absz);
+  const int   offz    = sign_z * static_cast<int>(fl_absz);
 
   // Compute the factors:
-  const auto wx = absx - fl_absx;
-  const auto wy = absy - fl_absy;
-  const auto wz = absz - fl_absz;
-  const auto fx = value_t{1} - wx;
-  const auto fy = value_t{1} - wy;
-  const auto fz = value_t{1} - wz;
+  const Value wx = absx - fl_absx;
+  const Value wy = absy - fl_absy;
+  const Value wz = absz - fl_absz;
+  const Value fx = Value{1} - wx;
+  const Value fy = Value{1} - wy;
+  const Value fz = Value{1} - wz;
+
+  return *it.offset(dimx(), offx).offset(dimy(), offy);
 
   // Offset to the close (c) and far (f) cell in z plane:
-  auto c = it.offset(dim_x, offx).offset(dim_y, offy).offset(dim_z, offz);
-  auto f = c.offset(dim_z, sign_z);
+  auto c = it.offset(dimx(), offx).offset(dimy(), offy).offset(dimz(), offz);
+  auto f = c.offset(dimz(), sign_z);
 
   // clang-format off
   return
     // x-y plane closest in z direction:
-    (*c) * (fx * fy * fz) + 
-    (*c.offset(dim_x, sign_x)) * (wx * fy * fz) +
-    (*c.offset(dim_y, sign_y)) * (wy * fx * fz) +
-    (*c.offset(dim_x, sign_x).offset(dim_y, sign_y)) * (wx * wy * fz)
+    ((*c)                                               * (fx * fy * fz) + 
+     (*c.offset(dimx(), sign_x))                        * (wx * fy * fz) +
+     (*c.offset(dimy(), sign_y))                        * (wy * fx * fz) +
+     (*c.offset(dimx(), sign_x).offset(dimy(), sign_y)) * (wx * wy * fz))
     // x-y plane furthest in z direction:
-    + (*f) * (fx * fy * wz) + 
-    (*f.offset(dim_x, sign_x)) * (wx * fy * wz) +
-    (*f.offset(dim_y, sign_y)) * (wy * fx * wz) +
-    (*f.offset(dim_x, sign_x).offset(dim_y, sign_y)) * (wx * wy * wz);
+    + 
+    ((*f)                                               * (fx * fy * wz) + 
+     (*f.offset(dimx(), sign_x))                        * (wx * fy * wz) +
+     (*f.offset(dimy(), sign_y))                        * (wy * fx * wz) +
+     (*f.offset(dimx(), sign_x).offset(dimy(), sign_y)) * (wx * wy * wz));
+
   // clang-format on
 }
 
