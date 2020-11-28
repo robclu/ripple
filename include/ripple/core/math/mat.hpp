@@ -13,11 +13,10 @@
 //
 //==------------------------------------------------------------------------==//
 
-#ifndef RIPPLE_CONTAINER_MAT_HPP
-#define RIPPLE_CONTAINER_MAT_HPP
+#ifndef RIPPLE_MATH_MAT_HPP
+#define RIPPLE_MATH_MAT_HPP
 
 #include "array.hpp"
-#include "array_traits.hpp"
 #include "tuple.hpp"
 #include <ripple/core/storage/polymorphic_layout.hpp>
 #include <ripple/core/storage/storage_descriptor.hpp>
@@ -40,7 +39,37 @@ namespace ripple {
  * \tparam Cols   The number of colums for the matrix.
  * \tparam Layout The type of the storage layout for the matrix.
  */
-template <typename T, typename Rows, typeanme Cols, typename Layout>
+template <typename T, typename Rows, typename Cols, typename Layout>
+struct MatImpl;
+
+/**
+ * Alias for a matrix with a given number of rows, columns, and layout.
+ * \tparam T      The data type of the matrix.
+ * \tparam Rows   The number of rows in the matrix.
+ * \tparam Cols   The number of columns in the matrix.
+ * \tparam Layout The layout of the data for the matrix.
+ */
+template <
+  typename T,
+  size_t Rows,
+  size_t Cols,
+  typename Layout = ContiguousOwned>
+using Mat = MatImpl<T, Num<Rows>, Num<Cols>, Layout>;
+
+/**
+ * The MatImpl class implements a matrix class with polymorphic data layout.
+ *
+ * The data for the elements is allocated according to the layout, and can be
+ * contiguous, owned, or strided.
+ *
+ * \note This class should not be used directly, use the Mat aliases.
+ *
+ * \tparam T      The type of the elements in the matrix
+ * \tparam Rows   The number of rows for the matrix.
+ * \tparam Cols   The number of colums for the matrix.
+ * \tparam Layout The type of the storage layout for the matrix.
+ */
+template <typename T, typename Rows, typename Cols, typename Layout>
 struct MatImpl : public PolymorphicLayout<MatImpl<T, Rows, Cols, Layout>> {
  private:
   /*==--- [constants] ------------------------------------------------------==*/
@@ -218,7 +247,7 @@ struct MatImpl : public PolymorphicLayout<MatImpl<T, Rows, Cols, Layout>> {
    */
   ripple_host_device auto
   operator()(size_t row, size_t col) noexcept -> Value& {
-    return storage_[to_index(row, col)];
+    return storage_.template get<0>(to_index(row, col));
   }
 
   /**
@@ -229,7 +258,7 @@ struct MatImpl : public PolymorphicLayout<MatImpl<T, Rows, Cols, Layout>> {
    */
   ripple_host_device auto
   operator()(size_t row, size_t col) const noexcept -> const Value& {
-    return storage_[to_index(row, col)];
+    return storage_.template get<0>(to_index(row, col));
   }
 
   /*==--- [interface] ------------------------------------------------------==*/
@@ -262,7 +291,7 @@ struct MatImpl : public PolymorphicLayout<MatImpl<T, Rows, Cols, Layout>> {
   ripple_host_device constexpr auto at() const noexcept -> const Value& {
     static_assert((Row < rows()), "Compile time row index out of range!");
     static_assert((Col < columns()), "Compile time col index out of range!");
-    constexpr size_t i = to_element(Row, Col);
+    constexpr size_t i = to_index(Row, Col);
     return storage_.template get<0, i>();
   }
 
@@ -278,7 +307,7 @@ struct MatImpl : public PolymorphicLayout<MatImpl<T, Rows, Cols, Layout>> {
   ripple_host_device constexpr auto at() const noexcept -> Value& {
     static_assert((Row < rows()), "Compile time row index out of range!");
     static_assert((Col < columns()), "Compile time col index out of range!");
-    constexpr size_t i = to_element(Row, Col);
+    constexpr size_t i = to_index(Row, Col);
     return storage_.template get<0, i>();
   }
 
@@ -297,12 +326,99 @@ struct MatImpl : public PolymorphicLayout<MatImpl<T, Rows, Cols, Layout>> {
    * \param  c The index of the column for the element.
    * \return The index of the element.
    */
-  ripple_host_device constepxr auto
+  ripple_host_device constexpr auto
   to_index(size_t r, size_t c) const noexcept -> size_t {
     return r * columns() + c;
   }
 };
 
+/**
+ * Defines the result type for matrix vector multiplication.
+ * \tparam Vec The vector type.
+ * \tparam Rows The number of rows in the matrix.
+ */
+template <typename Vec, size_t Rows>
+using mat_vec_result_t =
+  typename array_traits_t<Vec>::template ImplType<Rows, ContiguousOwned>;
+
+/**
+ * Multiplication of a matrix and any array type.
+ * \param  m    The matrix to multiply.
+ * \param  v    The vector type to multiply with.
+ * \tparam T    The type of the data for the matrix.
+ * \tparam R    The number of rows in the matrix.
+ * \tparam C    The number of columns in the matrix.
+ * \tparam L    The layout of the matrix implementation.
+ * \tparam Impl The implementation type of the array interface.
+ * \return A new vector type which is the result of the multiplication.
+ */
+template <typename T, typename R, typename C, typename L, typename Impl>
+ripple_host_device auto
+operator*(const MatImpl<T, R, C, L>& m, const Array<Impl>& v) noexcept
+  -> mat_vec_result_t<Impl, R::value> {
+  constexpr size_t rows = R::value;
+  constexpr size_t cols = C::value;
+  using Value           = typename array_traits_t<Impl>::Value;
+  using Result          = mat_vec_result_t<Impl, rows>;
+
+  static_assert(
+    cols == array_traits_t<Impl>::size,
+    "Invalid configuration for matrix vector multiplication!");
+  static_assert(
+    std::is_convertible_v<T, typename array_traits_t<Impl>::Value>,
+    "Matrix and vector types must be convertible!");
+
+  Result result;
+  unrolled_for<rows>([&](auto r) {
+    result[r] = 0;
+    unrolled_for<cols>([&](auto c) { result[r] += m(r, c) * v[c]; });
+  });
+  return result;
+}
+
+/**
+ * Multiplication of two matric types.
+ * \param  a The left matrix for multiplication.
+ * \param  b The right matrix for multiplication.
+ * \tparam T1    The type of the data for the first matrix.
+ * \tparam T2    The type of the data for the second matrix.
+ * \tparam R1    The number of rows in the first matrix.
+ * \tparam C1R2  The number of rows/columns in the matrices.
+ * \tparam C2    The number of columns in the second  matrix.
+ * \tparam L1    The layout of the first matrix implementation.
+ * \tparam L2    The layout of the first matrix implementation.
+ * \return A new matrix which is the multiplication of the two matrices.
+ */
+template <
+  typename T1,
+  typename T2,
+  typename R1,
+  typename C1R2,
+  typename C2,
+  typename L1,
+  typename L2>
+ripple_host_device auto operator*(
+  const MatImpl<T1, R1, C1R2, L1>& a,
+  const MatImpl<T2, C1R2, C2, L2>& b) noexcept
+  -> MatImpl<T1, R1, C2, ContiguousOwned> {
+  constexpr size_t rows  = R1::value;
+  constexpr size_t cols  = C2::value;
+  constexpr size_t inner = C1R2::value;
+
+  static_assert(
+    std::is_convertible_v<T1, T2>,
+    "Matrix multiplication requires data types which are convertible!");
+
+  using Result = MatImpl<T1, R1, C2, ContiguousOwned>;
+  Result res{0};
+  for (size_t r = 0; r < rows; ++r) {
+    for (size_t c = 0; c < cols; ++c) {
+      unrolled_for<inner>([&](auto i) { res(r, c) += a(r, i) * b(i, c); });
+    }
+  }
+  return res;
+}
+
 } // namespace ripple
 
-#endif // namespace RIPPLE_CONTAINER_MATH_HPP
+#endif // namespace RIPPLE_MATH_MAT_HPP
