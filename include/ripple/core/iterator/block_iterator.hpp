@@ -196,6 +196,7 @@ class BlockIterator {
     return CopyType{*data_ptr_};
   }
 
+ protected:
   Storage data_ptr_; //!< A pointer to the data.
   Space   space_;    //!< The space over which to iterate.
 
@@ -277,9 +278,9 @@ class BlockIterator {
    */
   template <typename Dim>
   ripple_host_device constexpr auto
-  offset(Dim&& dim, int amount = 1) const noexcept -> BlockIterator {
+  offset(Dim&& dim, int amount) const noexcept -> BlockIterator {
     return BlockIterator{
-      Offsetter::offset(data_ptr_, space_, static_cast<Dim&&>(dim), amount),
+      Offsetter::offset(data_ptr_, space_, ripple_forward(dim), amount),
       space_};
   }
 
@@ -292,8 +293,8 @@ class BlockIterator {
    */
   template <typename Dim>
   ripple_host_device constexpr auto
-  shift(Dim&& dim, int amount = 1) noexcept -> void {
-    Offsetter::shift(data_ptr_, space_, static_cast<Dim&&>(dim), amount);
+  shift(Dim&& dim, int amount) noexcept -> void {
+    Offsetter::shift(data_ptr_, space_, ripple_forward(dim), amount);
   }
 
   /**
@@ -315,6 +316,28 @@ class BlockIterator {
   ripple_host_device auto data() const noexcept -> ConstRawPtr {
     if constexpr (is_storage_accessor_v<Storage>) {
       return data_ptr_.data();
+    } else {
+      return data_ptr_;
+    }
+  }
+
+  /**
+   * Returns a reference to the storage type.
+   */
+  ripple_host_device decltype(auto) storage() noexcept {
+    if constexpr (is_storage_accessor_v<Storage>) {
+      return data_ptr_;
+    } else {
+      return data_ptr_;
+    }
+  }
+
+  /**
+   * Returns a reference to the storage type.
+   */
+  ripple_host_device decltype(auto) storage() const noexcept {
+    if constexpr (is_storage_accessor_v<Storage>) {
+      return data_ptr_;
     } else {
       return data_ptr_;
     }
@@ -372,9 +395,9 @@ class BlockIterator {
    */
   template <typename Dim>
   ripple_host_device constexpr auto
-  backward_diff(Dim&& dim, unsigned int amount = 1) const noexcept -> CopyType {
+  backward_diff(Dim&& dim, int amount = 1) const noexcept -> CopyType {
     return deref_impl(is_poly_layout_overload) -
-           *offset(static_cast<Dim&&>(dim), -static_cast<int>(amount));
+           *offset(static_cast<Dim&&>(dim), -amount);
   }
 
   /**
@@ -404,7 +427,7 @@ class BlockIterator {
    */
   template <typename Dim>
   ripple_host_device constexpr auto
-  forward_diff(Dim&& dim, unsigned int amount = 1) const noexcept -> CopyType {
+  forward_diff(Dim&& dim, int amount = 1) const noexcept -> CopyType {
     return *offset(static_cast<Dim&&>(dim), amount) -
            deref_impl(is_poly_layout_overload);
   }
@@ -438,9 +461,9 @@ class BlockIterator {
    */
   template <typename Dim>
   ripple_host_device constexpr auto
-  central_diff(Dim&& dim, unsigned int amount = 1) const noexcept -> CopyType {
+  central_diff(Dim&& dim, int amount = 1) const noexcept -> CopyType {
     return *offset(static_cast<Dim&&>(dim), amount) -
-           *offset(static_cast<Dim&&>(dim), -static_cast<int>(amount));
+           *offset(static_cast<Dim&&>(dim), -amount);
   }
 
   /**
@@ -473,9 +496,9 @@ class BlockIterator {
    */
   template <typename Dim>
   ripple_host_device constexpr auto
-  second_diff(Dim&& dim, unsigned int amount = 1) const noexcept -> CopyType {
+  second_diff(Dim&& dim, int amount = 1) const noexcept -> CopyType {
     return *offset(static_cast<Dim&&>(dim), amount) +
-           *offset(static_cast<Dim&&>(dim), -static_cast<int>(amount)) -
+           *offset(static_cast<Dim&&>(dim), -amount) -
            (T(2) * this->operator*());
   }
 
@@ -512,10 +535,10 @@ class BlockIterator {
    */
   template <typename Dim1, typename Dim2>
   ripple_host_device constexpr auto
-  second_partial_diff(Dim1&& dim1, Dim2&& dim2, unsigned int amount = 1) const
-    noexcept -> CopyType {
+  second_partial_diff(Dim1&& dim1, Dim2&& dim2, int amount = 1) const noexcept
+    -> CopyType {
     const auto scale   = 0.25;
-    const int  namount = -static_cast<int>(amount);
+    const int  namount = -amount;
     const auto next    = offset(static_cast<Dim1&&>(dim1), amount);
     const auto prev    = offset(static_cast<Dim1&&>(dim1), namount);
 
@@ -718,15 +741,15 @@ class BlockIterator {
   template <typename DataType>
   ripple_host_device constexpr auto
   curvature_2d(DataType dh = 1) const noexcept -> DataType {
-    const auto px      = grad_dim(dim_x, dh);
-    const auto py      = grad_dim(dim_y, dh);
+    const auto px      = grad_dim(dimx(), dh);
+    const auto py      = grad_dim(dimy(), dh);
     const auto px2     = px * px;
     const auto py2     = py * py;
     const auto px2_py2 = px2 + py2;
     const auto dh2     = DataType(1) / (dh * dh);
-    const auto pxx     = second_diff(dim_x);
-    const auto pyy     = second_diff(dim_y);
-    const auto pxy     = second_partial_diff(dim_x, dim_y);
+    const auto pxx     = second_diff(dimx());
+    const auto pyy     = second_diff(dimy());
+    const auto pxy     = second_partial_diff(dimx(), dimy());
 
     return dh2 * (pxx * py2 - DataType{2} * py * px * pxy + pyy * px2) /
            math::sqrt(px2_py2 * px2_py2 * px2_py2);
@@ -750,21 +773,21 @@ class BlockIterator {
   template <typename DataType>
   ripple_host_device constexpr auto
   curvature_3d(DataType dh = 1) const noexcept -> DataType {
-    const auto px    = grad_dim(dim_x, dh);
-    const auto py    = grad_dim(dim_y, dh);
-    const auto pz    = grad_dim(dim_z, dh);
+    const auto px    = grad_dim(dimx(), dh);
+    const auto py    = grad_dim(dimy(), dh);
+    const auto pz    = grad_dim(dimz(), dh);
     const auto px2   = px * px;
     const auto py2   = py * py;
     const auto pz2   = pz * pz;
     const auto pxyz2 = px2 + py2 + pz2;
 
     const auto dh2 = DataType(1) / (dh * dh);
-    const auto pxx = second_diff(dim_x);
-    const auto pyy = second_diff(dim_y);
-    const auto pzz = second_diff(dim_z);
-    const auto pxy = second_partial_diff(dim_x, dim_y);
-    const auto pxz = second_partial_diff(dim_x, dim_z);
-    const auto pyz = second_partial_diff(dim_y, dim_z);
+    const auto pxx = second_diff(dimx());
+    const auto pyy = second_diff(dimy());
+    const auto pzz = second_diff(dimz());
+    const auto pxy = second_partial_diff(dimx(), dimy());
+    const auto pxz = second_partial_diff(dimx(), dimz());
+    const auto pyz = second_partial_diff(dimy(), dimz());
 
     // clang-format off
     return dh2 * (
