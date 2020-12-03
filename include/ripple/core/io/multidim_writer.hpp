@@ -31,6 +31,23 @@ class MultidimWriter {
     size_t x = 1; //!< Size of x dimension.
     size_t y = 1; //!< Size of x dimension.
     size_t z = 1; //!< Size of x dimension.
+
+    /// Returns the total number of elements in the grid.
+    auto elements() const noexcept -> size_t {
+      return (x == 0 ? 1 : x) * (y == 0 ? 1 : y) * (z == 0 ? 1 : z);
+    }
+
+    /// Creates the dim sizes from a tensor \p t.
+    /// \param  t    The tensor to create the dim sizes from.
+    /// \tparam T    The type of the tensor data.
+    /// \tparam Dims The number of dimensions in the tensor.
+    template <typename T, size_t Dims>
+    static auto from_tensor(const Tensor<T, Dims>& t) noexcept -> DimSizes {
+      return DimSizes{
+        Dims >= 1 ? t.size(dimx()) : 1,
+        Dims >= 2 ? t.size(dimy()) : 1,
+        Dims >= 3 ? t.size(dimz()) : 0};
+    }
   };
 
   /// The type of the container for the element names.
@@ -63,16 +80,29 @@ class MultidimWriter {
     const Tensor<T, Dims>& data,
     const element_names_t& element_names,
     Args&&...              args) -> void {
-    open();
     // clang-format on
-    auto dims = get_dimension_sizes(data);
-    write_metadata(dims);
-
     PrintableElement elem;
+    const DimSizes   dims   = DimSizes::from_tensor(data);
+    size_t           factor = 1;
+    for (const auto& element : element_names) {
+      if (get_printable_element(data, element.c_str(), 0, 0, 0, args...)
+            .is_invalid()) {
+        continue;
+      }
+      factor++;
+    }
+    const size_t elements           = dims.elements() * factor;
+    const size_t percent            = elements < 100 ? 1 : elements / 100;
+    size_t       processed_elements = 0;
+
     for (auto& element : element_names) {
       const auto name = element.c_str();
       elem            = get_printable_element(data, name, 0, 0, 0, args...);
+      if (elem.is_invalid()) {
+        continue;
+      }
       write_element_header(elem);
+
       for (auto k : ripple::range(dims.z == 0 ? 1 : dims.z)) {
         for (auto j : ripple::range(dims.y)) {
           for (auto i : ripple::range(dims.x)) {
@@ -114,13 +144,16 @@ class MultidimWriter {
   /// Tries to open the file for the writer, using the base filename for the
   /// writer, appending the \p suffix to the base filename, as well as
   /// the .vtk extension, and then appending the result to the path.
-  /// \param suffix The suffix to append to the base filename.
   /// \param path   Path to the directory for the file.
-  virtual auto open(std::string suffix = "", std::string path = "") -> void = 0;
+  /// \param suffix The suffix to append to the base filename.
+  virtual auto open(std::string path = "", std::string suffix = "") -> void = 0;
 
   /// Closes the file being written to.
   /// otherwise returning false.
   virtual auto close() -> void = 0;
+
+  /// Clones the writer, returning a copy with the same paramters.
+  virtual auto clone() const noexcept -> std::shared_ptr<MultidimWriter> = 0;
 
  private:
   // clang-format off
@@ -145,12 +178,15 @@ class MultidimWriter {
     Args&&...              args) const -> PrintableElement {
     // clang-format on
     if constexpr (Dims == 1) {
-      return tensor(i)->printable_element(name, args...);
-    } else if (Dims == 2) {
-      return tensor(i, j)->printable_element(name, args...);
-    } else {
-      return tensor(i, j, k)->printable_element(name, args...);
+      return printable_element(*tensor(i), name, args...);
     }
+    if constexpr (Dims == 2) {
+      return printable_element(*tensor(i, j), name, args...);
+    }
+    if constexpr (Dims == 3) {
+      return printable_element(*tensor(i, j, k), name, args...);
+    }
+    return PrintableElement::not_found();
   }
   // clang-format on
 
@@ -160,11 +196,17 @@ class MultidimWriter {
   /// \tparam Dims   The number of dimensions in the tensor.
   template <typename T, size_t Dims>
   auto get_dimension_sizes(const Tensor<T, Dims>& tensor) const -> DimSizes {
-    return DimSizes{Dims >= 1 ? tensor.size(dim_x) : 1,
-                    Dims >= 2 ? tensor.size(dim_y) : 1,
-                    Dims >= 3 ? tensor.size(dim_z) : 0};
+    return DimSizes{
+      Dims >= 1 ? tensor.size(dimx()) : 1,
+      Dims >= 2 ? tensor.size(dimy()) : 1,
+      Dims >= 3 ? tensor.size(dimz()) : 0};
   }
-}; // namespace ripple
+};
+
+template <typename Derived, typename... Args>
+auto make_writer(Args&&... args) -> std::shared_ptr<MultidimWriter> {
+  return std::make_shared<Derived>(std::forward<Args>(args)...);
+}
 
 } // namespace ripple
 

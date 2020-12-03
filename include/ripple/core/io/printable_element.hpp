@@ -47,8 +47,8 @@ class PrintableElement {
   value_container_t _values = {}; //!< Element values.
 
  public:
-  std::string   name = "";                    //!< Element name.
-  AttributeKind kind = AttributeKind::scalar; //!< Element kind.
+  std::string   name = "";                     //!< Element name.
+  AttributeKind kind = AttributeKind::invalid; //!< Element kind.
 
   //==--- [construction] ---------------------------------------------------==//
 
@@ -103,6 +103,11 @@ class PrintableElement {
     return _values[0];
   }
 
+  /// Returns true if the element is in valid.
+  auto is_invalid() const noexcept -> bool {
+    return kind == AttributeKind::invalid;
+  }
+
   //==--- [invalid interface] ----------------------------------------------==//
 
   /// Returns a PrintableElement with the name 'not found' and an invalid kind.
@@ -110,6 +115,22 @@ class PrintableElement {
     return PrintableElement("not found", AttributeKind::invalid);
   }
 };
+
+/**
+ * Returns a printable element for the type, with the given name. If the type is
+ * a printable element, is just returns that, otherwise it creates a default
+ * printable element.
+ */
+template <typename T, typename... Args>
+decltype(auto)
+printable_element(T&& data, const char* name, Args&&... args) noexcept {
+  if constexpr (is_printable_v<T>) {
+    return data.printable_element(name, ripple_forward(args)...);
+  } else {
+    return PrintableElement{
+      name, PrintableElement::AttributeKind::scalar, data};
+  }
+}
 
 } // namespace ripple
 

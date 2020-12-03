@@ -68,7 +68,7 @@ class VtkWriter : public MultidimWriter {
   /// name of the data, and the names of any elements to write.
   /// \param  base_filename The base name of the file to write to.
   /// \param  name          The name of the data.
-  VtkWriter(std::string base_filename, std::string name)
+  VtkWriter(std::string base_filename, std::string name = "")
   : _base_filename{base_filename}, _name{name} {}
 
   /// Destructor which closes the file.
@@ -76,7 +76,19 @@ class VtkWriter : public MultidimWriter {
     close();
   }
 
+  /// Copy constructor to create another writer from this writer. This copies
+  /// the parameters from the other writer, but __does not__ open or write
+  /// any data for the writer.
+  VtkWriter(const VtkWriter& other) noexcept
+  : _base_filename{other._base_filename},
+    _name{other._name},
+    _res{other._res} {}
+
   //==--- [interface] ------------------------------------------------------==//
+
+  auto clone() const noexcept -> std::shared_ptr<MultidimWriter> override {
+    return make_writer<VtkWriter>(*this);
+  }
 
   /// Sets the name of the data to write.
   /// \param name The name to set for the data.
@@ -123,9 +135,9 @@ class VtkWriter : public MultidimWriter {
   /// Tries to open the file for the writer, using the base filename for the
   /// writer, appending the \p suffix to the base filename, as well as
   /// the .vtk extension, and then appending the result to the path.
-  /// \param suffix The suffix to append to the base filename.
   /// \param path   Path to the directory for the file.
-  auto open(std::string suffix = "", std::string path = "") -> void override {
+  /// \param suffix The suffix to append to the base filename.
+  auto open(std::string path = "", std::string suffix = "") -> void override {
     if (_ofstream.is_open()) {
       return;
     }

@@ -27,7 +27,7 @@ namespace ripple {
 template <typename Impl>
 class Printable {
   /// Defines the type of the implementation.
-  using impl_t = remove_reference_t<Impl>;
+  using impl_t = std::remove_reference_t<Impl>;
 
   /// Returns a const pointer to the implementation.
   ripple_host_device constexpr auto impl() const -> const impl_t* {
@@ -40,14 +40,6 @@ class Printable {
   }
 
  public:
-  /// Returns true if the type has an element which can be printed and has the
-  /// name \p name.
-  /// \param name The name of the element to determine if is present in the type
-  ///             implementing the printable interface.
-  auto has_printable_element(const char* name) const noexcept -> bool {
-    return impl()->has_printable_element_impl(name);
-  }
-
   /// Returns a printable element with the name \p name, using the arguments \p
   /// args if necessary.
   /// \param  name The name of the element to get.
