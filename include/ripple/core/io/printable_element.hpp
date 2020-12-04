@@ -17,26 +17,27 @@
 #define RIPPLE_IO_PRINTABLE_ELEMENT_HPP
 
 #include "printable_traits.hpp"
+#include "../utility/forward.hpp"
 #include <cstring>
 #include <string>
 #include <vector>
 
 namespace ripple {
 
-/// The PrintableElement type holdes a name and values for an element which can
-/// then be printed.
+/**
+ * The PrintableElement type holdes a name and values for an element which can
+ * be printed.
+ */
 class PrintableElement {
  public:
-  //==--- [aliases] --------------------------------------------------------==//
-
   // clang-format off
-  /// Defines the type of the values for the element.
-  using value_t           = double;
-  /// Defines the type of the container used to store the element values.
-  using value_container_t = std::vector<value_t>;
+  /** Defines the type of the values for the element. */
+  using Value          = double;
+  /** Defines the type of the container used to store the element values. */
+  using ValueContainer = std::vector<Value>;
   // clang-format on
 
-  /// Defines the possible kinds of attributes.
+  /** Defines the possible kinds of attributes. */
   enum AttributeKind : uint8_t {
     scalar, //!< Scalar data.
     vector, //!< Vector data.
@@ -44,86 +45,95 @@ class PrintableElement {
   };
 
  private:
-  value_container_t _values = {}; //!< Element values.
+  ValueContainer values_ = {}; //!< Element values.
 
  public:
   std::string   name = "";                     //!< Element name.
   AttributeKind kind = AttributeKind::invalid; //!< Element kind.
 
-  //==--- [construction] ---------------------------------------------------==//
+  /*==--- [construction] ---------------------------------------------------==*/
 
-  /// Default constructor which creates an empty element.
-  PrintableElement() = default;
+  /**
+   * Default constructor which creates an empty element.
+   */
+  PrintableElement() noexcept = default;
 
-  /// Creates a printable element with the \p name and \p kind, with \p values
-  /// values.
-  /// \param  name   The name of the element.
-  /// \param  kind   The kind of the element.
-  /// \param  values Values for the element.
-  /// \tparam Values The types of the values.
+  /**
+   * Creates a printable element with the given name, kind, and values.
+   * \param  name   The name of the element.
+   * \param  kind   The kind of the element.
+   * \param  values Values for the element.
+   * \tparam Values The types of the values.
+   */
   template <typename... Values>
   PrintableElement(
     std::string name, AttributeKind kind, Values&&... values) noexcept
-  : _values{static_cast<value_t>(values)...},
-    name{std::move(name)},
-    kind{kind} {}
-
-  //==--- [comparison] -----------------------------------------------------==//
-
-  /// Compares this element against another element, returning true if the
-  /// element names match, otherwise returning false.
-  auto operator==(const PrintableElement& other) const noexcept -> bool {
-    return std::memcmp(&other.name[0], &name[0], name.length()) == 0;
-  }
-
-  /// Compares this element against another element, returning true if the
-  /// element names don't match, otherwise returning true.
-  auto operator!=(const PrintableElement& other) const noexcept -> bool {
-    return !(*this == other);
-  }
+  : values_{ripple_forward(values)...}, name{ripple_move(name)}, kind{kind} {}
 
   //==--- [interface] ------------------------------------------------------==//
 
-  /// Adds a value to the printable element.
-  /// \param value The value to add to the element.
-  auto add_value(const value_t& value) noexcept -> void {
-    _values.emplace_back(value);
-  }
+  /**
+   * Compares this element against another element.
+   * \param other The other element to compare against.
+   * \return true if the elements are equal.
+   */
+  auto operator==(const PrintableElement& other) const noexcept -> bool;
 
-  /// Returns a reference to the values to print. If the kind is a vector, then
-  /// the vector rquires 3 elements, which will be default added as zero
-  /// components if there are not enough components.
-  auto values() const noexcept -> const value_container_t& {
-    return _values;
-  }
+  /**
+   * Compares this element against another element.
+   * \param other The other element to compare against.
+   * \return true if the eleements are not the same.
+   */
+  auto operator!=(const PrintableElement& other) const noexcept -> bool;
 
-  /// Returns the first value from the values, or the only value if there is
-  /// only one.
-  auto first_value() const noexcept -> value_t {
-    return _values[0];
-  }
+  /**
+   * Adds a value to the printable element.
+   * \param value The value to add to the element.
+   */
+  auto add_value(const Value& value) noexcept -> void;
 
-  /// Returns true if the element is in valid.
-  auto is_invalid() const noexcept -> bool {
-    return kind == AttributeKind::invalid;
-  }
+  /**
+   * Gets a reference to the values to print. If the kind is a vector, then
+   * the vector requires 3 elements, which will be default added as zero
+   * components if there are not enough components.
+   * \return A container of values.
+   */
+  auto values() const noexcept -> const ValueContainer&;
 
-  //==--- [invalid interface] ----------------------------------------------==//
+  /**
+   * Gets the first value from the values, or the only value if there is
+   * only one.
+   * \return The first value.
+   */
+  auto first_value() const noexcept -> Value;
 
-  /// Returns a PrintableElement with the name 'not found' and an invalid kind.
-  static auto not_found() -> PrintableElement {
-    return PrintableElement("not found", AttributeKind::invalid);
-  }
+  /**
+   * Determines if the attribute is invalid.
+   * \return true if the element is invalid.
+   */
+  auto is_invalid() const noexcept -> bool;
+
+  /**
+   * Gets a PrintableElement with the name 'not found' and an invalid kind.
+   * \return An invalid printable element.
+   */
+  static auto not_found() -> PrintableElement;
 };
 
 /**
- * Returns a printable element for the type, with the given name. If the type is
+ * Gets a printable element for the type, with the given name. If the type is
  * a printable element, is just returns that, otherwise it creates a default
  * printable element.
+ * \param  dat  The data to get the printable element from.
+ * \param  name The name of the element to get.
+ * \param  args Additional arguments to get the element.
+ * \tparam T    The type of the data.
+ * \tparam Args The types of the arguments.
+ * \return A printable element.
  */
 template <typename T, typename... Args>
-decltype(auto)
-printable_element(T&& data, const char* name, Args&&... args) noexcept {
+auto printable_element(T&& data, const char* name, Args&&... args) noexcept
+  -> PrintableElement {
   if constexpr (is_printable_v<T>) {
     return data.printable_element(name, ripple_forward(args)...);
   } else {

@@ -92,25 +92,26 @@ class VtkWriter : public MultidimWriter {
 
   /// Sets the name of the data to write.
   /// \param name The name to set for the data.
-  auto set_name(std::string name) -> void override {
+  auto set_name(std::string name) noexcept -> void override {
     _name = name;
   }
 
   /// Sets the resolution of the data.
   /// \param res The resolution for the data.
-  auto set_resolution(double res) -> void override {
+  auto set_resolution(double res) noexcept -> void override {
     _res = res;
   }
 
   /// Writes the metadata for the file, which is the header and the indices.
-  auto write_metadata(const dims_t& dims) -> void override {
+  auto write_metadata(const dims_t& dims) noexcept -> void override {
     write_header();
     write_indices(dims);
   }
 
   /// Writes the element to the output file.
   /// \param element The printable element to write.
-  auto write_element(const PrintableElement& element) -> void override {
+  auto
+  write_element(const PrintableElement& element) noexcept -> void override {
     for (const auto& v : element.values()) {
       _ofstream << (std::abs(v) > min_val ? v : 0.0) << " ";
     }
@@ -119,7 +120,8 @@ class VtkWriter : public MultidimWriter {
 
   /// Writes any necessary header data for an \p element.
   /// \param element The printable element to write the start data
-  auto write_element_header(const PrintableElement& element) -> void override {
+  auto write_element_header(const PrintableElement& element) noexcept
+    -> void override {
     _ofstream << get_kind_string(element.kind) << " " << element.name
               << " double\n";
     if (element.kind == PrintableElement::AttributeKind::scalar) {
@@ -128,7 +130,7 @@ class VtkWriter : public MultidimWriter {
   }
 
   /// Writes a footer after all element data has been written.
-  auto write_element_footer() -> void override {
+  auto write_element_footer() noexcept -> void override {
     _ofstream << "\n\n";
   }
 

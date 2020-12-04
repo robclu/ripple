@@ -23,24 +23,33 @@
 
 namespace ripple {
 
-/// The Writer class defines an interface for writing data to a file.
+/**
+ * The MultidimWriter class defines an interface for writing data to a file
+ * for multi dimensional data types.
+ */
 class MultidimWriter {
  public:
-  /// Struct for the sizes of the dimensions to write.
+  /** Struct for the sizes of the dimensions to write. */
   struct DimSizes {
     size_t x = 1; //!< Size of x dimension.
     size_t y = 1; //!< Size of x dimension.
     size_t z = 1; //!< Size of x dimension.
 
-    /// Returns the total number of elements in the grid.
+    /**
+     * Gets the total number of elements in the grid.
+     * \return The number of elements in the grid.
+     */
     auto elements() const noexcept -> size_t {
       return (x == 0 ? 1 : x) * (y == 0 ? 1 : y) * (z == 0 ? 1 : z);
     }
 
-    /// Creates the dim sizes from a tensor \p t.
-    /// \param  t    The tensor to create the dim sizes from.
-    /// \tparam T    The type of the tensor data.
-    /// \tparam Dims The number of dimensions in the tensor.
+    /**
+     * Creates the dim sizes from a tensor.
+     * \param  t    The tensor to create the dim sizes from.
+     * \tparam T    The type of the tensor data.
+     * \tparam Dims The number of dimensions in the tensor.
+     * \return The sizes of the dimensions from the tensor.
+     */
     template <typename T, size_t Dims>
     static auto from_tensor(const Tensor<T, Dims>& t) noexcept -> DimSizes {
       return DimSizes{
@@ -50,54 +59,59 @@ class MultidimWriter {
     }
   };
 
-  /// The type of the container for the element names.
-  using element_names_t = std::vector<std::string>;
+  /**
+   * The type of the container for the element names
+   */
+  using ElementNames = std::vector<std::string>;
 
-  //==--- [construction] ---------------------------------------------------==//
+  /*==--- [construction] ---------------------------------------------------==*/
 
-  /// Default constructor.
+  /**
+   * Default constructor.
+   */
   MultidimWriter() = default;
 
-  /// Destructor.
+  /**
+   * Default destructor.
+   */
   virtual ~MultidimWriter() = default;
 
-  //==--- [methods] --------------------------------------------------------==//
+  /*==--- [methods] --------------------------------------------------------==*/
 
   // clang-format off
-  /// Writes the elements from the \p data for the tensor.
-  ///
-  /// This will cause a compile time error if the data dos not implement the
-  /// Printable interface.
-  ///
-  /// \param  data          The data to write.
-  /// \param  element_names The names of the elements to write.
-  /// \param  args          Additional arguments for getting an element.
-  /// \tparam T             The type of the tensor data.
-  /// \tparam Dims          The number of dimensions for the tensor.
-  /// \tparam Args          The type of additional arguments.
+  /**
+   * Writes the elements with the given names from the data tensor.
+   *
+   * \note This will cause a compile time error if the data dos not implement
+   *       the Printable interface, or is an arithmetic type.
+   *
+   * \param  data          The data to write.
+   * \param  element_names The names of the elements to write.
+   * \param  args          Additional arguments for getting an element.
+   * \tparam T             The type of the tensor data.
+   * \tparam Dims          The number of dimensions for the tensor.
+   * \tparam Args          The type of additional arguments.
+   */
   template <typename T, size_t Dims, typename... Args>
   auto write(
     const Tensor<T, Dims>& data,
-    const element_names_t& element_names,
+    const ElementNames&    element_names,
     Args&&...              args) -> void {
     // clang-format on
     PrintableElement elem;
-    const DimSizes   dims   = DimSizes::from_tensor(data);
-    size_t           factor = 1;
+    const DimSizes   dims = DimSizes::from_tensor(data);
     for (const auto& element : element_names) {
-      if (get_printable_element(data, element.c_str(), 0, 0, 0, args...)
+      if (get_printable_element(
+            data, element.c_str(), 0, 0, 0, ripple_forward(args)...)
             .is_invalid()) {
         continue;
       }
-      factor++;
     }
-    const size_t elements           = dims.elements() * factor;
-    const size_t percent            = elements < 100 ? 1 : elements / 100;
-    size_t       processed_elements = 0;
 
-    for (auto& element : element_names) {
-      const auto name = element.c_str();
-      elem            = get_printable_element(data, name, 0, 0, 0, args...);
+    for (const std::string& element : element_names) {
+      const char* name = element.c_str();
+      elem =
+        get_printable_element(data, name, 0, 0, 0, ripple_forward(args)...);
       if (elem.is_invalid()) {
         continue;
       }
@@ -106,7 +120,8 @@ class MultidimWriter {
       for (auto k : ripple::range(dims.z == 0 ? 1 : dims.z)) {
         for (auto j : ripple::range(dims.y)) {
           for (auto i : ripple::range(dims.x)) {
-            elem = get_printable_element(data, name, i, j, k, args...);
+            elem = get_printable_element(
+              data, name, i, j, k, ripple_forward(args)...);
             write_element(elem);
           }
         }
@@ -115,59 +130,79 @@ class MultidimWriter {
     }
   }
 
-  //==--- [interface] ------------------------------------------------------==//
+  /*==--- [interface] ------------------------------------------------------==*/
 
-  /// Sets the name of the data to write.
-  /// \param name The name to set for the data.
-  virtual auto set_name(std::string name) -> void = 0;
+  /**
+   * Sets the name of the data to write.
+   * \param name The name to set for the data.
+   */
+  virtual auto set_name(std::string name) noexcept -> void = 0;
 
-  /// Sets the resolution of the data.
-  /// \param res The resolution for the data.
-  virtual auto set_resolution(double res) -> void = 0;
+  /**
+   * Sets the resolution of the data.
+   * \param res The resolution for the data.
+   */
+  virtual auto set_resolution(double res) noexcept -> void = 0;
 
-  /// Writes the metadata for the writer, if there is any.
-  /// \param sizes The sizes of the dimension to write.
-  virtual auto write_metadata(const DimSizes& sizes) -> void = 0;
+  /**
+   * Writes the metadata for the writer, if there is any.
+   * \param sizes The sizes of the dimension to write.
+   */
+  virtual auto write_metadata(const DimSizes& sizes) noexcept -> void = 0;
 
-  /// Writes the element to the output file.
-  /// \param element The printable element to write.
-  virtual auto write_element(const PrintableElement& element) -> void = 0;
-
-  /// Writes any necessary header data for an \p element.
-  /// \param element The printable element to write the start data
+  /**
+   * Writes the element to the output file.
+   * \param element The printable element to write.
+   */
   virtual auto
-  write_element_header(const PrintableElement& element) -> void = 0;
+  write_element(const PrintableElement& element) noexcept -> void = 0;
 
-  /// Writes a footer after all element data has been written.
-  virtual auto write_element_footer() -> void = 0;
+  /**
+   * Writes any necessary header data for an \p element.
+   * \param element The printable element to write the start data
+   */
+  virtual auto
+  write_element_header(const PrintableElement& element) noexcept -> void = 0;
 
-  /// Tries to open the file for the writer, using the base filename for the
-  /// writer, appending the \p suffix to the base filename, as well as
-  /// the .vtk extension, and then appending the result to the path.
-  /// \param path   Path to the directory for the file.
-  /// \param suffix The suffix to append to the base filename.
+  /**
+   * Writes a footer after all element data has been written.
+   */
+  virtual auto write_element_footer() noexcept -> void = 0;
+
+  /**
+   * Tries to open the file for the writer, using the base filename for the
+   * writer, appending the suffix to the base filename.
+   * \param path   Path to the directory for the file.
+   * \param suffix The suffix to append to the base filename.
+   */
   virtual auto open(std::string path = "", std::string suffix = "") -> void = 0;
 
-  /// Closes the file being written to.
-  /// otherwise returning false.
+  /**
+   * Closes the file being written to.
+   */
   virtual auto close() -> void = 0;
 
-  /// Clones the writer, returning a copy with the same paramters.
+  /**
+   * Clones the writer, returning a copy with the same paramters.
+   */
   virtual auto clone() const noexcept -> std::shared_ptr<MultidimWriter> = 0;
 
  private:
   // clang-format off
-  /// Gets the printable element from the \p tensor at the given indices and
-  /// with the \p name.
-  /// \param tensor The tensor to get the printable element from.
-  /// \param name   The name of the element to get.
-  /// \param i      The index of the element in the x dimension.
-  /// \param j      The index of the element in the y dimension.
-  /// \param k      The index of the element in the z dimension.
-  /// \param args   Additional arguments for getting the element.
-  /// \tparam T      The type of the tensor data.
-  /// \tparam Dims   The number of dimensions in the tensor.
-  /// \tparam Args   The types of additional arguments.
+  /**
+   * Gets the printable element from the tensor at the given indices and
+   * with the given name.
+   * \param  tensor The tensor to get the printable element from.
+   * \param  name   The name of the element to get.
+   * \param  i      The index of the element in the x dimension.
+   * \param  j      The index of the element in the y dimension.
+   * \param  k      The index of the element in the z dimension.
+   * \param  args   Additional arguments for getting the element.
+   * \tparam T      The type of the tensor data.
+   * \tparam Dims   The number of dimensions in the tensor.
+   * \tparam Args   The types of additional arguments.
+   * \return A printable element assosciated with the indices.
+   */
   template <typename T, size_t Dims, typename... Args>
   auto get_printable_element(
     const Tensor<T, Dims>& tensor,
@@ -175,7 +210,7 @@ class MultidimWriter {
     size_t                 i,
     size_t                 j,
     size_t                 k,
-    Args&&...              args) const -> PrintableElement {
+    Args&&...              args) const noexcept -> PrintableElement {
     // clang-format on
     if constexpr (Dims == 1) {
       return printable_element(*tensor(i), name, args...);
@@ -190,10 +225,13 @@ class MultidimWriter {
   }
   // clang-format on
 
-  /// Get the sizes of the dimensions from the \p tensor.
-  /// \param  tensor The tensor to get the dimension sizes from.
-  /// \tparam T      The type of the data in the tensor.
-  /// \tparam Dims   The number of dimensions in the tensor.
+  /**
+   * Get the sizes of the dimensions from the given tensor.
+   * \param  tensor The tensor to get the dimension sizes from.
+   * \tparam T      The type of the data in the tensor.
+   * \tparam Dims   The number of dimensions in the tensor.
+   * \return The sizes of the dimensions from the tensor.
+   */
   template <typename T, size_t Dims>
   auto get_dimension_sizes(const Tensor<T, Dims>& tensor) const -> DimSizes {
     return DimSizes{
@@ -203,9 +241,16 @@ class MultidimWriter {
   }
 };
 
+/**
+ * Makes a multidimensional writer with the derived type, initializing the
+ * writer with the given arguments.
+ * \param  args    The arguments for creation of the writer.
+ * \tparam Derived The type of the derived writer.
+ * \return A shared pointer to the writer.
+ */
 template <typename Derived, typename... Args>
 auto make_writer(Args&&... args) -> std::shared_ptr<MultidimWriter> {
-  return std::make_shared<Derived>(std::forward<Args>(args)...);
+  return std::make_shared<Derived>(ripple_forward(args)...);
 }
 
 } // namespace ripple
