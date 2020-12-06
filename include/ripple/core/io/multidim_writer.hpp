@@ -170,7 +170,7 @@ class MultidimWriter {
   virtual auto write_element_footer() noexcept -> void = 0;
 
   /**
-   * Tries to open the file for the writer, using the base filename for the
+   * Opens the file for the writer, using the base filename for the
    * writer, appending the suffix to the base filename.
    * \param path   Path to the directory for the file.
    * \param suffix The suffix to append to the base filename.

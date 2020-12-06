@@ -21,30 +21,30 @@
 
 namespace ripple {
 
-/// The Printable interface defines a static interface for types which can
-/// print data using a specific interface.
-/// \tparam Impl the implementation type for the interface.
+/**
+ * The Printable interface defines a static interface for types which can
+ * print data using a specific interface.
+ * \tparam Impl the implementation type for the interface.
+ */
 template <typename Impl>
 class Printable {
-  /// Defines the type of the implementation.
-  using impl_t = std::remove_reference_t<Impl>;
-
-  /// Returns a const pointer to the implementation.
-  ripple_host_device constexpr auto impl() const -> const impl_t* {
-    return static_cast<const impl_t*>(this);
-  }
-
-  /// Returns a pointer to the implementation.
-  ripple_host_device constexpr auto impl() -> impl_t* {
-    return static_cast<impl_t*>(this);
+  /**
+   * Gets a const pointer to the implementation.
+   * \return A const pointer to the implementation.
+   */
+  ripple_host_device constexpr auto impl() const -> const Impl* {
+    return static_cast<const Impl*>(this);
   }
 
  public:
-  /// Returns a printable element with the name \p name, using the arguments \p
-  /// args if necessary.
-  /// \param  name The name of the element to get.
-  /// \param  args Optional arguments used to get the elements.
-  /// \tparam Args The type of the arguments.
+  /**
+   * Gets a printable element with the given name and using the optional
+   * arguments if necessary.
+   * \param  name The name of the element to get.
+   * \param  args Optional arguments used to get the elements.
+   * \tparam Args The type of the arguments.
+   * \return A printable element.
+   */
   template <typename... Args>
   auto printable_element(const char* name, Args&&... args) const noexcept
     -> PrintableElement {
