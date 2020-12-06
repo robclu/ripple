@@ -54,8 +54,9 @@ endif()
 set(CUDA_TOOLKIT_ROOT_DIR                  ${CUDA_PATH})
 set(CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES ${CUDA_TOOLKIT_ROOT_DIR}/include)
 
-#enable_language(CUDA)
-#enable_language(CXX)
+# For some reason, cmake uses *this* variable to determine if the cuda compiler
+# is valid, rather than the the toolkit root directory, so this hack fixes that.
+set(CMAKE_CUDA_COMPILER_LIBRARY_ROOT ${CUDA_PATH})
 
 # Execute cuda compiler to check what we are using:
 execute_process(
@@ -147,29 +148,29 @@ else(APPLE)
   set(CMAKE_CXX_FLAGS_DEBUG   "${CMAKE_CXX_FLAGS_DEBUG} ${DEBUG_FLAGS}")
   set(CMAKE_CXX_FLAGS_DEBUG   "${CMAKE_CXX_FLAGS_DEBUG} ${WARN_FLAGS}")
   if (NOT ${USING_CLANG})
-    #set(CUDA_EXP_FLAGS "-expt-relaxed-constexpr -expt-extended-lambda")
+    set(CMAKE_CXX_FLAGS_RELEASE
+      "${CMAKE_CXX_FLAGS_RELEASE} -ffast-math -fdiagnostic-color=always")
     set(CUDA_EXP_FLAGS "-expt-relaxed-constexpr --extended-lambda")
     set(CUDA_FLAGS     "-use_fast_math -O3 --std c++17 ${CUDA_EXP_FLAGS}")
     set(CUDA_FLAGS     "${CUDA_FLAGS} ${CUDA_ARCH_FLAGS}")
     set(CUDA_FLAGS     "${CUDA_FLAGS} -lineinfo -Xptxas=-v")
+    set(CUDA_FLAGS     "${CUDA_FLAGS} -fdiagnostic-color=always")
     if (${MAX_REG_COUNT})
       set(CUDA_FLAGS "${CUDA_FLAGS} -maxrregcount=${MAX_REG_COUNT}")
     endif()
   else()
-    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -ffast-math")
-    set(CUDA_FLAGS "--cuda-path=${CUDA_TOOLKIT_ROOT_DIR}") 
-    set(CUDA_FLAGS "${CUDA_FLAGS}")
-    #set(CUDA_FLAGS "${CUDA_FLAGS} ${CUDA_ARCH_FLAGS}")
+    set(CMAKE_CXX_FLAGS_RELEASE 
+      "${CMAKE_CXX_FLAGS_RELEASE} -ffast-math -fcolor-diagnostics")
+    set(CUDA_FLAGS "${CUDA_FLAGS} --no-cuda-version-check -fcolor-diagnostics")
     set(CUDA_FLAGS 
       "${CUDA_FLAGS} -O3 -std=c++17 -ffast-math -ffp-contract=fast")
     if (CMAKE_BUILD_TYPE MATCHES Release)
-      set(CUDA_FLAGS "${CUDA_FLAGS}")
+      set(CUDA_FLAGS "${CUDA_FLAGS} -Xcuda-ptxas -v")
     else()
-      set(CUDA_FLAGS "${CUDA_FLAGS} -Xcuda-ptxas -lineinfo -Xcuda-ptxas -v")
+      set(CUDA_FLAGS "${CUDA_FLAGS} -Xcuda-ptxas -lineinfo -v")
     endif()
   endif()
 endif()
-set(CUDA_FLAGS "${CUDA_FLAGS} ${CUDA_DEFS}")
 
 if(CMAKE_BUILD_TYPE MATCHES Release)
   set(
@@ -186,11 +187,12 @@ endif()
 
 set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} ${CUDA_FLAGS}")
 
-enable_language(CUDA)
-enable_language(CXX)
-
 include_directories(${ripple_SOURCE_DIR}/include)
 include_directories(${CUDA_TOOLKIT_ROOT_DIR}/include)
+set(CMAKE_CUDA_COMPILER_TOOLKIT_ROOT ${CUDA_TOOLKIT_ROOT_DIR})
+
+enable_language(CUDA)
+enable_language(CXX)
 
 #==--- [install] ------------------------------------------------------------==#
 
