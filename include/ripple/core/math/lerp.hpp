@@ -141,41 +141,42 @@ template <
   typename Iterator,
   typename Weights,
   array_size_enable_t<Weights, 2> = 0>
-ripple_host_device auto lerp(Iterator&& it, const Weights& weights) noexcept ->
+ripple_host_device auto
+lerp(const Iterator& it, const Weights& weights) noexcept ->
   typename iterator_traits_t<Iterator>::CopyType {
   static_assert(
     is_array_v<Weights>, "Linear interpolation requires a weight array.");
-  constexpr auto elems = array_traits_t<Weights>::size;
   static_assert(
-    elems == 2, "Iterator dimensionality must match size of weight array.");
-  // using value_t = std::decay_t<decltype(weights[0])>;
-  using value_t = double;
+    array_traits_t<Weights>::size,
+    "Iterator dimensionality must match size of weight array.");
+
+  using T = std::decay_t<decltype(weights[0])>;
 
   // Compute offset params:
-  const auto sign_x  = math::sign(value_t{weights[dimx()]});
-  const auto absx    = std::abs(value_t{weights[dimx()]});
-  const auto fl_absx = std::floor(absx);
-  const auto offx    = sign_x * fl_absx;
-  const auto sign_y  = math::sign(value_t{weights[dimy()]});
-  const auto absy    = std::abs(value_t{weights[dimy()]});
-  const auto fl_absy = std::floor(absy);
-  const auto offy    = sign_y * fl_absy;
+  const T   absx    = std::abs(weights[dimx()]);
+  const T   fl_absx = std::floor(absx);
+  const int sign_x  = math::sign(weights[dimx()]);
+  const int offx    = sign_x * fl_absx;
+  const T   absy    = std::abs(weights[dimy()]);
+  const T   fl_absy = std::floor(absy);
+  const int sign_y  = math::sign(weights[dimy()]);
+  const int offy    = sign_y * fl_absy;
 
   // Compute the factors:
-  const auto wx = absx - fl_absx;
-  const auto wy = absy - fl_absy;
-  const auto fx = value_t{1} - wx;
-  const auto fy = value_t{1} - wy;
-
-  auto a = it.offset(dimx(), offx).offset(dimy(), offy);
+  const T wx = absx - fl_absx;
+  const T wy = absy - fl_absy;
+  const T fx = T{1} - wx;
+  const T fy = T{1} - wy;
 
   // clang-format off
+  auto a = it.offset(dimx(), offx).offset(dimy(), offy);
   return 
       (*a)                         * (fx * fy)
     + (*a.offset(dimx(), sign_x))  * (wx * fy)
     + (*a.offset(dimy(), sign_y))  * (wy * fx)
     + (*a.offset(dimx(), sign_x)
          .offset(dimy(), sign_y))  * (wx * wy);
+
   // clang-format on
 }
 
@@ -230,52 +231,47 @@ ripple_host_device auto lerp(Iterator&& it, const Weights& weights) ->
   typename iterator_traits_t<Iterator>::CopyType {
   static_assert(
     is_array_v<Weights>, "Linear interpolation requires a weight array.");
-  constexpr auto elems = array_traits_t<Weights>::size;
   static_assert(
-    elems == 3, "Iterator dimensionality must match size of weight array.");
-  using Value = std::decay_t<decltype(weights[0])>;
+    array_traits_t<Weights>::size == 3,
+    "Iterator dimensionality must match size of weight array.");
+  using T = std::decay_t<decltype(weights[0])>;
 
   // Compute offset params:
-  const int   sign_x  = math::sign(weights[dimx()]);
-  const Value absx    = std::abs(weights[dimx()]);
-  const Value fl_absx = std::floor(absx);
-  const int   offx    = sign_x * static_cast<int>(fl_absx);
-  const int   sign_y  = math::sign(weights[dimy()]);
-  const Value absy    = std::abs(weights[dimy()]);
-  const Value fl_absy = std::floor(absy);
-  const int   offy    = sign_y * static_cast<int>(fl_absy);
-  const int   sign_z  = math::sign(weights[dimz()]);
-  const Value absz    = std::abs(weights[dimz()]);
-  const Value fl_absz = std::floor(absz);
-  const int   offz    = sign_z * static_cast<int>(fl_absz);
+  const T   absx    = std::abs(weights[dimx()]);
+  const T   fl_absx = std::floor(absx);
+  const int sign_x  = math::sign(weights[dimx()]);
+  const int offx    = sign_x * fl_absx;
+  const T   absy    = std::abs(weights[dimy()]);
+  const T   fl_absy = std::floor(absy);
+  const int sign_y  = math::sign(weights[dimy()]);
+  const int offy    = sign_y * fl_absy;
+  const T   absz    = std::abs(weights[dimz()]);
+  const T   fl_absz = std::floor(absz);
+  const int sign_z  = math::sign(weights[dimz()]);
+  const int offz    = sign_z * fl_absz;
 
   // Compute the factors:
-  const Value wx = absx - fl_absx;
-  const Value wy = absy - fl_absy;
-  const Value wz = absz - fl_absz;
-  const Value fx = Value{1} - wx;
-  const Value fy = Value{1} - wy;
-  const Value fz = Value{1} - wz;
-
-  return *it.offset(dimx(), offx).offset(dimy(), offy);
+  const T wx = absx - fl_absx;
+  const T wy = absy - fl_absy;
+  const T wz = absz - fl_absz;
+  const T fx = T{1} - wx;
+  const T fy = T{1} - wy;
+  const T fz = T{1} - wz;
 
   // Offset to the close (c) and far (f) cell in z plane:
   auto c = it.offset(dimx(), offx).offset(dimy(), offy).offset(dimz(), offz);
   auto f = c.offset(dimz(), sign_z);
 
   // clang-format off
-  return
-    // x-y plane closest in z direction:
-    ((*c)                                               * (fx * fy * fz) + 
-     (*c.offset(dimx(), sign_x))                        * (wx * fy * fz) +
-     (*c.offset(dimy(), sign_y))                        * (wy * fx * fz) +
-     (*c.offset(dimx(), sign_x).offset(dimy(), sign_y)) * (wx * wy * fz))
-    // x-y plane furthest in z direction:
-    + 
-    ((*f)                                               * (fx * fy * wz) + 
-     (*f.offset(dimx(), sign_x))                        * (wx * fy * wz) +
-     (*f.offset(dimy(), sign_y))                        * (wy * fx * wz) +
-     (*f.offset(dimx(), sign_x).offset(dimy(), sign_y)) * (wx * wy * wz));
+  return 
+    (*c)                                               * (fx * fy * fz) + 
+    (*c.offset(dimx(), sign_x))                        * (wx * fy * fz) +
+    (*c.offset(dimy(), sign_y))                        * (wy * fx * fz) +
+    (*c.offset(dimx(), sign_x).offset(dimy(), sign_y)) * (wx * wy * fz) + 
+    (*f)                                               * (fx * fy * wz) + 
+    (*f.offset(dimx(), sign_x))                        * (wx * fy * wz) +
+    (*f.offset(dimy(), sign_y))                        * (wy * fx * wz) +
+    (*f.offset(dimx(), sign_x).offset(dimy(), sign_y)) * (wx * wy * wz);
 
   // clang-format on
 }
