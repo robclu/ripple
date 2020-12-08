@@ -25,7 +25,10 @@
 #include "../../functional/invoke.hpp"
 #include "../../iterator/iterator_traits.hpp"
 #include "../../utility/portability.hpp"
-#include <cooperative_groups/reduce.h>
+
+#if defined(ripple_gpu_compile)
+  #include <cooperative_groups/reduce.h>
+#endif
 
 namespace ripple::kernel::gpu {
 namespace detail {
@@ -43,11 +46,15 @@ namespace detail {
  */
 template <typename T, typename P>
 ripple_device auto reduce_impl(T value, P&& pred) noexcept -> T {
+#if defined(ripple_gpu_compile)
   namespace cg = cooperative_groups;
   auto active  = cg::coalesced_threads();
   T    result  = cg::reduce(active, value, ripple_forward(pred));
   active.sync();
   return result;
+#else
+  return T{0};
+#endif
 }
 
 /**
@@ -70,10 +77,14 @@ reduce_block(Iterator it, ResIterator results_it, Pred pred) -> void {
   constexpr size_t dims     = iterator_traits_t<Iterator>::dimensions;
   bool             in_range = true;
   unrolled_for<dims>([&](auto dim) {
-    if (!it.is_valid(dim)) { in_range = false; }
+    if (!it.is_valid(dim)) {
+      in_range = false;
+    }
   });
 
-  if (!in_range) { return; }
+  if (!in_range) {
+    return;
+  }
 
   unrolled_for<dims>([&](auto dim) { it.shift(dim, global_idx(dim)); });
   auto result = *it;
