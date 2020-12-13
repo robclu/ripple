@@ -103,11 +103,11 @@ struct IsDimension<Dimension<Value>> {
 /*==--- [aliases] ----------------------------------------------------------==*/
 
 /** Aliases for the x spacial dimension type. */
-using dimx_t = Dimension<0>;
+using DimX = Dimension<0>;
 /** Alias for the y spacial dimension type. */
-using dimy_t = Dimension<1>;
+using DimY = Dimension<1>;
 /** Aloas for the z spacial dimension type. */
-using dimz_t = Dimension<2>;
+using DimZ = Dimension<2>;
 
 /*==--- [constants] --------------------------------------------------------==*/
 
@@ -115,24 +115,24 @@ using dimz_t = Dimension<2>;
  * Defines a compile time type for the x spatial dimension.
  * \return A x dimension type.
  */
-static constexpr inline dimx_t dimx() {
-  return dimx_t{};
+static constexpr inline DimX dimx() {
+  return DimX{};
 }
 
 /**
  * Defines a compile time type for the y spatial dimension.
  * \return A y dimension type.
  */
-static constexpr inline dimy_t dimy() {
-  return dimy_t{};
+static constexpr inline DimY dimy() {
+  return DimY{};
 }
 
 /**
  * Defines a compile time type for the z spatial dimension.
  * \return A z dimension type.
  */
-static constexpr inline dimz_t dimz() {
-  return dimz_t{};
+static constexpr inline DimZ dimz() {
+  return DimZ{};
 }
 
 /**

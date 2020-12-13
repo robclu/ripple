@@ -20,9 +20,19 @@
 #include "detail/index_of_impl_.hpp"
 #include "detail/function_traits_impl_.hpp"
 #include "portability.hpp"
+#include "dim.hpp"
+#include "number.hpp"
 #include <type_traits>
 
 namespace ripple {
+
+/**
+ * Returns true if the template parameter is a constexpr evaluatable number.
+ * \tparam T The type to determine if is a constexpr number.
+ */
+template <typename T>
+static constexpr bool is_constexpr_number_v =
+  is_dimension_v<T> || is_number_v<T>;
 
 //==--- [aliases] ----------------------------------------------------------==//
 
@@ -108,6 +118,12 @@ static constexpr auto index_of_ignore_templates_v =
   detail::IndexOfIgnoreTemplates<0, T, Ts...>::value;
 
 //==--- [traits] -----------------------------------------------------------==//
+
+/// Defines a type as T with all references removed, but not with CV qualifiers
+/// removed.
+/// \tparam T The type to remove references from.
+template <typename T>
+using remove_ref_t = std::remove_reference_t<T>;
 
 /// Defines a valid type if all the Ts are the same as type T.
 /// \tparam T The type to base the enable on.
