@@ -38,6 +38,8 @@ enum class Modifier : uint8_t {
   exclusive_shared_expander  = 10, //!< Exclusive & shared  & expander
 };
 
+using ExpType = int;
+
 /**
  * The ModificationSpecifier struct wraps a type T with some information for
  * how it is modified.
@@ -47,9 +49,9 @@ enum class Modifier : uint8_t {
  */
 template <typename T, Modifier Modification = Modifier::concurrent>
 struct ModificationSpecifier {
-  T   wrapped;       //!< The type being wrapped.
-  int expansion = 0; //!< The amount to expand into the padding.
-  int overlap   = 0; //!< The amount of overlap.
+  T       wrapped;       //!< The type being wrapped.
+  ExpType expansion = 0; //!< The amount to expand into the padding.
+  ExpType overlap   = 0; //!< The amount of overlap.
 };
 
 /*==--- [traits] -----------------------------------------------------------==*/
@@ -201,8 +203,8 @@ using non_modifier_enable_t = std::enable_if_t<!is_modifier_v<T>, int>;
  * Parameters specifying the type of expansion.
  */
 struct ExpansionParams {
-  int expansion = 0; //!< The amount of expansion into padding.
-  int overlap   = 0; //!< The amount of overlapping cells.
+  ExpType expansion = 0; //!< The amount of expansion into padding.
+  ExpType overlap   = 0; //!< The amount of overlapping cells.
 };
 
 /**
@@ -210,7 +212,7 @@ struct ExpansionParams {
  * \param The amount of expansion on each side of each dimension.
  * \return The expansion paramters defining the expansion.
  */
-auto with_expansion(int expansion) noexcept -> ExpansionParams {
+auto with_expansion(ExpType expansion) noexcept -> ExpansionParams {
   return ExpansionParams{expansion, 0};
 }
 
@@ -219,7 +221,7 @@ auto with_expansion(int expansion) noexcept -> ExpansionParams {
  * \param The amount of overlap for each block of execution.
  * \return The expansion paramters defining the overlap.
  */
-auto with_overlap(int overlap) noexcept -> ExpansionParams {
+auto with_overlap(ExpType overlap) noexcept -> ExpansionParams {
   return ExpansionParams{overlap, overlap};
 }
 
@@ -348,7 +350,7 @@ auto in_shared(T& t) noexcept {
  * \return The type wrapped in a modifier.
  */
 template <typename T, typename Type = std::remove_reference_t<T>>
-auto expanded(T& t, int expansion) noexcept {
+auto expanded(T& t, ExpType expansion) noexcept {
   return ModificationSpecifier<Type&, Modifier::expander>{t, expansion};
 }
 
@@ -362,7 +364,7 @@ auto expanded(T& t, int expansion) noexcept {
  * \return The type wrapped in a modifier.
  */
 template <typename T, typename Type = std::remove_reference_t<T>>
-auto overlapped(T& t, int overlap) noexcept {
+auto overlapped(T& t, ExpType overlap) noexcept {
   return ModificationSpecifier<Type&, Modifier::expander>{t, overlap, overlap};
 }
 

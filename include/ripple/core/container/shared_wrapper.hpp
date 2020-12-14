@@ -18,6 +18,7 @@
 #define RIPPLE_CONTAINER_SHARED_WRAPPER_HPP
 
 #include "block_traits.hpp"
+#include "../graph/modifier.hpp"
 
 namespace ripple {
 
@@ -35,8 +36,10 @@ struct SharedWrapper {
   /** Defines a size for invalid padding. */
   static constexpr size_t invalid_padding = std::numeric_limits<size_t>::max();
 
-  T      wrapped;                   //!< The wrapped type for shared memory.
-  size_t padding = invalid_padding; //!< The padding for the type.
+  T       wrapped;                     //!< The wrapped type for shared memory.
+  size_t  padding   = invalid_padding; //!< The padding for the type.
+  ExpType expansion = 0;               //!< Amount of padding to not consider.
+  ExpType overlap   = 0;               //!< Amount of overlap.
 
   /**
    * Determines if the wrapper is padded or not.
@@ -44,6 +47,29 @@ struct SharedWrapper {
    */
   ripple_host_device auto padded() const noexcept -> bool {
     return padding != invalid_padding;
+  }
+
+  /**
+   * Gets the amount of offset based on the expansion and overlap.
+   * \return The amount of offset when creating an iterator.
+   */
+  ripple_host_device auto offset_amount() const noexcept -> ExpType {
+    return overlap != 0 ? overlap : expansion;
+  }
+};
+
+template <typename T>
+struct ExpansionWrapper {
+  T       wrapped;
+  ExpType expansion = 0;
+  ExpType overlap   = 0;
+
+  /**
+   * Gets the amount of offset based on the expansion and overlap.
+   * \return The amount of offset when creating an iterator.
+   */
+  ripple_host_device auto offset_amount() const noexcept -> ExpType {
+    return overlap != 0 ? overlap : expansion;
   }
 };
 
@@ -56,9 +82,29 @@ struct SharedWrapper {
  * \tparam T The type being wrapped.
  */
 template <typename T>
-struct BlockEnabledTraits<SharedWrapper<T>> {
+struct MultiBlockTraits<SharedWrapper<T>> {
+  /** Defines the type of the value for the traits. */
+  using Value = typename multiblock_traits_t<T>::Value;
+
   /** Defines the number of dimensions for the type T if it's block enabled. */
-  static constexpr size_t dimensions = block_enabled_traits_t<T>::dimensions;
+  static constexpr size_t dimensions = multiblock_traits_t<T>::dimensions;
+};
+
+/**
+ * Overload of BlockEnabled traits for a SharedWrapper.
+ *
+ * This specialization exists so that the traits can be used for a wrapped type
+ * as if the type was not wrapped.
+ *
+ * \tparam T The type being wrapped.
+ */
+template <typename T>
+struct MultiBlockTraits<ExpansionWrapper<T>> {
+  /** Defines the type of the value for the traits. */
+  using Value = typename multiblock_traits_t<T>::Value;
+
+  /** Defines the number of dimensions for the type T if it's block enabled. */
+  static constexpr size_t dimensions = multiblock_traits_t<T>::dimensions;
 };
 
 /**
@@ -88,6 +134,33 @@ struct SharedWrapperTraits<SharedWrapper<T>> {
   static constexpr bool is_shared_wrapper = true;
 };
 
+/**
+ * A traits class for expansion wrapper types.
+ * \tparam T The type to get the expansion wrapper traits for.
+ */
+template <typename T>
+struct ExpansionWrapperTraits {
+  /** Defines the type being wrapped for expansion. */
+  using type = T;
+
+  /** Returns that the type T is _not_ an ExpansionWrapper. */
+  static constexpr bool is_expansion_wrapper = false;
+};
+
+/**
+ * Specialization of the expansionwrapper traits for a type which is wrapped for
+ * expansion.
+ * \tparam T The type being wrapped for expansion.
+ */
+template <typename T>
+struct ExpansionWrapperTraits<ExpansionWrapper<T>> {
+  /** Defines the type being wrapped for expansion. */
+  using type = T;
+
+  /** Returns that the type T _is_ an ExpansionWrapper. */
+  static constexpr bool is_expansion_wrapper = true;
+};
+
 /*==--- [aliases & constants] ----------------------------------------------==*/
 
 /**
@@ -95,7 +168,14 @@ struct SharedWrapperTraits<SharedWrapper<T>> {
  * \tparam T The type to get the shared wrapper traits for.
  */
 template <typename T>
-using shared_wrapper_traits_t = SharedWrapperTraits<remove_ref_t<T>>;
+using shared_wrapper_traits_t = SharedWrapperTraits<std::decay_t<T>>;
+
+/**
+ * Returns the expansion wrapper traits for T, removing any references for T.
+ * \tparam T The type to get the expansion wrapper traits for.
+ */
+template <typename T>
+using expansion_wrapper_traits_t = ExpansionWrapperTraits<std::decay_t<T>>;
 
 /**
  * Returns true if T is a shared wrapper.
@@ -104,6 +184,14 @@ using shared_wrapper_traits_t = SharedWrapperTraits<remove_ref_t<T>>;
 template <typename T>
 static constexpr bool is_shared_wrapper_v =
   shared_wrapper_traits_t<T>::is_shared_wrapper;
+
+/**
+ * Returns true if T is an expansion wrapper.
+ * \tparam T The type to check if is an expansion wrapper.
+ */
+template <typename T>
+static constexpr bool is_expansion_wrapper_v =
+  expansion_wrapper_traits_t<T>::is_expansion_wrapper;
 
 /**
  * Defines a valid type if T __is__ a shared wrapper.
@@ -139,19 +227,8 @@ auto as_shared() noexcept -> SharedWrapper<T> {
  * \return A SharedWrapper which references the argument.
  */
 template <typename T>
-auto as_shared(T&& t) noexcept -> SharedWrapper<decltype(t)> {
-  return SharedWrapper<decltype(t)>{static_cast<T&&>(t)};
-}
-
-/**
- * Wraps the argument for shared memory.
- * \param  t The object to wrap for shared memory.
- * \tparam T The type of the object to wrap.
- * \return A SharedWrapper which references the argument.
- */
-template <typename T>
-auto as_shared(T& t) noexcept -> SharedWrapper<T&> {
-  return SharedWrapper<T&>{t};
+auto as_shared(T&& t) noexcept {
+  return SharedWrapper<T&&>{ripple_forward(t)};
 }
 
 /**
@@ -162,8 +239,43 @@ auto as_shared(T& t) noexcept -> SharedWrapper<T&> {
  *         amount of padding.
  */
 template <typename T>
-auto as_shared(T& t, size_t padding) noexcept -> SharedWrapper<T&> {
-  return SharedWrapper<T&>{t, padding};
+auto as_shared(T& t, ExpType padding, ExpansionParams params) noexcept
+  -> SharedWrapper<T&> {
+  return SharedWrapper<T&>{t, padding, params.expansion, params.overlap};
+}
+
+/**
+ * Wraps a given type for shared mempry.
+ * \tparam T The type to return a SharedWrapper for.
+ * \return SharedWrapper for a type T
+ */
+template <typename T>
+auto as_expansion() noexcept -> ExpansionWrapper<T> {
+  return ExpansionWrapper<T>{T{}};
+}
+
+/**
+ * Wraps the argument for shared memory.
+ * \param  t The object to wrap for shared memory.
+ * \tparam T The type of the object to wrap.
+ * \return A SharedWrapper which references the argument.
+ */
+template <typename T>
+auto as_expansion(T&& t) noexcept {
+  return ExpansionWrapper<T&&>{ripple_forward(t)};
+}
+
+/**
+ * Wraps the argument for shared memory with the given amount of padding.
+ * \param  t The object to wrap for shared memory.
+ * \tparam T The type of the object.
+ * \return A SharedWrapper which references the argument and has the given
+ *         amount of padding.
+ */
+template <typename T>
+auto as_expansion(T& t, ExpansionParams params) noexcept
+  -> ExpansionWrapper<T&> {
+  return ExpansionWrapper<T&>{t, params.expansion, params.overlap};
 }
 
 /**
@@ -177,7 +289,7 @@ auto as_shared(T& t, size_t padding) noexcept -> SharedWrapper<T&> {
  * \param wrapper The wrapper to get the amount of padding for.
  * \return The amount of padding for the wrapper.
  */
-template <typename T, block_enabled_t<T> = 0>
+template <typename T, any_block_enable_t<T> = 0>
 auto padding(SharedWrapper<T>& wrapper) noexcept -> size_t {
   return wrapper.padded() ? wrapper.padding : wrapper.wrapped.padding();
 }
@@ -194,7 +306,7 @@ auto padding(SharedWrapper<T>& wrapper) noexcept -> size_t {
  * \param wrapper The wrapper to get the amount of padding for.
  * \return The amount of padding for the wrapper.
  */
-template <typename T, non_block_enabled_t<T> = 0>
+template <typename T, non_any_block_enable_t<T> = 0>
 auto padding(SharedWrapper<T>& wrapper) noexcept -> size_t {
   return wrapper.padded() ? wrapper.padding : 0;
 }
