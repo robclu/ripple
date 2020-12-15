@@ -17,8 +17,8 @@
 #define RIPPLE_GRAPH_DETAIL_SPLITTER_UTILS__HPP
 
 #include "../node.hpp"
-#include <ripple/core/container/block.hpp>
-#include <ripple/core/iterator/iterator_traits.hpp>
+#include "../../container/block.hpp"
+#include "../../iterator/iterator_traits.hpp"
 
 namespace ripple::detail {
 
@@ -59,6 +59,38 @@ auto deref_if_iter(T&& iter) noexcept -> decltype(*iter)& {
 template <typename T, non_iterator_enable_t<T> = 0>
 decltype(auto) deref_if_iter(T&& t) noexcept {
   return ripple_forward(t);
+}
+
+/**
+ * Gets a reference to the iterated type.
+ *
+ * \note This overlaod is only enabled for iterator types.
+ *
+ * \param iter The iterator to get the dereferences type from.
+ * \return A reference to the iterated data.
+ */
+template <typename T, iterator_enable_t<T> = 0>
+auto padding_if_iter(T&& iter) noexcept -> size_t {
+  if constexpr (is_any_block_v<decltype(*iter)>) {
+    return iter->padding();
+  } else {
+    return 0;
+  }
+  // return iter.padding();
+}
+
+/**
+ * Gets a reference to the iterated type.
+ *
+ * \note This overlaod is only enabled for non-iterator types and forwards the
+ *       argument back.
+ *
+ * \param iter The iterator to get the dereferences type from.
+ * \return A reference to the iterated data.
+ */
+template <typename T, non_iterator_enable_t<T> = 0>
+auto padding_if_iter(T&& t) noexcept -> size_t {
+  return 0;
 }
 
 /*==--- [padding] ----------------------------------------------------------==*/
@@ -105,8 +137,9 @@ auto copy_face_padding(ExecutionKind exec_kind, Iterator&& it) noexcept
  * \tparam Align    The alignment of the node.
  * \tparam Iterator The type of the iterator.
  */
-template <size_t Align, typename Iterator>
-auto add_friend_nodes(Node<Align>& node, Iterator&& it) noexcept -> void {
+template <size_t Align, size_t MinStorage, typename Iterator>
+auto add_friend_nodes(Node<Align, MinStorage>& node, Iterator&& it) noexcept
+  -> void {
   static_assert(
     is_iterator_v<Iterator>, "Friend node adding requires iterator!");
   static_assert(

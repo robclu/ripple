@@ -20,11 +20,11 @@
 #include "node.hpp"
 #include "splitter.hpp"
 #include "reducer.hpp"
-#include <ripple/core/algorithm/unrolled_for.hpp>
-#include <ripple/core/allocation/allocator.hpp>
-#include <ripple/core/arch/cache.hpp>
-#include <ripple/core/utility/spinlock.hpp>
-#include <ripple/core/utility/type_traits.hpp>
+#include "../algorithm/unrolled_for.hpp"
+#include "../allocation/allocator.hpp"
+#include "../arch/cache.hpp"
+#include "../utility/spinlock.hpp"
+#include "../utility/type_traits.hpp"
 #include <memory>
 #include <mutex>
 #include <optional>
@@ -66,13 +66,13 @@ class Graph {
    */
   using ArenaType     = HeapArena;
   /** Defines the type of the nodes for the graph. */
-  using Node          = Node<node_alignment, node_min_storage>;
+  using NodeType       = Node<node_alignment, node_min_storage>;
   /** Defines the type of the node allocator. */
-  using NodeAllocator = ThreadSafeObjectPoolAllocator<Node, ArenaType>;
+  using NodeAllocator = ThreadSafeObjectPoolAllocator<NodeType, ArenaType>;
   /** Defines the type of the node info allocator. */
   using InfoAllocator = ThreadSafeObjectPoolAllocator<NodeInfo, ArenaType>;
   /** Defines the container used for the nodes in the graph. */
-  using NodeContainer = std::vector<Node*>;
+  using NodeContainer = std::vector<NodeType*>;
   /** Defines a container to store the locations of joins and splits. */
   using Connections   = std::vector<int>;
   /** Defines the type of the lock used for initialization. */
@@ -87,7 +87,7 @@ class Graph {
    */
   template <typename T>
   using non_node_enable_t =
-    std::enable_if_t<!std::is_same_v<Node, std::decay_t<T>>, int>;
+    std::enable_if_t<!std::is_same_v<NodeType, std::decay_t<T>>, int>;
 
  public:
   // clang-format off
@@ -184,8 +184,8 @@ class Graph {
    * \return A reference to the new node.
    */
   template <typename F, typename... Args>
-  static auto make_node(F&& callable, Args&&... args) -> Node& {
-    return *node_allocator().create<Node>(
+  static auto make_node(F&& callable, Args&&... args) -> NodeType& {
+    return *node_allocator().create<NodeType>(
       ripple_forward(callable), ripple_forward(args)...);
   }
 
@@ -200,9 +200,9 @@ class Graph {
    * \return A reference to the new node.
    */
   template <typename F, typename... Args>
-  static auto
-  make_node(F&& callable, ExecutionKind exec_kind, Args&&... args) -> Node& {
-    Node& node = *node_allocator().create<Node>(
+  static auto make_node(F&& callable, ExecutionKind exec_kind, Args&&... args)
+    -> NodeType& {
+    NodeType& node = *node_allocator().create<NodeType>(
       ripple_forward(callable), ripple_forward(args)...);
     node.info_ = info_allocator().create<NodeInfo>(exec_kind);
     return node;
@@ -233,7 +233,7 @@ class Graph {
     Graph graph;
     for (const auto& node : nodes_) {
       // TODO: Add copying of node info for new node.
-      graph.nodes_.emplace_back(node_allocator().create<Node>(*node));
+      graph.nodes_.emplace_back(node_allocator().create<NodeType>(*node));
       graph.nodes_.back()->info_ =
         info_allocator().create<NodeInfo>(node->info_->name, node->info_->id);
     }
@@ -272,10 +272,10 @@ class Graph {
    * \param name The name of the node to find.
    * \return A valid pointer wrapped in an optional on success.
    */
-  auto find(std::string name) noexcept -> std::optional<Node*> {
+  auto find(std::string name) noexcept -> std::optional<NodeType*> {
     for (auto& node : nodes_) {
       if (std::strcmp(node->info_->name.c_str(), name.c_str()) == 0) {
-        return std::make_optional<Node*>(node);
+        return std::make_optional<NodeType*>(node);
       }
     }
     return std::nullopt;
@@ -286,11 +286,11 @@ class Graph {
    * \param name The name of the node to find.
    * \return A valid optional if the node was found.
    */
-  auto find_last_of(std::string name) noexcept -> std::optional<Node*> {
+  auto find_last_of(std::string name) noexcept -> std::optional<NodeType*> {
     for (int i = nodes_.size() - 1; i >= 0; --i) {
       auto* node = nodes_[i];
       if (std::strcmp(node->info_->name.c_str(), name.c_str()) == 0) {
-        return std::make_optional<Node*>(node);
+        return std::make_optional<NodeType*>(node);
       }
     }
     return std::nullopt;
@@ -327,7 +327,7 @@ class Graph {
    */
   template <typename F, typename... Args, non_node_enable_t<F> = 0>
   auto emplace_named(NodeInfo info, F&& callable, Args&&... args) -> Graph& {
-    auto& node = *nodes_.emplace_back(node_allocator().create<Node>(
+    auto& node = *nodes_.emplace_back(node_allocator().create<NodeType>(
       ripple_forward(callable), ripple_forward(args)...));
     node.info_ = info_allocator().create<NodeInfo>(
       info.name, info.id, info.kind, info.exec);
@@ -345,7 +345,7 @@ class Graph {
    */
   template <
     typename... Nodes,
-    all_same_enable_t<Node, std::decay_t<Nodes>...> = 0>
+    all_same_enable_t<NodeType, std::decay_t<Nodes>...> = 0>
   auto emplace(Nodes&&... nodes) -> Graph& {
     constexpr size_t node_count = sizeof...(Nodes);
 
@@ -470,7 +470,7 @@ class Graph {
    */
   template <
     typename... Nodes,
-    all_same_enable_t<Node, std::decay_t<Nodes>...> = 0>
+    all_same_enable_t<NodeType, std::decay_t<Nodes>...> = 0>
   auto then(Nodes&&... nodes) -> Graph& {
     join_ids_.emplace_back(nodes_.size());
     return emplace(ripple_forward(nodes)...);
@@ -823,13 +823,13 @@ class Graph {
    * \return An optional with a pointer to the node if one was found.
    */
   auto find_in_last_split(typename NodeInfo::IdType id) noexcept
-    -> std::optional<Node*> {
+    -> std::optional<NodeType*> {
     const int start = split_ids_[split_ids_.size() - 2];
     const int end   = split_ids_[split_ids_.size() - 1];
     for (int i = start; i < end; ++i) {
       auto* node = nodes_[i];
       if (node->id() == id) {
-        return std::make_optional<Node*>(node);
+        return std::make_optional<NodeType*>(node);
       }
     }
     return std::nullopt;
@@ -840,7 +840,7 @@ class Graph {
    * the node to its successors.
    * \param node The node to setup for emplacement.
    */
-  auto setup_node(Node& node) noexcept -> void {
+  auto setup_node(NodeType& node) noexcept -> void {
     setup_split_node(node);
     setup_nonsplit_node(node);
   }
@@ -849,7 +849,7 @@ class Graph {
    * Sets up the node if it is a split node.
    * \param node The node to set up.
    */
-  auto setup_split_node(Node& node) noexcept -> void {
+  auto setup_split_node(NodeType& node) noexcept -> void {
     /* For a split node, we need to find all the indices in the previous split
      * and for any node with the same id, we need to add dependencies between
      * that node and this node. We need to do the same for any friends of the
@@ -881,7 +881,7 @@ class Graph {
    * Node setup for a non-split node.
    * \param node The node to set up.
    */
-  auto setup_nonsplit_node(Node& node) noexcept -> void {
+  auto setup_nonsplit_node(NodeType& node) noexcept -> void {
     if (join_ids_.size() <= 1) {
       return;
     }
@@ -912,7 +912,7 @@ class Graph {
    * \return A reference to the allocator for the nodes.
    */
   static auto node_allocator() noexcept -> NodeAllocator& {
-    static NodeAllocator allocator(allocation_pool_nodes() * sizeof(Node));
+    static NodeAllocator allocator(allocation_pool_nodes() * sizeof(NodeType));
     return allocator;
   }
 

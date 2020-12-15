@@ -17,13 +17,12 @@
 #ifndef RIPPLE_GRAPH_SPLITTER_HPP
 #define RIPPLE_GRAPH_SPLITTER_HPP
 
-#include "graph.hpp"
 #include "modifier.hpp"
 #include "detail/splitter_utils_.hpp"
-#include <ripple/core/container/block_extractor.hpp>
-#include <ripple/core/container/tensor.hpp>
-#include <ripple/core/execution/execution_traits.hpp>
-#include <ripple/core/functional/invoke.hpp>
+#include "../container/block_extractor.hpp"
+#include "../container/tensor.hpp"
+#include "../execution/execution_traits.hpp"
+#include "../functional/invoke.hpp"
 
 namespace ripple {
 
@@ -42,8 +41,12 @@ namespace ripple {
  * \return A deferenced type with shared memory modification properties.
  */
 template <typename Mod, typename Arg, shared_mod_enable_t<Mod> = 0>
-decltype(auto) apply_modifier_after_deref(Arg&& arg) noexcept {
-  return as_shared(detail::deref_if_iter(ripple_forward(arg)));
+decltype(auto)
+apply_modifier_after_deref(Arg&& arg, ExpansionParams params) noexcept {
+  return as_shared(
+    detail::deref_if_iter(ripple_forward(arg)),
+    detail::padding_if_iter(ripple_forward(arg)),
+    params);
 }
 
 /**
@@ -60,8 +63,13 @@ decltype(auto) apply_modifier_after_deref(Arg&& arg) noexcept {
  * \return A deferenced argument if it is an iterator.
  */
 template <typename Mod, typename Arg, non_shared_mod_enable_t<Mod> = 0>
-decltype(auto) apply_modifier_after_deref(Arg&& arg) noexcept {
-  return detail::deref_if_iter(ripple_forward(arg));
+decltype(auto)
+apply_modifier_after_deref(Arg&& arg, ExpansionParams params) noexcept {
+  if constexpr (is_expander_modifier_v<Mod>) {
+    return as_expansion(detail::deref_if_iter(ripple_forward(arg)), params);
+  } else {
+    return detail::deref_if_iter(ripple_forward(arg));
+  }
 }
 
 /*==--- [fill indices implementation] --------------------------------------==*/
@@ -145,6 +153,7 @@ struct Splitter {
     size_t                    id,
     F&&                       functor,
     std::index_sequence<I...>,
+    std::array<ExpansionParams, sizeof...(Args)>& padding_mods,
     Args&&...                 args) noexcept -> void {
     // clang-format on
     graph.emplace_named(
@@ -154,7 +163,7 @@ struct Splitter {
           exe, ripple_forward(functor), ripple_forward(node_args)...);
       },
       apply_modifier_after_deref<tuple_element_t<I, Mods>>(
-        ripple_forward(args))...);
+        ripple_forward(args), padding_mods[I])...);
   }
 
  public:
@@ -201,6 +210,7 @@ struct Splitter {
     constexpr size_t dimensions = max_element(detail::dims_from_block<Args>...);
     using Modifiers             = Tuple<std::decay_t<Args>...>;
     using Indices               = std::array<uint32_t, dimensions>;
+    using PaddingMods           = std::array<ExpansionParams, sizeof...(Args)>;
 
     /* If any argument has a modifier, then padding nodes are needed, so add the
      * them for any tensor which has the modifier and multiple partitions. */
@@ -217,10 +227,13 @@ struct Splitter {
       graph.split_ids_.emplace_back(graph.nodes_.size());
     }
 
+    PaddingMods padding_mods{
+      get_modifier_expansion_params(ripple_forward(args))...};
+
     /* Add the nodes to perform the actual computation. */
     invoke_generic(
       CpuExecutor(),
-      [&](auto&&... unwrapped_args) {
+      [&](PaddingMods& padding_mods, auto&&... unwrapped_args) {
         Indices indices;
         bool    set = false;
         (fill_indices(indices, set, unwrapped_args), ...);
@@ -236,8 +249,10 @@ struct Splitter {
           NodeInfo::id_from_indices(indices),
           ripple_forward(functor),
           std::make_index_sequence<sizeof...(Args)>(),
+          padding_mods,
           ripple_forward(unwrapped_args)...);
       },
+      padding_mods,
       unwrap_modifiers(ripple_forward(args))...);
   }
 };

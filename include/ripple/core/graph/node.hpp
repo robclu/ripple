@@ -16,12 +16,11 @@
 #ifndef RIPPLE_GRAPH_NODE_HPP
 #define RIPPLE_GRAPH_NODE_HPP
 
-#include <ripple/core/container/tuple.hpp>
-#include <ripple/core/execution/execution_traits.hpp>
-#include <ripple/core/functional/invocable.hpp>
-#include <ripple/core/math/math.hpp>
-#include <ripple/core/utility/forward.hpp>
-#include <ripple/core/utility/range.hpp>
+#include "../container/tuple.hpp"
+#include "../execution/execution_traits.hpp"
+#include "../functional/invocable.hpp"
+#include "../math/math.hpp"
+#include "../utility/forward.hpp"
 #include <array>
 #include <atomic>
 #include <cassert>
