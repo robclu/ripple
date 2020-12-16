@@ -30,7 +30,7 @@ namespace ripple {
  * variadic templates than using a raw numeric literal.
  * \tparam Value The value of the number.
  */
-template <std::size_t Value>
+template <size_t Value>
 struct Num {
   /** Returns the value of the number. */
   static constexpr auto value = size_t{Value};
@@ -55,7 +55,7 @@ struct Int64 {
   static constexpr auto value = int64_t{Value};
 
   /** Conversion to int64_t so that the number can be used as a size type. */
-  ripple_host_device constexpr operator int64_t() const {
+  ripple_host_device constexpr operator int64_t() const noexcept {
     return Value;
   }
 };
@@ -92,14 +92,14 @@ struct IsNumber<Int64<Value>> {
   static constexpr bool value = true;
 };
 
+} // namespace detail
+
 /**
  * Returns true if the type T is a number.
  * \tparam T The type to detrmine if is a number.
  */
 template <typename T>
 static constexpr bool is_number_v = detail::IsNumber<std::decay_t<T>>::value;
-
-} // namespace detail
 
 } // namespace ripple
 

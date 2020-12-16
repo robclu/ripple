@@ -1,9 +1,8 @@
-//==--- ripple/core/core/utility/type_traits.hpp ---------------- -*- C++ -*-
-//---==//
+//==--- ripple/core/core/utility/type_traits.hpp ----------- -*- C++ -*- ---==//
 //
 //                                Ripple
 //
-//                      Copyright (c) 2019 Rob Clucas.
+//                      Copyright (c) 2019, 2020 Rob Clucas.
 //
 //  This file is distributed under the MIT License. See LICENSE for details.
 //
@@ -19,7 +18,6 @@
 
 #include "detail/index_of_impl_.hpp"
 #include "detail/function_traits_impl_.hpp"
-#include "portability.hpp"
 #include "dim.hpp"
 #include "number.hpp"
 #include <type_traits>
@@ -31,8 +29,7 @@ namespace ripple {
  * \tparam T The type to determine if is a constexpr number.
  */
 template <typename T>
-static constexpr bool is_constexpr_number_v =
-  is_dimension_v<T> || is_number_v<T>;
+static constexpr bool is_cx_number_v = is_dimension_v<T> || is_number_v<T>;
 
 //==--- [aliases] ----------------------------------------------------------==//
 

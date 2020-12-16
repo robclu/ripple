@@ -30,6 +30,7 @@
 #if defined(__clang__) && defined(RIPPLE_SM_80)
   #pragma clang diagnostic push
   #pragma clang diagnostic ignored "-W#warnings"
+  #pragma clang diagnostic ignored "-Wpedantic"
   #include <crt/sm_80_rt.h>
   #pragma clang diagnostic pop
 #endif
@@ -39,7 +40,7 @@
  * Definitions for host, device, and host device functions
  * if CUDA is supported by either nvcc or clang.
  */
-#if defined(__CUDACC__) || defined(__clang__)
+#if defined(__CUDACC__) || (defined(__clang__) && defined(__CUDA__))
   /** Defines if GPU functionality is available. */
   #define ripple_gpu_available  true
   /** Defines if CUDA functionality is available */
@@ -54,6 +55,14 @@
   #define ripple_global         __global__
   /* Defines valid code if cuda is available. */
   #define ripple_if_cuda(...)   __VA_ARGS__
+
+  #if defined(__CUDA_ARCH__)
+    /** Compiling for the gpu */
+    #define ripple_gpu_compile
+  #else
+    /** Compiling for the cpu. */
+    #define ripple_cpu_compile
+  #endif 
 #else
   /** Defines if GPU functionality is available. */
   #define ripple_gpu_available  false
@@ -69,6 +78,8 @@
   #define ripple_global
   /** Removes the code defined in the argument. */
   #define ripple_if_cuda(...) 
+  /** Compiling for the cpu. */
+  #define ripple_cpu_compile
 #endif
 // clang-format on
 
@@ -150,11 +161,12 @@ check_cuda_error(GpuError err_code, const char* file, int line) -> void {
    * Defines a macro for checking a cuda error in release mode. This does not
    * do anything so that there is no performance cost in release mode.
    */
-  #define ripple_check_cuda_result(result) (result)
+  #define ripple_check_cuda_result(result) ripple_if_cuda(result)
 #else
   /** Defines a macro to check the result of cuda calls in debug mode. */
   #define ripple_check_cuda_result(result) \
-    ::ripple::gpu::debug::check_cuda_error((result), __FILE__, __LINE__)
+    ripple_if_cuda(                        \
+      ::ripple::gpu::debug::check_cuda_error((result), __FILE__, __LINE__))
 #endif // NDEBUG
 
 #endif // RIPPLE_UTILITY_PORTABILITY_HPP
