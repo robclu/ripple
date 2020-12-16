@@ -17,7 +17,8 @@
 #define RIPPLE_CORE_ALGORITHM_FOR_EACH_HPP
 
 #include "unrolled_for.hpp"
-#include <ripple/core/container/tuple.hpp>
+#include "../container/tuple.hpp"
+#include "../utility/forward.hpp"
 
 namespace ripple {
 
@@ -41,7 +42,7 @@ ripple_host_device constexpr auto for_each(
   -> void {
   constexpr size_t num_args = sizeof...(Args);
   unrolled_for<num_args>([&] ripple_host_device(auto i) -> void {
-    functor(get<i>(tuple), static_cast<FuncArgs&&>(func_args)...);
+    functor(get<i>(tuple), ripple_forward(func_args)...);
   });
 }
 
@@ -64,7 +65,7 @@ ripple_host_device constexpr auto for_each(
   FuncArgs&&... func_args) noexcept -> void {
   constexpr size_t num_args = sizeof...(Args);
   unrolled_for<num_args>([&] ripple_host_device(auto i) -> void {
-    functor(get<i>(tuple), static_cast<FuncArgs&&>(func_args)...);
+    functor(get<i>(tuple), ripple_forward(func_args)...);
   });
 }
 
@@ -86,10 +87,7 @@ ripple_host_device constexpr auto for_each(
   -> void {
   constexpr size_t num_args = sizeof...(Args);
   unrolled_for<num_args>([&] ripple_host_device(auto i) -> void {
-    using MoveType = std::remove_reference_t<decltype(get<i>(tuple))>;
-    functor(
-      static_cast<MoveType&&>(get<i>(tuple)),
-      static_cast<FuncArgs&&>(func_args)...);
+    functor(ripple_move(get<i>(tuple)), ripple_forward(func_args)...);
   });
 }
 
@@ -107,8 +105,7 @@ template <typename Functor, typename... Args>
 ripple_host_device constexpr auto
 for_each(Functor&& functor, Args&&... args) -> void {
   using TupleType = Tuple<Args&&...>;
-  for_each(
-    TupleType{static_cast<Args&&>(args)...}, static_cast<Functor&&>(functor));
+  for_each(TupleType{ripple_forward(args)...}, ripple_forward(functor));
 }
 
 } // namespace ripple

@@ -19,7 +19,7 @@
 #define RIPPLE_ALGORITHM_UNROLLED_FOR_HPP
 
 #include "detail/unrolled_for_impl_.hpp"
-#include <ripple/core/utility/type_traits.hpp>
+#include "../utility/type_traits.hpp"
 
 namespace ripple {
 
@@ -123,7 +123,7 @@ template <
 ripple_host_device constexpr inline auto
 unrolled_for_bounded(Functor&& functor, Args&&... args) noexcept -> void {
   for (size_t i = 0; i < Amount; ++i) {
-    functor(i, static_cast<Args&&>(args)...);
+    functor(i, ripple_forward(args)...);
   }
 }
 // clang-format on
