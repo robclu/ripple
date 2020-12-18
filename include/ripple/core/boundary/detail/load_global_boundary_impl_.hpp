@@ -83,7 +83,7 @@ ripple_host_device auto load_global_boundary_for_dim(
  */
 template <typename It, size_t Dims, typename Loader, typename... Args>
 ripple_host_device auto load_global_boundary(
-  dimx_t                  dim,
+  DimX                    dim,
   It&&                    it,
   const GhostIndex<Dims>& indices,
   Loader&&                loader,
@@ -116,7 +116,7 @@ ripple_host_device auto load_global_boundary(
  */
 template <typename It, size_t Dims, typename Loader, typename... Args>
 ripple_host_device auto load_global_boundary(
-  dimy_t                  dim,
+  DimY                  dim,
   It&&                    it,
   const GhostIndex<Dims>& indices,
   Loader&&                loader,
@@ -135,6 +135,7 @@ ripple_host_device auto load_global_boundary(
     dimy(),
     ripple_forward(loader),
     ripple_forward(args)...);
+
   // Load corner boundaries, first offset into y padding, then load x
   // boundaries using the padding data for y. The sign of the index is opposite
   // to the direction in which we need to offset because the index normal points
@@ -173,11 +174,11 @@ ripple_host_device auto load_global_boundary(
  */
 template <typename It, size_t Dims, typename Loader, typename... Args>
 ripple_host_device auto load_global_boundary(
-  dimz_t                  dim,
+  DimZ                    dim,
   It&&                    it,
   const GhostIndex<Dims>& indices,
   Loader&&                loader,
-  Args&&... args) noexcept -> void {
+  Args&&...               args) noexcept -> void {
   // Load boundaries for 2D plane from cell:
   load_global_boundary(
     dimy(),

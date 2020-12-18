@@ -16,8 +16,8 @@
 #ifndef RIPPLE_BOUNDARY_BOUNDARY_LOADER_HPP
 #define RIPPLE_BOUNDARY_BOUNDARY_LOADER_HPP
 
-#include <ripple/core/iterator/iterator_traits.hpp>
-#include <ripple/core/utility/portability.hpp>
+#include "../iterator/iterator_traits.hpp"
+#include "../utility/portability.hpp"
 
 namespace ripple {
 
@@ -65,10 +65,7 @@ class BoundaryLoader {
   load_front(Iterator&& it, int index, Dim&& dim, Args&&... args) const noexcept
     -> void {
     impl()->load_front(
-      static_cast<Iterator&&>(it),
-      index,
-      static_cast<Dim&&>(dim),
-      static_cast<Args&&>(args)...);
+      ripple_forward(it), index, ripple_forward(dim), ripple_forward(args)...);
   }
 
   /**
@@ -87,10 +84,7 @@ class BoundaryLoader {
   load_back(Iterator&& it, int index, Dim&& dim, Args&&... args) const noexcept
     -> void {
     impl()->load_back(
-      static_cast<Iterator&&>(it),
-      index,
-      static_cast<Dim&&>(dim),
-      static_cast<Args&&>(args)...);
+      ripple_forward(it), index, ripple_forward(dim), ripple_forward(args)...);
   }
 };
 

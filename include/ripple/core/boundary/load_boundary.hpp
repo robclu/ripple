@@ -27,7 +27,7 @@
 namespace ripple {
 
 /**
- * Loads the global boundary data for the \p it iterator using the \p loader.
+ * Loads the global boundary data for the iterator using theloader.
  *
  * \note The loader must implement the BoundaryLoader interface.
  *
@@ -50,10 +50,8 @@ load_boundary(Iterator&& it, Loader&& loader, Args&&... args) noexcept -> void {
     "interface!");
 
   constexpr auto dims = iterator_traits_t<Iterator>::dimensions;
-  using DimType       = std::conditional_t<
-    dims == 1,
-    dimx_t,
-    std::conditional_t<dims == 2, dimy_t, dimz_t>>;
+  using DimType       = std::
+    conditional_t<dims == 1, DimX, std::conditional_t<dims == 2, DimY, DimZ>>;
 
   GhostIndex<dims> indices;
   if (!indices.init_as_global(it)) {
@@ -68,6 +66,120 @@ load_boundary(Iterator&& it, Loader&& loader, Args&&... args) noexcept -> void {
     static_cast<Loader&&>(loader),
     static_cast<Args&&>(args)...);
 }
+
+/**
+ * Functor which applies a loader to call the boundary loading function. This
+ * can be passed to a graph to be applied to a tensor.
+ */
+struct LoadBoundary {
+  /**
+   * Loads the global boundary data for the iterator using theloader.
+   *
+   * \note The loader must implement the BoundaryLoader interface.
+   *
+   * \param  it       The iterator to load the boundaries for.
+   * \param  loader   The loader which defines how to load the boundaries.
+   * \param  args     Additional arguments for the loading.
+   * \tparam Iterator The type of the iterator.
+   * \tparam Loader   The type of the loader.
+   * \tparam Args     The types of the arguments.
+   */
+  template <typename Iterator, typename Loader, typename... Args>
+  ripple_host_device auto
+  operator()(Iterator&& it, Loader&& loader, Args&&... args) const noexcept
+    -> void {
+    static_assert(
+      is_iterator_v<Iterator>,
+      "Boundary loading requires input to be an iterator!");
+    static_assert(
+      is_loader_v<Loader>,
+      "Boundary loading requires a loader which implements the BoundaryLoader "
+      "interface!");
+
+    constexpr auto dims = iterator_traits_t<Iterator>::dimensions;
+    using DimOther      = std::conditional_t<dims == 2, DimY, DimZ>;
+    using DimType       = std::conditional_t<dims == 1, DimX, DimOther>;
+
+    GhostIndex<dims> indices;
+    if (!indices.init_as_global(it)) {
+      return;
+    }
+
+    // Call loader impl ...
+    detail::load_global_boundary(
+      DimType{},
+      static_cast<Iterator&&>(it),
+      indices,
+      static_cast<Loader&&>(loader),
+      static_cast<Args&&>(args)...);
+  }
+};
+
+/**
+ * Functor which applies a loader to call the boundary loading function. This
+ * can be passed to a graph to be applied to a tensor.
+ */
+struct LoadMultiBoundary {
+  /**
+   * Loads the global boundary data for the iterator using theloader.
+   *
+   * \note The loader must implement the BoundaryLoader interface.
+   *
+   * \param  it       The iterator to load the boundaries for.
+   * \param  loader   The loader which defines how to load the boundaries.
+   * \param  args     Additional arguments for the loading.
+   * \tparam Iterator The type of the iterator.
+   * \tparam Loader   The type of the loader.
+   * \tparam Args     The types of the arguments.
+   */
+  template <
+    typename IteratorA,
+    typename IteratorB,
+    typename Loader,
+    typename... Args>
+  ripple_host_device auto operator()(
+    IteratorA&& it_a,
+    IteratorB&& it_b,
+    Loader&&    loader,
+    Args&&... args) const noexcept -> void {
+    static_assert(
+      is_iterator_v<IteratorA> && is_iterator_v<IteratorB>,
+      "Boundary loading requires input to be an iterator!");
+    static_assert(
+      is_loader_v<Loader>,
+      "Boundary loading requires a loader which implements the BoundaryLoader "
+      "interface!");
+
+    constexpr auto dims = iterator_traits_t<IteratorA>::dimensions;
+    using DimOther      = std::conditional_t<dims == 2, DimY, DimZ>;
+    using DimType       = std::conditional_t<dims == 1, DimX, DimOther>;
+
+    GhostIndex<dims> indices;
+    if (indices.init_as_global(it_a)) {
+      // Call loader impl ...
+      detail::load_global_boundary(
+        DimType{},
+        static_cast<IteratorA&&>(it_a),
+        indices,
+        static_cast<Loader&&>(loader),
+        static_cast<Args&&>(args)...);
+    }
+
+    constexpr auto dimsb = iterator_traits_t<IteratorB>::dimensions;
+    using DimOtherB      = std::conditional_t<dimsb == 2, DimY, DimZ>;
+    using DimTypeB       = std::conditional_t<dimsb == 1, DimX, DimOtherB>;
+
+    if (indices.init_as_global(it_b)) {
+      // Call loader impl ...
+      detail::load_global_boundary(
+        DimTypeB{},
+        static_cast<IteratorB&&>(it_b),
+        indices,
+        static_cast<Loader&&>(loader),
+        static_cast<Args&&>(args)...);
+    }
+  }
+};
 
 /**
  * Loads boundary data from the \p it_from iterator into the boundary of the \p
