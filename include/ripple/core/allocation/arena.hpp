@@ -283,8 +283,9 @@ struct GpuHeapArena {
    * Cleans up the allocator resources.
    */
   auto cleanup() noexcept -> void {
-    if (start_ != nullptr) {
+    if (start_) {
       gpu::set_device(id_);
+      gpu::synchronize_device();
       gpu::free_device(start_);
       start_ = nullptr;
       end_   = nullptr;
