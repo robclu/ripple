@@ -16,9 +16,8 @@
 #ifndef RIPPLE_CONTAINER_ARRAY_TRAITS_HPP
 #define RIPPLE_CONTAINER_ARRAY_TRAITS_HPP
 
-#include <ripple/core/storage/storage_layout.hpp>
-#include <ripple/core/utility/number.hpp>
-#include <ripple/core/utility/type_traits.hpp>
+#include "../storage/storage_layout.hpp"
+#include "../utility/number.hpp"
 
 namespace ripple {
 
@@ -68,6 +67,15 @@ struct ArrayTraits {
   /**  Defines the type for an array of type T */
   using Array  = VecImpl<Value, Num<1>, Layout>;
 
+  /** 
+   * A type with the same type as the implementation with the given number of
+   * elements and layout.
+   * \tparam Elements The number of elements in the vector.
+   * \tparam L        The layout for the the vector.
+   */
+  template <size_t Elements, typename L = ContiguousOwned>
+  using ImplType = VecImpl<Value, Num<Elements>, L>;
+
   /** Returns the number of elements in the array.   */
   static constexpr auto size = 1;
   // clang-format on
@@ -89,6 +97,15 @@ struct ArrayTraits<VecImpl<T, Size, LayoutType>> {
   using Layout = LayoutType;
   /** Defines the type of an array of the value type. */
   using Array  = VecImpl<Value, Size, Layout>;
+
+  /** 
+   * A type with the same type as the implementation with the given number of
+   * elements and layout.
+   * \tparam Elements The number of elements in the vector.
+   * \tparam L        The layout for the the vector.
+   */
+  template <size_t Elements, typename L = ContiguousOwned>
+  using ImplType = VecImpl<Value, Num<Elements>, L>;
 
   /** Returns the number of elements in the array.  */
   static constexpr auto size = Size::value;
@@ -115,6 +132,15 @@ struct ArrayTraits<Array<Impl>> {
   using Layout = typename Traits::Layout;
   /** Defines the type of an array of the value type. */
   using Array  = typename Traits::Array;
+
+  /** 
+   * A type with the same type as the implementation with the given number of
+   * elements and layout.
+   * \tparam Elements The number of elements in the vector.
+   * \tparam L        The layout for the the vector.
+   */
+  template <size_t Elements, typename L = ContiguousOwned>
+  using ImplType = typename Traits::template ImplType<Elements, L>;
 
   /** Returns the number of elements in the array. */
   static constexpr auto size = Traits::size;

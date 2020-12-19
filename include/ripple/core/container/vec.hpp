@@ -278,81 +278,33 @@ struct VecImpl : public PolymorphicLayout<VecImpl<T, Size, Layout>>,
   /*==--- [interface] ------------------------------------------------------==*/
 
   /**
-   * Gets the element at index I, where the offset to the element is computed
-   * at compile time.
-   * \tparam I The index of the element to get.
-   * \return A const reference to the element at position I.
+   * Gets a reference to the ith component of the state.
+   * \param i The index of the component to get.
+   * \return A reference to the component to get.
    */
-  template <size_t I>
-  ripple_host_device constexpr auto at() const noexcept -> const Value& {
-    static_assert((I < elements), "Compile time index out of range!");
-    return storage_.template get<0, I>();
+  template <typename Index>
+  ripple_host_device auto component(Index&& i) noexcept -> Value& {
+    if constexpr (ripple::is_cx_number_v<Index>) {
+      using Idx = std::decay_t<Index>;
+      return storage_.template get<0, Idx::value>();
+    } else {
+      return storage_.template get<0>(i);
+    }
   }
 
   /**
-   * Gets the element at index I, where the offset to the element is computed
-   * at compile time.
-   * \tparam I The index of the element to get.
-   * \return A reference to the element at position I.
+   * Gets a const reference to the ith component of the state.
+   * \param i The index of the component to get.
+   * \return A const reference to the component to get.
    */
-  template <size_t I>
-  ripple_host_device constexpr auto at() noexcept -> Value& {
-    static_assert((I < elements), "Compile time index out of range!");
-    return storage_.template get<0, I>();
-  }
-
-  /**
-   * Gets the element at \p index , where the offset to the element is computed
-   * at compile time if Index is a Dimension, and therefore the value is known
-   * at compile time, otherwise the offset is computed at runtime.
-   *
-   * \tparam I The index of the element to get.
-   * \return A reference to the element at position index.
-   */
-  template <typename Index, dim_enable_t<Index> = 0>
-  ripple_host_device constexpr auto at(Index&& index) noexcept -> Value& {
-    constexpr size_t i = std::decay_t<Index>::value;
-    return at<i>();
-  }
-
-  /**
-   * Gets the element at \p index , where the offset to the element is computed
-   * at compile time if Index is a Dimension, and therefore the value is known
-   * at compile time, otherwise the offset is computed at runtime.
-   *
-   * \tparam I The index of the element to get.
-   * \return A reference to the element at position index.
-   */
-  template <typename Index, non_dim_enable_t<Index> = 0>
-  ripple_host_device constexpr auto at(Index&& index) noexcept -> Value& {
-    return this->operator[](index);
-  }
-
-  /**
-   * Gets the element at \p index , where the offset to the element is
-   * computed at compile time if Index is a Dimension, and therefore the
-   * value is known at compile time, otherwise the offset is computed at
-   * runtime. \tparam I The index of the element to get. \return A const
-   * reference to the element at position index.
-   */
-  template <typename Index, dim_enable_t<Index> = 0>
-  ripple_host_device constexpr auto
-  at(Index&& index) const noexcept -> const Value& {
-    constexpr size_t i = std::decay_t<Index>::value;
-    return at<i>();
-  }
-
-  /**
-   * Gets the element at \p index , where the offset to the element is
-   * computed at compile time if Index is a Dimension, and therefore the
-   * value is known at compile time, otherwise the offset is computed at
-   * runtime. \tparam I The index of the element to get. \return A const
-   * reference to the element at position index.
-   */
-  template <typename Index, non_dim_enable_t<Index> = 0>
-  ripple_host_device constexpr auto
-  at(Index&& index) const noexcept -> const Value& {
-    return this->operator[](index);
+  template <typename Index>
+  ripple_host_device auto component(Index&& i) const noexcept -> const Value& {
+    if constexpr (ripple::is_cx_number_v<Index>) {
+      using Idx = std::decay_t<Index>;
+      return storage_.template get<0, Idx::value>();
+    } else {
+      return storage_.template get<0>(i);
+    }
   }
 
   /**
@@ -361,6 +313,34 @@ struct VecImpl : public PolymorphicLayout<VecImpl<T, Size, Layout>>,
    */
   ripple_host_device constexpr auto size() const noexcept -> size_t {
     return elements;
+  }
+
+  /**
+   * Gets the squared length of the vector.
+   * \return The squared length of the vector.
+   */
+  ripple_host_device constexpr auto length_squared() const noexcept -> Value {
+    Value result = 0;
+    unrolled_for<elements>(
+      [&](auto i) { result += component(i) * component(i); });
+    return result;
+  }
+
+  /**
+   * Gets the length of the vector (L2 norm).
+   * \return The length of the vector.
+   */
+  ripple_host_device constexpr auto length() const noexcept -> Value {
+    return std::sqrt(length_squared());
+  }
+
+  /**
+   * Normalizes the vector.
+   */
+  ripple_host_device constexpr auto normalize() noexcept -> void {
+    const auto scale = Value{1} / length();
+    unrolled_for<elements>(
+      [&](auto i) { storage_.template get<0, i>() *= scale; });
   }
 };
 
