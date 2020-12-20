@@ -43,13 +43,17 @@ struct GpuInfo {
      * Creates a non-blocking stream.
      */
     auto create() noexcept -> void {
-      if (set) { return; }
+      if (set) {
+        return;
+      }
       gpu::create_nonblocking_stream(&stream);
     }
 
     /** Destroys the stream. */
     auto destroy() noexcept -> void {
-      if (!set) { return; }
+      if (!set) {
+        return;
+      }
 
       gpu::destroy_stream(stream);
       set = false;
@@ -65,6 +69,8 @@ struct GpuInfo {
   using PeerContainer   = std::vector<Index>;
   /** Type of container for streams for the device. */
   using StreamContainer = std::array<Stream, streams_per_device>;
+  /** Defines the type used for stream ids for a gpu. */
+  using StreamId        = uint8_t;
   // clang-format on
 
   /*==--- [constants] ------------------------------------------------------==*/
@@ -131,7 +137,9 @@ struct GpuInfo {
 
       // Determine if peer to peer is supported:
       for (Index i = 0; i < num_devices; ++i) {
-        if (i == dev) { continue; }
+        if (i == dev) {
+          continue;
+        }
         cudaDeviceCanAccessPeer(&can_access_peer, dev, i);
         if (can_access_peer) {
           info.peers.emplace_back(i);
@@ -148,7 +156,7 @@ struct GpuInfo {
    * \return The number of devices in the system.
    */
   static auto device_count() noexcept -> uint32_t {
-    int count;
+    int count = 0;
     ripple_if_cuda(cudaGetDeviceCount(&count));
     return static_cast<uint32_t>(count);
   }
@@ -177,7 +185,9 @@ struct GpuInfo {
    */
   auto peer_to_peer_available(Index other_id) const noexcept -> bool {
     for (auto& peer_id : peers) {
-      if (peer_id == other_id) { return true; }
+      if (peer_id == other_id) {
+        return true;
+      }
     }
     return false;
   }
@@ -198,9 +208,9 @@ struct GpuInfo {
    * Gets the next stream for the device.
    * \return The next stream for the device.
    */
-  auto next_stream_id() noexcept -> uint8_t {
-    auto id   = stream_id;
-    stream_id = (stream_id + 1) % streams_per_device;
+  auto next_stream_id() noexcept -> StreamId {
+    StreamId id = stream_id;
+    stream_id   = (stream_id + 1) % streams_per_device;
     return id;
   }
 
@@ -208,11 +218,15 @@ struct GpuInfo {
    * Synchronizes the streams for the gpu.
    */
   auto synchronize() const noexcept -> void {
-    if (index == invalid) { return; }
+    if (index == invalid) {
+      return;
+    }
 
     gpu::set_device(index);
     for (auto& stream : streams) {
-      if (!stream.set) { continue; }
+      if (!stream.set) {
+        continue;
+      }
       gpu::synchronize_stream(stream.stream);
     }
   }
@@ -221,7 +235,9 @@ struct GpuInfo {
    * Creates a fence on the gpu, blocking until the device is synchronized.
    */
   auto fence() const noexcept -> void {
-    if (index == invalid) { return; }
+    if (index == invalid) {
+      return;
+    }
 
     gpu::set_device(index);
     gpu::synchronize_device();
@@ -232,7 +248,7 @@ struct GpuInfo {
   Index           index     = invalid; //!< Index of the gpu in the system.
   uint64_t        mem_size  = 0;       //!< Amount of memory for the device.
   uint64_t        mem_alloc = 0;       //!< Amount of device  memory.
-  uint8_t         stream_id = 0;       //!< Id of the current stream.
+  StreamId        stream_id = 0;       //!< Id of the current stream.
   uint8_t         pad[padding_size];   //!< Padding for false sharing.
 };
 

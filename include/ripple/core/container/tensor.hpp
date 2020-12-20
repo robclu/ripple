@@ -27,6 +27,7 @@
 #include <array>
 #include <cassert>
 #include <numeric>
+#include <set>
 
 namespace ripple {
 
@@ -371,9 +372,12 @@ class Tensor {
 
   /**
    * Reallocates (or allocates if unallocated) the data for the tensor.
+   * \param stream_map A map of gpu indicies to stream inidices which specifies
+   *                   which streams to use for which gpu.
    */
-  auto reallocate() -> void {
-    initialize();
+  auto reallocate(const ripple::StreamMap& stream_map = ripple::StreamMap())
+    -> void {
+    initialize(stream_map);
   }
 
   /**
@@ -472,7 +476,7 @@ class Tensor {
    * Initializes the tensor. This will allocate the blocks for the tensor, as
    * well as the data for each of the allocted blocks.
    */
-  auto initialize() -> void {
+  auto initialize(ripple::StreamMap stream_map = ripple::StreamMap()) -> void {
     blocks_.set_op_kind(BlockOpKind::synchronous);
     check_partitions();
 
@@ -492,7 +496,7 @@ class Tensor {
       //  "Inavlid number of blocks per gpu!");
     });
     blocks_.reallocate_and_init();
-    allocate_data_for_blocks();
+    allocate_data_for_blocks(stream_map);
   }
 
   /**
@@ -574,7 +578,7 @@ class Tensor {
    * Allocates the data for the blocks and initializes the fields for the
    * blocks.
    */
-  auto allocate_data_for_blocks() -> void {
+  auto allocate_data_for_blocks(const ripple::StreamMap& stream_map) -> void {
     invoke(blocks_, [&](auto block) {
       auto& host   = block->host_data;
       auto& device = block->device_data;
@@ -606,13 +610,21 @@ class Tensor {
       });
 
       // Set all the gpu data:
-      auto& gpu       = topology().gpus[id];
-      auto  stream_id = gpu.next_stream_id();
+      GpuInfo& gpu = topology().gpus[id];
       block->set_device_id(gpu.index);
       gpu::set_device(gpu.index);
 
       // Allocate the host memory:
       host.reallocate();
+
+      auto stream_id = stream_map.find(id) != stream_map.end()
+                         ? stream_map.at(id)
+                         : gpu.next_stream_id();
+
+      printf(
+        "Createed partition: gpu : %3lu, stream : %3u\n",
+        id,
+        (unsigned)stream_id);
 
       // Now alloate device data:
       device.set_stream(gpu.streams[stream_id].stream);

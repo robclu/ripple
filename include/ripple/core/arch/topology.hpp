@@ -19,8 +19,14 @@
 
 #include "cpu_info.hpp"
 #include "gpu_info.hpp"
+#include <map>
 
 namespace ripple {
+
+/**
+ * Defines a map type to map gpu indices to stream indices.
+ */
+using StreamMap = std::map<ripple::GpuInfo::Index, ripple::GpuInfo::StreamId>;
 
 /**
  * The Topology struct stores information about the topology of the system. It
