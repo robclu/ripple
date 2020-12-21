@@ -186,9 +186,9 @@ struct Block : MultiBlock<Block<T, Dimensions>> {
    * Gets an iterator to the device data for the block.
    * \return An iterator to the first valid (non-padding) element in the block.
    */
-  auto device_iterator() const noexcept -> Iterator {
-    auto iter = Iterator{device_data.begin()};
-    set_iter_properties(iter);
+  auto device_iterator(int padding_mod = 0) const noexcept -> Iterator {
+    auto iter = Iterator{device_data.begin(padding_mod)};
+    set_iter_properties(iter, padding_mod);
     return iter;
   }
 
@@ -201,14 +201,6 @@ struct Block : MultiBlock<Block<T, Dimensions>> {
     set_iter_properties(iter);
     return iter;
   }
-
-  /**
-   * Gets an iterator to the beginning of the device data.
-   * \return An iterator to the beginning of the device data.
-   */
-  // decltype(auto) begin() noexcept {
-  //  return device_data.begin();
-  //}
 
   /**
    * Returns the stream for this block.
@@ -272,21 +264,21 @@ struct Block : MultiBlock<Block<T, Dimensions>> {
    *       the padding of the other block depending on the mapping.
    *
    * \param  other     The other block to use to fill the padding.
-   * \param  dest_face The destination face to fill.
+   * \param  dst_face  The destination face to fill.
    * \tparam Dim       The dimension of the destination face.
    * \tparam Location  The location of the face to fill the padding for.
    * \tparam Map       The padding for the face.
    */
-  template <size_t Dim, Face Location, Mapping Map>
+  template <size_t Dim, FaceLocation Location, Mapping Map>
   auto fill_padding(
     Block&                            other,
-    FaceSpecifier<Dim, Location, Map> dest_face,
+    CopySpecifier<Dim, Location, Map> dst_face,
     ExecutionKind                     exe) noexcept -> void {
     if (exe == ExecutionKind::gpu) {
-      fill_padding_device(other, dest_face);
+      fill_padding_device(other, dst_face);
       return;
     }
-    fill_padding_host(other, dest_face);
+    fill_padding_host(other, dst_face);
   }
 
   /*==--- [reduction] ------------------------------------------------------==*/
@@ -372,11 +364,12 @@ struct Block : MultiBlock<Block<T, Dimensions>> {
    * \tparam Map      The mapping for the face.
    * \return The opposite face specifier.
    */
-  template <size_t Dim, Face Location, Mapping Map>
+  template <size_t Dim, FaceLocation Location, Mapping Map>
   static constexpr auto
-  opp_face_for_src(FaceSpecifier<Dim, Location, Map>) noexcept {
-    constexpr auto location = Location == Face::start ? Face::end : Face::start;
-    return FaceSpecifier<Dim, location, Mapping::domain>{};
+  opp_face_for_src(CopySpecifier<Dim, Location, Map>) noexcept {
+    constexpr auto location =
+      Location == FaceLocation::start ? FaceLocation::end : FaceLocation::start;
+    return CopySpecifier<Dim, location, Mapping::domain>{};
   }
 
   /**
@@ -391,10 +384,10 @@ struct Block : MultiBlock<Block<T, Dimensions>> {
    * \tparam Map      The mapping for the face.
    * \return The same face specifier.
    */
-  template <size_t Dim, Face Location, Mapping Map>
+  template <size_t Dim, FaceLocation Location, Mapping Map>
   static constexpr auto
-  same_face_for_dst(FaceSpecifier<Dim, Location, Map>) noexcept {
-    return FaceSpecifier<Dim, Location, Mapping::padding>{};
+  same_face_for_dst(CopySpecifier<Dim, Location, Map>) noexcept {
+    return CopySpecifier<Dim, Location, Mapping::padding>{};
   }
 
   /**
@@ -403,10 +396,12 @@ struct Block : MultiBlock<Block<T, Dimensions>> {
    * \tparam Iterator The type of the iterator.
    */
   template <typename Iterator>
-  auto set_iter_properties(Iterator& it) const noexcept -> void {
+  auto set_iter_properties(Iterator& it, int padding_mod = 0) const noexcept
+    -> void {
     unrolled_for<dims>([&](auto dim) {
-      it.set_block_start_index(dim, indices[dim] * block_sizes[dim]);
-      it.set_global_size(dim, global_sizes[dim]);
+      it.set_block_start_index(
+        dim, indices[dim] * (block_sizes[dim] + 2 * padding_mod));
+      it.set_global_size(dim, global_sizes[dim] + 2 * padding_mod);
     });
   }
 
@@ -422,9 +417,9 @@ struct Block : MultiBlock<Block<T, Dimensions>> {
    * \tparam Location  The location of the face to fill the padding for.
    * \tparam Map       The padding for the face.
    */
-  template <size_t Dim, Face Location, Mapping Map>
+  template <size_t Dim, FaceLocation Location, Mapping Map>
   auto fill_padding_device(
-    Block& other, FaceSpecifier<Dim, Location, Map> dest_face) noexcept
+    Block& other, CopySpecifier<Dim, Location, Map> dest_face) noexcept
     -> void {
     constexpr auto src_face = opp_face_for_src(dest_face);
     constexpr auto dst_face = same_face_for_dst(dest_face);
@@ -439,9 +434,9 @@ struct Block : MultiBlock<Block<T, Dimensions>> {
         src_face,
         dst_face,
         other.device_data.stream());
-      if (other.gpu_id == gpu_id) {
-        gpu::synchronize_stream(other.device_data.stream());
-      }
+      // if (other.gpu_id == gpu_id) {
+      gpu::synchronize_stream(other.device_data.stream());
+      //}
       return;
     }
 
@@ -476,9 +471,9 @@ struct Block : MultiBlock<Block<T, Dimensions>> {
    * \tparam Location  The location of the face to fill the padding for.
    * \tparam Map       The padding for the face.
    */
-  template <size_t Dim, Face Location, Mapping Map>
+  template <size_t Dim, FaceLocation Location, Mapping Map>
   auto fill_padding_host(
-    Block& other, FaceSpecifier<Dim, Location, Map> dest_face) noexcept
+    Block& other, CopySpecifier<Dim, Location, Map> dest_face) noexcept
     -> void {
     constexpr auto src_face = opp_face_for_src(dest_face);
     constexpr auto dst_face = same_face_for_dst(dest_face);

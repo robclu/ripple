@@ -617,14 +617,9 @@ class Tensor {
       // Allocate the host memory:
       host.reallocate();
 
-      auto stream_id = stream_map.find(id) != stream_map.end()
-                         ? stream_map.at(id)
-                         : gpu.next_stream_id();
-
-      printf(
-        "Createed partition: gpu : %3lu, stream : %3u\n",
-        id,
-        (unsigned)stream_id);
+      // Here we either use the supplied stream, or the first one.
+      auto stream_id =
+        stream_map.find(id) != stream_map.end() ? stream_map.at(id) : 0;
 
       // Now alloate device data:
       device.set_stream(gpu.streams[stream_id].stream);
