@@ -41,14 +41,16 @@ template <typename... Ts>
 class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
   // clang-format off
   /** Defines the type of the pointer to the data. */
-  using Ptr     = void*;
+  using Ptr      = void*;
+  /** Defines the type of a const pointer to the data. */
+  using ConstPtr = const void*;
   /** Defiens the type of this storage. */
-  using Storage = StridedStorageView;
+  using Storage  = StridedStorageView;
   // clang-format on
 
   /** LayoutTraits is a friend to allow allocator access. */
   template <typename T, bool B>
-  friend class LayoutTraits;
+  friend struct LayoutTraits;
 
   /*==--- [traits] ---------------------------------------------------------==*/
 
@@ -90,6 +92,14 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
   template <size_t I>
   static constexpr size_t nth_element_bytes = sizeof(nth_element_value_t<I>);
 
+  /**
+   * Returns the number of components for the Nth element.
+   * \param I The index of the element to get the number of components of.
+   */
+  template <size_t I>
+  static constexpr size_t nth_element_components_v =
+    storage_element_traits_t<nth_element_t<I, Ts...>>::num_elements;
+
   /*==--- [allocator] ------------------------------------------------------==*/
 
   /**
@@ -106,7 +116,7 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
      */
     template <size_t I>
     ripple_host_device static constexpr auto
-    offset_scale(Num<I>, dimx_t) noexcept -> size_t {
+    offset_scale(Num<I>, DimX) noexcept -> size_t {
       return 1;
     }
 
@@ -117,7 +127,7 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
      */
     template <size_t I>
     ripple_host_device static constexpr auto
-    offset_scale(Num<I>, dimy_t) noexcept -> size_t {
+    offset_scale(Num<I>, DimY) noexcept -> size_t {
       return nth_element_components<I>;
     }
 
@@ -129,7 +139,7 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
      */
     template <size_t I>
     ripple_host_device static constexpr auto
-    offset_scale(Num<I>, dimz_t) noexcept -> size_t {
+    offset_scale(Num<I>, DimZ) noexcept -> size_t {
       return nth_element_components<I>;
     }
 
@@ -179,37 +189,33 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
     }
 
     /**
-     * Offsets the storage by the amount specified by the indices. This
-     * assumes that the data into which the storage can offset is valid, which
-     * is the case if the storage was created through the allocator.
-     *
-     *
-     * \param  storage   The storage to offset.
-     * \param  space     The space for which the storage is defined.
-     * \param  is        The indices to offset to in the space.
-     * \tparam SpaceImpl The implementation of the spatial interface.
-     * \tparam Indices   The types of the indices.
-     * \return A new strided storage offset to the location specified by the
-     *         indices.
+     * Gets the number of types which are stored strided.
+     * \return The number of types which are stored strided.
      */
-    template <
-      typename SpaceImpl,
-      typename... Indices,
-      variadic_ge_enable_t<1, Indices...> = 0>
-    ripple_host_device static auto offset(
-      const Storage&                  storage,
-      const MultidimSpace<SpaceImpl>& space,
-      Indices&&... is) noexcept -> Storage {
-      Storage r;
-      r.stride_ = storage.stride_;
-      unrolled_for<num_types>([&](auto i) {
-        constexpr auto components_i = nth_element_components<size_t{i}>;
-        using Type                  = nth_element_value_t<i>;
-        r.data_[i]                  = static_cast<void*>(
-          static_cast<Type*>(storage.data_[i]) +
-          offset_to_soa(space, components_i, ripple_forward(is)...));
-      });
-      return r;
+    static constexpr auto strided_types() noexcept -> size_t {
+      return num_types;
+    }
+
+    /**
+     * Gets the number of elements in the Ith type.
+     * \tparam I The index of the type.
+     * \return The number of elements in the ith type.
+     */
+    template <size_t I>
+    static constexpr auto num_elements() noexcept -> size_t {
+      static_assert(I < num_types, "Invalid type index!");
+      return nth_element_components_v<I>;
+    }
+
+    /**
+     * Gets the number of bytes for an elemeent in the Ith type.
+     * \tparam I The index of the type to get the element size of.
+     * \return The number of bytes for an element in the Ith type.
+     */
+    template <size_t I>
+    static constexpr auto element_byte_size() noexcept -> size_t {
+      static_assert(I < num_types, "Invalid type index!");
+      return nth_element_bytes<I>;
     }
 
     /**
@@ -222,7 +228,7 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
      * \tparam Dim       The type of the dimension.
      * \return A new strided storage offset by the given amount.
      */
-    template <typename SpaceImpl, typename Dim, diff_enable_t<Dim, int> = 0>
+    template <typename SpaceImpl, typename Dim>
     ripple_host_device static auto offset(
       const Storage&                  storage,
       const MultidimSpace<SpaceImpl>& space,
@@ -262,34 +268,6 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
           amount * space.step(ripple_forward(dim)) *
             offset_scale(i, ripple_forward(dim)));
       });
-    }
-
-    /**
-     * Creates the storage, initializing a StridedStorage instance which has
-     * its data pointers pointing to the given pointer, and then offset by the
-     * given indices.
-     *
-     * \note The memory space should have a size which is that returned by the
-     *       `allocation_size()` method, otherwise this may index into undefined
-     *       memory.
-     *
-     * \param  ptr       A pointer to the data to create the storage in.
-     * \param  space     The space for which the storage is defined.
-     * \param  is        The indices to offset to in the space.
-     * \tparam SpaceImpl The implementation of the spatial interface.
-     * \tparam Indices   The types of the indices.
-     * \return A new strided storage offset to the given location.
-     */
-    template <
-      typename SpaceImpl,
-      typename... Indices,
-      variadic_ge_enable_t<1, Indices...> = 0>
-    ripple_host_device static auto create(
-      void*                           ptr,
-      const MultidimSpace<SpaceImpl>& space,
-      Indices&&... is) noexcept -> Storage {
-      Storage r = create(ptr, space);
-      return offset(r, space, is...);
     }
 
     /**
@@ -450,8 +428,17 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
    * Gets a const pointer to the data.
    * \return A const pointer to the data for the storage.
    */
-  ripple_host_device auto data() const noexcept -> const Ptr {
+  ripple_host_device auto data() const noexcept -> ConstPtr {
     return &data_[0];
+  }
+
+  /**
+   * Returns a reference to the data pointers for the storage.
+   */
+  ripple_host_device auto data_ptrs() noexcept -> std::vector<Ptr> {
+    std::vector<Ptr> p;
+    unrolled_for<num_types>([&](auto i) { p.push_back(data_[i]); });
+    return p;
   }
 
   /**

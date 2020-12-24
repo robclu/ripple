@@ -22,6 +22,8 @@
 #include "storage_traits.hpp"
 #include "storage_accessor.hpp"
 
+#include "../execution/thread_index.hpp"
+
 namespace ripple {
 
 /**
@@ -36,15 +38,13 @@ class ContiguousStorageView
   using Ptr          = void*;
   /** Defines the type of the storage. */
   using Storage      = ContiguousStorageView;
-  /** Defines the type of owned storage. */
-  using OwnedStorage = OwnedStorage<Ts...>;
   /** The type of the helper traits class. */
   using Helper       = detail::ContigStorageHelper<Ts...>;
   // clang-format on
 
   /** LayoutTraits is a friend to allow allocator access. */
   template <typename T, bool B>
-  friend class LayoutTraits;
+  friend struct LayoutTraits;
 
   /**
    * Gets the value type of the storage element traits for a type.
@@ -52,6 +52,21 @@ class ContiguousStorageView
    */
   template <typename T>
   using element_value_t = typename storage_element_traits_t<T>::Value;
+
+  /**
+   * Gets the value type of the storage element traits the type at position I.
+   * \tparam I The index of the type to get the value type for.
+   */
+  template <size_t I>
+  using nth_element_value_t = element_value_t<nth_element_t<I, Ts...>>;
+
+  /**
+   * Returns the number of components for the Nth element.
+   * \param I The index of the element to get the number of components of.
+   */
+  template <size_t I>
+  static constexpr size_t nth_element_components_v =
+    storage_element_traits_t<nth_element_t<I, Ts...>>::num_elements;
 
   /*==--- [constants] ------------------------------------------------------==*/
 
@@ -113,34 +128,35 @@ class ContiguousStorageView
       return storage_byte_size * Elements;
     }
 
-    // clang-format off
     /**
-     * Offsets the \p storage by the amount specified by the indices \p is. 
-     * 
-     * \note This assumes that the data into which the storage can offset is
-     *       valid, which is the case if the storage was created through the
-     *       allocator. If not, the behaviour is undefined.
-     * 
-     * \param  storage The storage to offset.
-     * \param  space   The space for which the storage is defined.
-     * \param  is      The indices to offset to in the space.
-     * \tparam Space   The implementation of the spatial interface.
-     * \tparam Is      The types of the indices.
-     * \return A new ContiguousStorageView which points to offset data.
+     * Gets the number of types which are stored strided.
+     * \return The number of types which are stored strided.
      */
-    template <
-      typename SpaceImpl, typename... Is, variadic_ge_enable_t<1, Is...> = 0>
-    ripple_host_device static auto offset(
-      const Storage&                storage,
-      const MultidimSpace<SpaceImpl>& space,
-      Is&&...                         is) noexcept -> Storage {
-      Storage r;
-      r.data_ = static_cast<void*>(
-        static_cast<char*>(storage.data_) +
-        offset_to_aos(space, storage_byte_size, static_cast<Is&&>(is)...));
-      return r;
+    static constexpr auto strided_types() noexcept -> size_t {
+      return 1;
     }
-    // clang-format on
+
+    /**
+     * Gets the number of elements in the Ith type. This is always 1 since the
+     * data is not strided, it looks like a single element.
+     * \tparam I The index of the type.
+     * \return The number of elements in the ith type.
+     */
+    template <size_t I>
+    static constexpr auto num_elements() noexcept -> size_t {
+      return 1;
+    }
+
+    /**
+     * Gets the number of bytes for an element in the Ith type. This returns
+     * the total size since all data is stored contiguously.
+     * \tparam I The index of the type to get the element size of.
+     * \return The number of bytes for an element in the Ith type.
+     */
+    template <size_t I>
+    static constexpr auto element_byte_size() noexcept -> size_t {
+      return storage_byte_size;
+    }
 
     /**
      * Offsets the storage by the amount specified by \p amount in the
@@ -192,37 +208,6 @@ class ContiguousStorageView
         static_cast<char*>(storage.data_) +
         amount * storage_byte_size * space.step(ripple_forward(dim)));
     }
-
-    // clang-format off
-    /**
-     * Creates the storage, initializing a ContiguousStorageView instance which
-     * has its data pointer pointing to the location defined by the indices \p
-     * is, from the initial \p ptr. 
-     * 
-     * \note The memory space should have a size which is returned by the 
-     *       `allocation_size()` method, otherwise this may index into undefined
-     *       memory.
-     * 
-     * \param  ptr       A pointer to the beginning of the memory space.
-     * \param  space     The multidimensional space which defines the domain.
-     * \param  is        The indices of the element in the space to create.
-     * \tparam SpaceImpl The implementation of the spatial interface.
-     * \tparam Is        The type of the indices.
-     * \return A new ContiguousStorageView which is offset to the location
-     *         specified by the indices.
-     */
-    template <
-      typename SpaceImpl, typename... Is, variadic_ge_enable_t<1, Is...> = 0>
-    ripple_host_device static auto
-    create(void* ptr, const MultidimSpace<SpaceImpl>& space, Is&&... is)
-      noexcept -> Storage {
-      Storage r;
-      r.data_ = static_cast<void*>(
-        static_cast<char*>(ptr) +
-        offset_to_aos(space, storage_byte_size, static_cast<Is&&>(is)...));
-      return r;
-    }
-    // clang-format on
 
     /**
      * Creates the storage, initializing a ContiguousStorageView instance which
@@ -355,6 +340,13 @@ class ContiguousStorageView
    */
   ripple_host_device auto data() const noexcept -> const void* {
     return data_;
+  }
+
+  /**
+   * Returns a reference to the data pointers for the storage.
+   */
+  ripple_host_device auto data_ptrs() noexcept -> std::vector<Ptr> {
+    return {data_};
   }
 
   /**
