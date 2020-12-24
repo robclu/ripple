@@ -16,7 +16,7 @@
 #ifndef RIPPLE_STORAGE_STORAGE_LAYOUT_HPP
 #define RIPPLE_STORAGE_STORAGE_LAYOUT_HPP
 
-#include <ripple/core/utility/portability.hpp>
+#include "../utility/portability.hpp"
 
 namespace ripple {
 

@@ -17,7 +17,7 @@
 #ifndef RIPPLE_STORAGE_POINTER_WRAPPER_HPP
 #define RIPPLE_STORAGE_POINTER_WRAPPER_HPP
 
-#include <ripple/core/utility/portability.hpp>
+#include "../utility/portability.hpp"
 
 namespace ripple {
 

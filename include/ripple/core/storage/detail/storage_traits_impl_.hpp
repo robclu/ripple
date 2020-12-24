@@ -17,7 +17,7 @@
 #define RIPPLE_STORAGE_DETAIL_STORAGE_TRAITS_IMPL__HPP
 
 #include "../storage_element_traits.hpp"
-#include <ripple/core/utility/type_traits.hpp>
+#include "../../utility/type_traits.hpp"
 
 namespace ripple::detail {
 

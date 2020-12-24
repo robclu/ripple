@@ -22,8 +22,6 @@
 #include "storage_traits.hpp"
 #include "storage_accessor.hpp"
 
-#include "../execution/thread_index.hpp"
-
 namespace ripple {
 
 /**

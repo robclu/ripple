@@ -17,7 +17,7 @@
 #define RIPPLE_STORAGE_STORAGE_ELEMENT_TRAITS_HPP
 
 #include "storage_layout.hpp"
-#include <ripple/core/algorithm/max_element.hpp>
+#include "../algorithm/max_element.hpp"
 
 namespace ripple {
 

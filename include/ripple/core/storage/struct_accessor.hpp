@@ -17,7 +17,7 @@
 #ifndef RIPPLE_STORAGE_STRUCT_ACCESSOR_HPP
 #define RIPPLE_STORAGE_STRUCT_ACCESSOR_HPP
 
-#include <ripple/core/utility/portability.hpp>
+#include "../utility/portability.hpp"
 
 namespace ripple {
 

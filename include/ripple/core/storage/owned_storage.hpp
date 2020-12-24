@@ -19,7 +19,7 @@
 #include "storage_element_traits.hpp"
 #include "storage_traits.hpp"
 #include "storage_accessor.hpp"
-#include <ripple/core/utility/type_traits.hpp>
+#include "../utility/type_traits.hpp"
 
 namespace ripple {
 /**
@@ -77,7 +77,7 @@ class OwnedStorage : public StorageAccessor<OwnedStorage<Ts...>> {
    * \tparam I The index of the component to get the number of elements for.
    */
   template <size_t I>
-  static constexpr size_t nth_element_components =
+  static constexpr size_t nth_element_components_v =
     element_components<nth_element_t<I, Ts...>>;
 
   /*==--- [construction] ---------------------------------------------------==*/
