@@ -17,7 +17,7 @@
 #define RIPPLE_CONTAINER_TUPLE_TRAITS_HPP
 
 #include "detail/basic_tuple_.hpp"
-#include <ripple/core/utility/type_traits.hpp>
+#include "../utility/type_traits.hpp"
 
 namespace ripple {
 

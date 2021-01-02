@@ -177,8 +177,8 @@ ripple_host_device constexpr inline auto get(const Tuple<Ts...>& tuple) noexcept
  * \return A reference to the Ith element.
  */
 template <size_t I, typename... Ts>
-ripple_host_device constexpr inline auto
-get(Tuple<Ts...>& tuple) noexcept -> remove_ref_t<nth_element_t<I, Ts...>>& {
+ripple_host_device constexpr inline auto get(Tuple<Ts...>& tuple) noexcept
+  -> std::remove_reference_t<nth_element_t<I, Ts...>>& {
   return detail::get_impl<I>(tuple.data());
 }
 
@@ -194,11 +194,11 @@ get(Tuple<Ts...>& tuple) noexcept -> remove_ref_t<nth_element_t<I, Ts...>>& {
  * \return An rvalue reference to to the element.
  */
 template <size_t I, typename... Ts>
-ripple_host_device constexpr inline auto
-get(Tuple<Ts...>&& tuple) noexcept -> remove_ref_t<nth_element_t<I, Ts...>>&& {
+ripple_host_device constexpr inline auto get(Tuple<Ts...>&& tuple) noexcept
+  -> std::remove_reference_t<nth_element_t<I, Ts...>>&& {
   using DataType = decltype(tuple.data());
   return detail::get_impl<I>(
-    static_cast<remove_ref_t<DataType>&&>(tuple.data()));
+    static_cast<std::remove_reference_t<DataType>&&>(tuple.data()));
 }
 
 /**
@@ -218,7 +218,7 @@ get(const Tuple<Ts...>&& tuple) noexcept
   -> const std::decay_t<nth_element_t<I, Ts...>>&& {
   using DataType = decltype(tuple.data());
   return detail::get_impl<I>(
-    static_cast<const remove_ref_t<DataType>&&>(tuple.data()));
+    static_cast<const std::remove_reference_t<DataType>&&>(tuple.data()));
 }
 
 /*==--- [make tuple] -------------------------------------------------------==*/
