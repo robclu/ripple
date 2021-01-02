@@ -17,7 +17,7 @@
 #define RIPPLE_IO_MULTIDIM_WRITER_HPP
 
 #include "printable_element.hpp"
-#include <ripple/core/container/tensor.hpp>
+#include "../container/tensor.hpp"
 #include <string>
 #include <vector>
 
