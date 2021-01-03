@@ -242,8 +242,10 @@ static inline auto memcpy_device_to_host_async(
  */
 template <typename HostPtr, typename DevPtr>
 static inline auto memcpy_device_to_host_async(
-  HostPtr* host_ptr, const DevPtr* dev_ptr, size_t bytes, GpuStream stream)
-  -> void {
+  HostPtr*         host_ptr,
+  const DevPtr*    dev_ptr,
+  size_t           bytes,
+  const GpuStream& stream) -> void {
   ripple_check_cuda_result(ripple_if_cuda(
     cudaMemcpyAsync(host_ptr, dev_ptr, bytes, cudaMemcpyDeviceToHost, stream)));
 }
