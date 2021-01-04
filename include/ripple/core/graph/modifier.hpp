@@ -38,7 +38,7 @@ enum class Modifier : uint8_t {
   exclusive_shared_expander  = 10, //!< Exclusive & shared  & expander
 };
 
-using ExpType = int;
+using ExpType = int16_t;
 
 /**
  * The ModificationSpecifier struct wraps a type T with some information for

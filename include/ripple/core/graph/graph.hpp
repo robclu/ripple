@@ -57,7 +57,7 @@ class Graph {
   /** The alignment for a node, use some multiple of the false sharing size. */
   static constexpr size_t node_alignment   = avoid_false_sharing_size;
   /** The minimum amount of extra padding for node data. */
-  static constexpr size_t node_min_storage = 72;
+  static constexpr size_t node_min_storage = 2 * 72;
 
   /**
    * The arena for the allocator. We define this here to explicitly use a heap
@@ -92,7 +92,7 @@ class Graph {
  public:
   // clang-format off
   /** The default number of nodes per thread. */
-  static constexpr size_t default_nodes = 1000;
+  static constexpr size_t default_nodes = 1024;
   /** Default id for a node. */
   static constexpr auto   default_id    = NodeInfo::default_id;
   // clang-format on
@@ -394,7 +394,7 @@ class Graph {
 
   /**
    * Emplaces a node into the graph which creates a sync point in the graph
-   * which synchronizes *all* work on *all* GPUs. To create only a submission
+   * which synchronizes *all* streams on *all* GPUs. To create only a submission
    * synchronization point, \sa sync.
    *
    * \param  callable The callable which defines the node's operation.
@@ -415,6 +415,29 @@ class Graph {
     info.kind = NodeKind::sync;
     return emplace_named(
       info, ripple_forward(callable), ripple_forward(args)...);
+  }
+
+  /**
+   * Emplaces a node into the graph which creates a fence for each gpu,
+   * which will block until all gpus have finished their currently submitted
+   * work.
+   *
+   * \param  callable The callable which defines the node's operation.
+   * \param  args     Arguments for the callable.
+   * \tparam F        The type of the callable.
+   * \tparam Args     The types of the arguments.
+   */
+  auto gpu_fence() -> Graph& {
+    join_ids_.emplace_back(nodes_.size());
+
+    NodeInfo info{NodeKind::normal, ExecutionKind::gpu};
+    for (const auto& gpu : topology().gpus) {
+      emplace_named(info, [&gpu] { gpu.fence(); });
+    }
+
+    join_ids_.emplace_back(nodes_.size());
+    info.kind = NodeKind::sync;
+    return emplace_named(info, [] {});
   }
 
   /*==--- [then] -----------------------------------------------------------==*/
