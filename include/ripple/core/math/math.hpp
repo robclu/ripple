@@ -16,12 +16,52 @@
 #ifndef RIPPLE_MATH_MATH_HPP
 #define RIPPLE_MATH_MATH_HPP
 
-#include <ripple/core/container/array.hpp>
-#include <ripple/core/utility/portability.hpp>
+#include "../container/array.hpp"
 #include <algorithm>
 #include <cmath>
 
 namespace ripple::math {
+
+/*==--- [trig functions] ---------------------------------------------------==*/
+
+/**
+ * Computes tanh for the given input.
+ * \param  x The value to compute tanh for.
+ * \tparam T The type of the data.
+ * \return The result of tanh(x).
+ */
+template <typename T>
+ripple_host_device constexpr auto tanh(T x) noexcept -> T {
+  // TOOD: Test performance on the GPU.
+  return std::tanh(x);
+}
+
+/**
+ * Computes cosh for the given input.
+ * \param  x The value to compute cosh for.
+ * \tparam T The type of the data.
+ * \return The result of cosh(x).
+ */
+template <typename T>
+ripple_host_device constexpr auto cosh(T x) noexcept -> T {
+  // TOOD: Test performance on the GPU.
+  return std::cosh(x);
+}
+
+/**
+ * Fast exp function, less precision but better performance.
+ * \param x The input to the exp function.
+ * \tparam T The type of the data for the exp function.
+ * \return The resutl of exp(x).
+ */
+template <typename T>
+ripple_host_device constexpr auto fast_exp(T x) noexcept -> T {
+#if defined(ripple_gpu_compile)
+  return __expf(x);
+#else
+  return std::exp(x);
+#endif
+}
 
 /*==--- [hash] -------------------------------------------------------------==*/
 
@@ -58,6 +98,8 @@ hash_combine(uint32_t a, uint32_t b) noexcept -> uint64_t {
   return (x + y) * (x + y + uint64_t{1}) / div_factor + y;
 }
 
+namespace literals {
+
 /**
  * Literal operator to perform a hash on string literals.
  * \tparam input The input string to hash.
@@ -66,6 +108,8 @@ ripple_host_device constexpr auto
 operator"" _hash(const char* input, unsigned long) noexcept -> unsigned int {
   return hash(input);
 }
+
+} // namespace literals
 
 namespace detail {
 
@@ -309,6 +353,41 @@ min(const Array<ImplA>& a, const Array<ImplB>& b) noexcept
 }
 
 /**
+ * Computes the elementwise min of a and b.
+ * \param  a    The first array for comparison.
+ * \param  b    The scalar to compute the min with.
+ * \tparam Impl The implementation type of the array.
+ * \tparam T    The type of the scalar.
+ * \return A new array with each element as the min of the corresponding
+ *         elements.
+ */
+template <typename Impl, typename T, array_enable_t<Impl> = 0>
+ripple_host_device constexpr auto
+min(const Array<Impl>& a, T b) noexcept -> Impl {
+  using Result = Impl;
+  Result r;
+  unrolled_for_bounded<array_traits_t<Impl>::size>(
+    [&](auto i) { r[i] = std::min(a[i], b); });
+  return r;
+}
+
+/**
+ * Determines the minimum element in the array.
+ * \param  a    The array to find the minimum of.
+ * \tparam Impl The implementation type of the array.
+ * \return The minimum element in the array,
+ */
+template <typename Impl, array_enable_t<Impl> = 0>
+ripple_host_device constexpr auto
+min(const Array<Impl>& a) noexcept -> typename array_traits_t<Impl>::Value {
+  using Result = typename array_traits_t<Impl>::Value;
+  Result r     = a[0];
+  unrolled_for_bounded<array_traits_t<Impl>::size - 1>(
+    [&](auto i) { r = std::min(r, a[i + 1]); });
+  return r;
+}
+
+/**
  * Computes the max of a and b.
  *
  * \note This overload is provided so that max can be used in this namespace for
@@ -341,6 +420,41 @@ max(const Array<ImplA>& a, const Array<ImplB>& b) noexcept
   Result r;
   unrolled_for_bounded<array_traits_t<ImplA>::size>(
     [&](auto i) { r[i] = std::max(a[i], b[i]); });
+  return r;
+}
+
+/**
+ * Computes the elementwise max of a and b.
+ * \param  a    The first array for comparison.
+ * \param  b    The scalar to compute the max with.
+ * \tparam Impl The implementation type of the array.
+ * \tparam T    The type of the scalar.
+ * \return A new array with each element as the max of the corresponding
+ *         elements.
+ */
+template <typename Impl, typename T, array_enable_t<Impl> = 0>
+ripple_host_device constexpr auto
+max(const Array<Impl>& a, T b) noexcept -> Impl {
+  using Result = Impl;
+  Result r;
+  unrolled_for_bounded<array_traits_t<Impl>::size>(
+    [&](auto i) { r[i] = std::max(a[i], b); });
+  return r;
+}
+
+/**
+ * Determines the maximum element in the array.
+ * \param  a    The array to find the maximum of.
+ * \tparam Impl The implementation type of the array.
+ * \return The maximum element in the array,
+ */
+template <typename Impl, array_enable_t<Impl> = 0>
+ripple_host_device constexpr auto
+max(const Array<Impl>& a) noexcept -> typename array_traits_t<Impl>::Value {
+  using Result = typename array_traits_t<Impl>::Value;
+  Result r     = a[0];
+  unrolled_for_bounded<array_traits_t<Impl>::size - 1>(
+    [&](auto i) { r = std::max(r, a[i + 1]); });
   return r;
 }
 
@@ -457,9 +571,10 @@ ripple_host_device constexpr auto
 cross(const Array<ImplA>& a, const Array<ImplB>& b) noexcept
   -> array_impl_t<ImplA, ImplB> {
   using Result = array_impl_t<ImplA, ImplB>;
-  return Result{a[1] * b[2] - a[2] * b[1],
-                a[2] * b[0] - a[0] * b[2],
-                a[0] * b[1] - a[1] * b[0]};
+  return Result{
+    a[1] * b[2] - a[2] * b[1],
+    a[2] * b[0] - a[0] * b[2],
+    a[0] * b[1] - a[1] * b[0]};
 }
 
 /**
