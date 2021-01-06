@@ -19,7 +19,7 @@
 
 #include "shared_wrapper.hpp"
 #include "tensor_traits.hpp"
-#include <ripple/core/graph/modifier.hpp>
+#include "../graph/modifier.hpp"
 
 namespace ripple {
 
@@ -27,6 +27,15 @@ namespace ripple {
  * This struct extracts the blocks from a tensor.
  */
 struct BlockExtractor {
+  /**
+   * Defines a valid enable if not a modifier, shared wrapper, or tensor.
+   * \tparam T The type to base the enable on.
+   */
+  template <typeanme T>
+  using not_modifier_shared_or_tensor_enable_t = std::enable_if_t<
+    !is_modifier_v<T> && !is_shared_wrapper_v<T> && !is_tensor_v<T>,
+    int>;
+
   /**
    * Extracts the blocks from a tensor.
    *
@@ -37,7 +46,7 @@ struct BlockExtractor {
    * \tparam T The type of the object.
    * \return An rvalue rerence to the object.
    */
-  template <typename T, non_tensor_enable_t<T> = 0>
+  template <typename T, not_modifier_shared_or_tensor_enable_t<T> = 0>
   static auto extract_blocks_if_tensor(T&& t) noexcept -> T&& {
     return ripple_forward(t);
   }
@@ -71,10 +80,11 @@ struct BlockExtractor {
    * \return A new modification specifier which references the tensor blocks.
    */
   template <typename T, Modifier M, tensor_enable_t<T> = 0>
-  static auto
-  extract_blocks_if_tensor(ModificationSpecifier<T, M> specifier) noexcept {
+  static auto extract_blocks_if_tensor(
+    const ModificationSpecifier<T, M>& specifier) noexcept {
     using Spec = ModificationSpecifier<decltype(specifier.wrapped.blocks_)&, M>;
-    return Spec{specifier.wrapped.blocks_};
+    return Spec{
+      specifier.wrapped.blocks_, specifier.expansion, specifier.overlap};
   }
 
   /**
@@ -89,9 +99,36 @@ struct BlockExtractor {
    * \return A new shared wrapper which references the tensor blocks.
    */
   template <typename T, tensor_enable_t<T> = 0>
-  static auto extract_blocks_if_tensor(SharedWrapper<T> wrapper) noexcept {
+  static auto
+  extract_blocks_if_tensor(const SharedWrapper<T>& wrapper) noexcept {
     using Wrapper = SharedWrapper<decltype(wrapper.wrapped.blocks_)&>;
-    return Wrapper{wrapper.wrapped.blocks_};
+    // return Wrapper{wrapper.wrapped.blocks_, wrapper.padding,
+    // wrapper.padding};
+    return Wrapper{
+      wrapper.wrapped.blocks_,
+      wrapper.padding,
+      wrapper.expansion,
+      wrapper.overlap};
+  }
+
+  /**
+   * Extracts the blocks from a tensor.
+   *
+   * \note This overload is for tensor types wrapped in a shared wrapper
+   *       and returns a reference to blocks, rewrapped in the wrapper.
+   *       specifier.
+   *
+   * \param   wrapper The shared wrapper to extract the blocks from.
+   * \tparam  T       The type of the tensor object.
+   * \return A new shared wrapper which references the tensor blocks.
+   */
+  template <typename T, tensor_enable_t<T> = 0>
+  static auto
+  extract_blocks_if_tensor(const ExpansionWrapper<T>& wrapper) noexcept {
+    using Wrapper = ExpansionWrapper<decltype(wrapper.wrapped.blocks_)&>;
+    // return Wrapper{wrapper.wrapped.blocks_, wrapper.padding,
+    // wrapper.padding};
+    return Wrapper{wrapper.wrapped.blocks_, wrapper.expansion, wrapper.overlap};
   }
 };
 
