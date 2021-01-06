@@ -75,15 +75,16 @@ auto get_dim_num_threads(T elements, U max_threads) noexcept -> size_t {
  */
 template <typename Block, typename ExeImpl, any_block_1d_enable_t<Block> = 0>
 auto get_exec_size(
-  const Block& block, const ExecParams<ExeImpl>& exec_params) noexcept
-  -> std::tuple<dim3, dim3> {
+  const Block&               block,
+  const ExecParams<ExeImpl>& exec_params,
+  int                        overlap = 0) noexcept -> std::tuple<dim3, dim3> {
   const auto elems_x = block.size(dimx());
 
   auto threads = dim3(1, 1, 1);
   auto blocks  = dim3(1, 1, 1);
 
   threads.x = get_dim_num_threads(elems_x, exec_params.size(dimx()));
-  blocks.x  = get_dim_num_blocks(elems_x, threads.x);
+  blocks.x  = get_dim_num_blocks(elems_x, threads.x - overlap);
 
   return std::make_tuple(threads, blocks);
 }
@@ -102,8 +103,9 @@ auto get_exec_size(
  */
 template <typename Block, typename ExeImpl, any_block_2d_enable_t<Block> = 0>
 auto get_exec_size(
-  const Block& block, const ExecParams<ExeImpl>& exec_params) noexcept
-  -> std::tuple<dim3, dim3> {
+  const Block&               block,
+  const ExecParams<ExeImpl>& exec_params,
+  int                        overlap = 0) noexcept -> std::tuple<dim3, dim3> {
   const auto elems_x = block.size(dimx());
   const auto elems_y = block.size(dimy());
 
@@ -112,8 +114,8 @@ auto get_exec_size(
 
   threads.x = get_dim_num_threads(elems_x, exec_params.size(dimx()));
   threads.y = get_dim_num_threads(elems_y, exec_params.size(dimy()));
-  blocks.x  = get_dim_num_blocks(elems_x, threads.x);
-  blocks.y  = get_dim_num_blocks(elems_y, threads.y);
+  blocks.x  = get_dim_num_blocks(elems_x, threads.x - overlap);
+  blocks.y  = get_dim_num_blocks(elems_y, threads.y - overlap);
 
   return std::make_tuple(threads, blocks);
 }
@@ -131,11 +133,12 @@ auto get_exec_size(
  * \return A tuple with { num threads (3d), num blocks (3d) }.
  */
 template <typename Block, typename ExeImpl, any_block_3d_enable_t<Block> = 0>
-auto get_exec_size(const Block& block, const ExecParams<ExeImpl>& exec_params)
+auto get_exec_size(
+  const Block& block, const ExecParams<ExeImpl>& exec_params, int overlap = 0)
   -> std::tuple<dim3, dim3> {
-  const auto elems_x = block.size(dimx());
-  const auto elems_y = block.size(dimy());
-  const auto elems_z = block.size(dimz());
+  const size_t elems_x = block.size(dimx());
+  const size_t elems_y = block.size(dimy());
+  const size_t elems_z = block.size(dimz());
 
   auto threads = dim3(1, 1, 1);
   auto blocks  = dim3(1, 1, 1);
@@ -143,9 +146,9 @@ auto get_exec_size(const Block& block, const ExecParams<ExeImpl>& exec_params)
   threads.x = get_dim_num_threads(elems_x, exec_params.size(dimx()));
   threads.y = get_dim_num_threads(elems_y, exec_params.size(dimy()));
   threads.z = get_dim_num_threads(elems_z, exec_params.size(dimz()));
-  blocks.x  = get_dim_num_blocks(elems_x, threads.x);
-  blocks.y  = get_dim_num_blocks(elems_y, threads.y);
-  blocks.z  = get_dim_num_blocks(elems_z, threads.z);
+  blocks.x  = get_dim_num_blocks(elems_x, threads.x - overlap);
+  blocks.y  = get_dim_num_blocks(elems_y, threads.y - overlap);
+  blocks.z  = get_dim_num_blocks(elems_z, threads.z - overlap);
 
   return std::make_tuple(threads, blocks);
 }
