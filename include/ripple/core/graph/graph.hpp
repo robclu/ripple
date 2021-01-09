@@ -17,6 +17,7 @@
 #ifndef RIPPLE_GRAPH_GRAPH_HPP
 #define RIPPLE_GRAPH_GRAPH_HPP
 
+#include "memcopy.hpp"
 #include "node.hpp"
 #include "splitter.hpp"
 #include "reducer.hpp"
@@ -42,7 +43,7 @@ class Graph;
 class Executor;
 
 /* Forward declaration of the execution function for a graph. */
-inline auto execute(Graph& graph) noexcept -> void;
+auto execute(Graph& graph) noexcept -> void;
 
 /**
  * The Graph class is a collection of nodes and the connectivity between them.
@@ -52,6 +53,8 @@ class Graph {
   friend class Executor;
   /** Allow the slitter access to modify the graph. */
   friend struct Splitter;
+  /** Allows the memcopy functor access  to modify the graph. */
+  friend struct Memcopy;
 
   // clang-format off
   /** The alignment for a node, use some multiple of the false sharing size. */
@@ -164,16 +167,7 @@ class Graph {
    * \param nodes The number of nodes for the allocation pool.
    * \return true when called for the first time, false otherwise.
    */
-  static auto set_allocation_pool_size(size_t nodes) noexcept -> bool {
-    Guard g(initialization_lock());
-    if (is_initialized()) {
-      return false;
-    }
-
-    allocation_pool_nodes() = nodes;
-    is_initialized()        = true;
-    return true;
-  }
+  static auto set_allocation_pool_size(size_t nodes) noexcept -> bool;
 
   /**
    * Makes a node with the given callable and args.
@@ -211,15 +205,7 @@ class Graph {
   /**
    * Resets the graph, returning all allocated nodes to the allocator.
    */
-  auto reset() noexcept -> void {
-    for (auto& node : nodes_) {
-      if (node) {
-        info_allocator().recycle(node->info_);
-        node_allocator().recycle(node);
-      }
-    }
-    exec_count_ = 0;
-  }
+  auto reset() noexcept -> void;
 
   /**
    * Clones the graph by allocates new nodes for the new graph and then copying
@@ -229,25 +215,7 @@ class Graph {
    *
    * \return The new graph.
    */
-  auto clone() const noexcept -> Graph {
-    Graph graph;
-    for (const auto& node : nodes_) {
-      // TODO: Add copying of node info for new node.
-      graph.nodes_.emplace_back(node_allocator().create<NodeType>(*node));
-      graph.nodes_.back()->info_ =
-        info_allocator().create<NodeInfo>(node->info_->name, node->info_->id);
-    }
-    graph.join_ids_.clear();
-    for (const auto& id : join_ids_) {
-      graph.join_ids_.push_back(id);
-    }
-    graph.split_ids_.clear();
-    for (const auto& id : split_ids_) {
-      graph.split_ids_.push_back(id);
-    }
-    graph.exec_count_ = exec_count_;
-    return graph;
-  }
+  auto clone() const noexcept -> Graph;
 
   /**
    * Gets the number of nodes in the graph.
@@ -272,29 +240,14 @@ class Graph {
    * \param name The name of the node to find.
    * \return A valid pointer wrapped in an optional on success.
    */
-  auto find(std::string name) noexcept -> std::optional<NodeType*> {
-    for (auto& node : nodes_) {
-      if (std::strcmp(node->info_->name.c_str(), name.c_str()) == 0) {
-        return std::make_optional<NodeType*>(node);
-      }
-    }
-    return std::nullopt;
-  }
+  auto find(std::string name) noexcept -> std::optional<NodeType*>;
 
   /**
    * Finds the last instance of a node with the given name.
    * \param name The name of the node to find.
    * \return A valid optional if the node was found.
    */
-  auto find_last_of(std::string name) noexcept -> std::optional<NodeType*> {
-    for (int i = nodes_.size() - 1; i >= 0; --i) {
-      auto* node = nodes_[i];
-      if (std::strcmp(node->info_->name.c_str(), name.c_str()) == 0) {
-        return std::make_optional<NodeType*>(node);
-      }
-    }
-    return std::nullopt;
-  }
+  auto find_last_of(std::string name) noexcept -> std::optional<NodeType*>;
 
   /*==--- [emplace] --------------------------------------------------------==*/
 
@@ -427,18 +380,7 @@ class Graph {
    * \tparam F        The type of the callable.
    * \tparam Args     The types of the arguments.
    */
-  auto gpu_fence() -> Graph& {
-    join_ids_.emplace_back(nodes_.size());
-
-    NodeInfo info{NodeKind::normal, ExecutionKind::gpu};
-    for (const auto& gpu : topology().gpus) {
-      emplace_named(info, [&gpu] { gpu.fence(); });
-    }
-
-    join_ids_.emplace_back(nodes_.size());
-    info.kind = NodeKind::sync;
-    return emplace_named(info, [] {});
-  }
+  auto gpu_fence() -> Graph&;
 
   /*==--- [then] -----------------------------------------------------------==*/
 
@@ -650,10 +592,102 @@ class Graph {
     return *this;
   }
 
+  /*==--- [memcpy] ---------------------------------------------------------==*/
+
+  /**
+   * Performs a copy of the data between the partitions of the data, if the
+   * data is a tensor and has partitions, otherwise does not emplace any
+   * nodes into the graph.
+   *
+   * \note If the tensor is wrapped in any modifiers, these are applied as well
+   *       to ensure that the dependencies between nodes are created.
+   *
+   * \note This uses the default execution kind of the graph.
+   *
+   * \param  args The arguments to the apply the memcopies to.
+   * \tparam Args The types of the arguments.
+   * \return A reference to the modified graph.
+   */
+  template <typename... Args>
+  auto memcopy_padding(Args&&... args) noexcept -> Graph& {
+    Memcopy::memcopy(*this, execution_, ripple_forward(args)...);
+    return *this;
+  }
+
+  /**
+   * Performs a copy of the data between the partitions of the data, if the
+   * data is a tensor and has partitions, otherwise does not emplace any
+   * nodes into the graph. This operation will only perform the call to start
+   * the memcopy operations once all previosuly submitted operations have been
+   * executed.
+   *
+   * \note If the tensor is wrapped in any modifiers, these are applied as well
+   *       to ensure that the dependencies between nodes are created.
+   *
+   * \note This uses the default execution kind of the graph.
+   *
+   * \param  args The arguments to the apply the memcopies to.
+   * \tparam Args The types of the arguments.
+   * \return A reference to the modified graph.
+   */
+  template <typename... Args>
+  auto then_memcopy_padding(Args&&... args) noexcept -> Graph& {
+    join_ids_.emplace_back(nodes_.size());
+    split_ids_.emplace_back(nodes_.size());
+    Memcopy::memcopy(*this, execution_, ripple_forward(args)...);
+    return *this;
+  }
+
+  /**
+   * Performs a copy of the data between the partitions of the data, if the
+   * data is a tensor and has partitions, otherwise does not emplace any
+   * nodes into the graph.
+   *
+   * \note If the tensor is wrapped in any modifiers, these are applied as well
+   *       to ensure that the dependencies between nodes are created.
+   *
+   *
+   * \param  args The arguments to the apply the memcopies to.
+   * \param  exec The kind of the execution of the memory copying, i.e, if
+   *              the memcopy is required for the host or device data.
+   * \tparam Args The types of the arguments.
+   * \return A reference to the modified graph.
+   */
+  template <typename... Args>
+  auto memcopy_padding(ExecutionKind exec, Args&&... args) noexcept -> Graph& {
+    Memcopy::memcopy(*this, exec, ripple_forward(args)...);
+    return *this;
+  }
+
+  /**
+   * Performs a copy of the data between the partitions of the data, if the
+   * data is a tensor and has partitions, otherwise does not emplace any
+   * nodes into the graph. This operation will only perform the call to start
+   * the memcopy operations once all previosuly submitted operations have been
+   * executed.
+   *
+   * \note If the tensor is wrapped in any modifiers, these are applied as well
+   *       to ensure that the dependencies between nodes are created.
+   *
+   *
+   * \param  args The arguments to the apply the memcopies to.
+   * \param  exec The kind of the execution of the memory copying, i.e, if
+   *              the memcopy is required for the host or device data.
+   * \tparam Args The types of the arguments.
+   * \return A reference to the modified graph.
+   */
+  template <typename... Args>
+  auto
+  then_memcopy_padding(ExecutionKind exec, Args&&... args) noexcept -> Graph& {
+    join_ids_.emplace_back(nodes_.size());
+    split_ids_.emplace_back(nodes_.size());
+    Memcopy::memcopy(*this, exec, ripple_forward(args)...);
+    return *this;
+  }
+
   /*==--- [reduction] ------------------------------------------------------==*/
 
   // clang-format off
-
   /**
    * Performs a reduction of the data using the given predicate.
    * 
@@ -816,29 +850,7 @@ class Graph {
    * last layer of this graph.
    * \param graph The graph to connect to this graph.
    */
-  auto connect(Graph& graph) noexcept -> void {
-    const int start = std::min(split_ids_.back(), join_ids_.back());
-    const int end   = std::max(graph.split_ids_[0], graph.join_ids_[0]);
-
-    for (int i = 0; i < end; ++i) {
-      auto* other_node = graph.nodes_[i];
-      for (int j = start; j < nodes_.size(); ++j) {
-        auto* this_node = nodes_[j];
-
-        // clang-format off
-        const bool unmatched_split = 
-          other_node->kind() == this_node->kind() &&
-          other_node->id()   != this_node->id()   &&
-          this_node->kind()  == NodeKind::split;
-        // clang-format on
-
-        if (unmatched_split) {
-          continue;
-        }
-        this_node->add_successor(*other_node);
-      }
-    }
-  }
+  auto connect(Graph& graph) noexcept -> void;
 
   /**
    * Gets a reference to the node with the given id in the last split.
@@ -846,17 +858,7 @@ class Graph {
    * \return An optional with a pointer to the node if one was found.
    */
   auto find_in_last_split(typename NodeInfo::IdType id) noexcept
-    -> std::optional<NodeType*> {
-    const int start = split_ids_[split_ids_.size() - 2];
-    const int end   = split_ids_[split_ids_.size() - 1];
-    for (int i = start; i < end; ++i) {
-      auto* node = nodes_[i];
-      if (node->id() == id) {
-        return std::make_optional<NodeType*>(node);
-      }
-    }
-    return std::nullopt;
-  }
+    -> std::optional<NodeType*>;
 
   /**
    * Sets up the given node. This initializes the dependency count and connects
@@ -872,61 +874,13 @@ class Graph {
    * Sets up the node if it is a split node.
    * \param node The node to set up.
    */
-  auto setup_split_node(NodeType& node) noexcept -> void {
-    /* For a split node, we need to find all the indices in the previous split
-     * and for any node with the same id, we need to add dependencies between
-     * that node and this node. We need to do the same for any friends of the
-     * dependents. */
-    if (!(node.kind() == NodeKind::split && split_ids_.size() > 1)) {
-      return;
-    }
-
-    const int start = split_ids_[split_ids_.size() - 2];
-    const int end   = split_ids_[split_ids_.size() - 1];
-    for (int i = start; i < end; ++i) {
-      auto* other = nodes_[i];
-      if (
-        other->kind() != NodeKind::sync &&
-        (other->kind() != NodeKind::split || other->id() != node.id())) {
-        continue;
-      }
-      other->add_successor(node);
-
-      for (const auto& friend_id : other->friends()) {
-        if (auto friend_node = find_in_last_split(friend_id)) {
-          friend_node.value()->add_successor(node);
-        }
-      }
-    }
-  }
+  auto setup_split_node(NodeType& node) noexcept -> void;
 
   /**
    * Node setup for a non-split node.
    * \param node The node to set up.
    */
-  auto setup_nonsplit_node(NodeType& node) noexcept -> void {
-    if (join_ids_.size() <= 1) {
-      return;
-    }
-
-    /* This node is a successor of all nodes between the the node with the
-     * last index in the join index vector and the last node in the node
-     * container, so we need to set the number of dependents for the node and
-     * also add this node as a successor to those other nodes, if there are
-     * enough join indices. */
-    constexpr auto split = NodeKind::split;
-    const int      start = join_ids_[join_ids_.size() - 2];
-    const int      end   = join_ids_[join_ids_.size() - 1];
-    for (int i = start; i < end; ++i) {
-      auto& other_node = *nodes_[i];
-      if (other_node.kind() == split && node.kind() == split) {
-        continue;
-      }
-
-      // One of the node kinds is not split, so there is a dependence.
-      other_node.add_successor(node);
-    }
-  }
+  auto setup_nonsplit_node(NodeType& node) noexcept -> void;
 
   /*==--- [static methods] -------------------------------------------------==*/
 
