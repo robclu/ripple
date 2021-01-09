@@ -1,20 +1,20 @@
-//==--- ripple/core/graph/detail/splitter_utils_.hpp ------- -*- C++ -*- ---==//
-//
-//                                 Ripple
-//
-//                      Copyright (c) 2020 Rob Clucas
-//
-//  This file is distributed under the MIT License. See LICENSE for details.
-//
-//==------------------------------------------------------------------------==//
-//
-/// \file  splitter_utils_.hpp
-/// \brief This file implements utilities for a splitter implementation.
-//
-//==------------------------------------------------------------------------==//
+/**==--- ripple/core/graph/detail/utils_.hpp --------------- -*- C++ -*- ---==**
+ *
+ *                                 Ripple
+ *
+ *                   Copyright (c) 2019 - 2021 Rob Clucas
+ *
+ *  This file is distributed under the MIT License. See LICENSE for details.
+ *
+ *==-------------------------------------------------------------------------==*
+ *
+ * \file  splitter_utils_.hpp
+ * \brief This file implements utilities for a splitter implementation.
+ *
+ *==------------------------------------------------------------------------==*/
 
-#ifndef RIPPLE_GRAPH_DETAIL_SPLITTER_UTILS__HPP
-#define RIPPLE_GRAPH_DETAIL_SPLITTER_UTILS__HPP
+#ifndef RIPPLE_GRAPH_DETAIL_UTILS__HPP
+#define RIPPLE_GRAPH_DETAIL_UTILS__HPP
 
 #include "../node.hpp"
 #include "../../container/block.hpp"
@@ -50,8 +50,8 @@ auto deref_if_iter(T&& iter) noexcept -> decltype(*iter)& {
 /**
  * Gets a reference to the iterated type.
  *
- * \note This overlaod is only enabled for non-iterator types and forwards the
- *       argument back.
+ * \note This overlaod is only enabled for non-iterator types and forwards
+ * the argument back.
  *
  * \param iter The iterator to get the dereferences type from.
  * \return A reference to the iterated data.
@@ -82,8 +82,8 @@ auto padding_if_iter(T&& iter) noexcept -> size_t {
 /**
  * Gets a reference to the iterated type.
  *
- * \note This overlaod is only enabled for non-iterator types and forwards the
- *       argument back.
+ * \note This overlaod is only enabled for non-iterator types and forwards
+ * the argument back.
  *
  * \param iter The iterator to get the dereferences type from.
  * \return A reference to the iterated data.
@@ -99,28 +99,28 @@ auto padding_if_iter(T&& t) noexcept -> size_t {
  * Copies the padding for the faces of the block iterated over by the iterato
  * for each of the dimensions which can be iterated over.
  *
- * \note This will fail at compile time if the iterator does not iterator over a
- *       Block.
+ * \note This will fail at compile time if the iterator does not iterator
+ *       over a Block.
  *
- * \param  exec_kind The kind of the execution for the operation.
+ * \param  exec      The kind of the execution for the operation.
  * \param  it        The iterator to copy the face padding for.
  * \tparam Iterator  The type of the iterator.
  */
 template <typename Iterator>
-auto copy_face_padding(ExecutionKind exec_kind, Iterator&& it) noexcept
-  -> void {
+auto copy_face_padding(ExecutionKind exec, Iterator&& it) noexcept -> void {
   static_assert(
     is_iterator_v<Iterator>, "Friend node adding requires iterator!");
   static_assert(
     is_multiblock_v<decltype(*it)>, "Iterator must be over block type!");
+
   unrolled_for<iterator_traits_t<Iterator>::dimensions>([&](auto dim) {
     if (!it->first_in_dim(dim)) {
-      constexpr auto specifier = CopySpecifier<dim, FaceLocation::start>();
-      it->fill_padding(*it.offset(dim, -1), specifier, exec_kind);
+      it->fill_padding(
+        *it.offset(dim, -1), CopySpecifier<dim, FaceLocation::start>(), exec);
     }
     if (!it->last_in_dim(dim)) {
-      constexpr auto specifier = CopySpecifier<dim, FaceLocation::end>();
-      it->fill_padding(*it.offset(dim, 1), specifier, exec_kind);
+      it->fill_padding(
+        *it.offset(dim, 1), CopySpecifier<dim, FaceLocation::end>(), exec);
     }
   });
 }
@@ -165,18 +165,18 @@ auto add_friend_nodes(Node<Align, MinStorage>& node, Iterator&& it) noexcept
  * If the is_exclusive parameter is true, then friend nodes are added to the
  * resulting node in the graph so that subsequent operations on the new node
  * wont run until the friend nodes in the same level finish (i.e so that this
- * node--the friend-- finishes its copy bofore any other nodes run, so it make
- * a  stricter dependency in the graph).
+ * node--the friend-- finishes its copy bofore any other nodes run, so it
+ * make a  stricter dependency in the graph).
  *
- * \note If the iterator iterates over a non-block enabled type then no node is
- *       added to the graph.
+ * \note If the iterator iterates over a non-block enabled type then no node
+ * is added to the graph.
  *
  * \param  graph        The graph to add the node to.
  * \param  exec_kind    The kind of execution for the node.
  * \param  it           The iterator to add a node for.
- * \param  is_exclusive If data requires exclusive access (i.e is written to).
- * \tparam GraphType    The type of the graph.
- * \tparam Iterator     The type of the iterator.
+ * \param  is_exclusive If data requires exclusive access (i.e is written
+ * to). \tparam GraphType    The type of the graph. \tparam Iterator     The
+ * type of the iterator.
  */
 template <typename GraphType, typename Iterator>
 auto add_padding_op_nodes_for_iter(
@@ -196,7 +196,7 @@ auto add_padding_op_nodes_for_iter(
         },
         ripple_forward(it));
 
-      /* See function comment. */
+      // See function comment.
       if (is_exclusive) {
         auto* node = graph.find(name).value();
         detail::add_friend_nodes(*node, it);

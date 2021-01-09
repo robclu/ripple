@@ -1,26 +1,24 @@
-//==--- ripple/core/graph/splitter.hpp --------------------- -*- C++ -*- ---==//
-//
-//                                 Ripple
-//
-//                      Copyright (c) 2019, 2020 Rob Clucas
-//
-//  This file is distributed under the MIT License. See LICENSE for details.
-//
-//==------------------------------------------------------------------------==//
-//
-/// \file  splitter.hpp
-/// \brief This file implements functionality for splitting operations on a
-///        splittable type into a parallel graph.
-//
-//==------------------------------------------------------------------------==//
+/**==--- ripple/core/graph/splitter.hpp -------------------- -*- C++ -*- ---==**
+ *
+ *                                 Ripple
+ *
+ *                  Copyright (c) 2019 - 2021 Rob Clucas
+ *
+ *  This file is distributed under the MIT License. See LICENSE for details.
+ *
+ *==-------------------------------------------------------------------------==*
+ *
+ * \file  splitter.hpp
+ * \brief This file implements functionality for splitting a tensor in a graph.
+ *
+ *==------------------------------------------------------------------------==*/
 
 #ifndef RIPPLE_GRAPH_SPLITTER_HPP
 #define RIPPLE_GRAPH_SPLITTER_HPP
 
 #include "modifier.hpp"
-#include "detail/splitter_utils_.hpp"
+#include "detail/utils_.hpp"
 #include "../container/block_extractor.hpp"
-#include "../container/tensor.hpp"
 #include "../execution/execution_traits.hpp"
 #include "../functional/invoke.hpp"
 
@@ -124,7 +122,6 @@ auto fill_indices(
  * for each of the partitions in the tensor. It also determines the dependencies
  * between nodes in the graph, and adds memory transfer nodes for copying tensor
  * padding data, if required.
- *
  */
 struct Splitter {
  private:
