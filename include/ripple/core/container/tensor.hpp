@@ -68,15 +68,15 @@ class Tensor {
 
  public:
   /** Defines the size type used. */
-  using Size        = uint32_t;
+  using Size       = uint32_t;
   /** Defines the type of the block split specifier. */
-  using BlockSplit  = std::array<Size, dims>;
+  using BlockSplit = std::array<Size, dims>;
   /** Defines the type to store partition information. */
-  using Partitions  = std::array<Size, dims>;
+  using Partitions = std::array<Size, dims>;
   /** Container to hold a number of elements. */
-  using Elements    = std::array<Size, dims>;
+  using Elements   = std::array<Size, dims>;
   /** Defines the type of an iterator over the blocks. */
-  using BlockIter   = typename block_traits_t<Blocks>::Iter;
+  using BlockIter  = typename block_traits_t<Blocks>::Iter;
   // clang-format on
 
   /*==--- [friends] --------------------------------------------------------==*/
@@ -97,9 +97,9 @@ class Tensor {
         swap(left_it->host_data, right_it->host_data);
         swap(left_it->device_data, right_it->device_data);
 
-        auto st = left_it->stream();
+        auto stream = left_it->stream();
         left_it->device_data.set_stream(right_it->stream());
-        right_it->device_data.set_stream(st);
+        right_it->device_data.set_stream(stream);
       },
       lhs.blocks_,
       rhs.blocks_);
@@ -475,6 +475,7 @@ class Tensor {
   /**
    * Initializes the tensor. This will allocate the blocks for the tensor, as
    * well as the data for each of the allocted blocks.
+   * \param stream_map Map of stream indices for each gpu.
    */
   auto initialize(ripple::StreamMap stream_map = ripple::StreamMap()) -> void {
     blocks_.set_op_kind(BlockOpKind::synchronous);
@@ -577,6 +578,8 @@ class Tensor {
   /**
    * Allocates the data for the blocks and initializes the fields for the
    * blocks.
+   * \param stream_map A map of gpu ids to streams to use for the partitions
+   *                   of the tensor.
    */
   auto allocate_data_for_blocks(const ripple::StreamMap& stream_map) -> void {
     invoke(blocks_, [&](auto block) {
@@ -612,6 +615,8 @@ class Tensor {
       // Set all the gpu data:
       GpuInfo& gpu = topology().gpus[id];
       block->set_device_id(gpu.index);
+      block->set_transfer_stream(
+        gpu.transfer_streams[gpu.next_transfer_stream_id()].stream);
       gpu::set_device(gpu.index);
 
       // Allocate the host memory:
@@ -622,12 +627,11 @@ class Tensor {
         stream_map.find(id) != stream_map.end() ? stream_map.at(id) : 0;
 
       // Now alloate device data:
-      device.set_stream(gpu.streams[stream_id].stream);
+      auto& stream = gpu.compute_streams[stream_id].stream;
+      device.set_stream(stream);
       device.reallocate();
-      gpu::synchronize_stream(gpu.streams[stream_id].stream);
+      gpu::synchronize_stream(stream);
 
-      // Update global gpu memory data:
-      gpu.mem_alloc += device.mem_requirement();
       block->data_state = DataState::updated_device;
     });
   }
