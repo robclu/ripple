@@ -224,7 +224,7 @@ struct Block : MultiBlock<Block<T, Dimensions>> {
    * \return The transfer stream for the block.
    */
   auto transfer_stream() const noexcept -> Stream {
-    return transfer_stream != nullptr ? transfer_stream : stream();
+    return transfer_stream_ != nullptr ? transfer_stream_ : stream();
   }
 
   /**
@@ -232,7 +232,7 @@ struct Block : MultiBlock<Block<T, Dimensions>> {
    * \param stream The stream to set the transfer stream to.
    */
   auto set_transfer_stream(Stream stream) noexcept -> void {
-    transfer_stream = stream;
+    transfer_stream_ = stream;
   }
 
   /**
@@ -288,20 +288,28 @@ struct Block : MultiBlock<Block<T, Dimensions>> {
    * \note Whether this copies the data from the inside of the domain or from
    *       the padding of the other block depending on the mapping.
    *
-   * \param  other     The other block to use to fill the padding.
-   * \param  dst_face  The destination face to fill.
-   * \tparam Dim       The dimension of the destination face.
-   * \tparam Location  The location of the face to fill the padding for.
-   * \tparam Map       The padding for the face.
+   * \note When the exec_kind specifies gpu, ie the transfer is between gpus
+   *       or between a gpu and the host, then transfer_kind specifies if the
+   *       operations are placed on the same stream as compute operations (i.e
+   *       they are synchronous with respect to compute) or the transfer stream
+   *       and can happen asynchronously with respect to compute.
+   *
+   * \param  other         The other block to use to fill the padding.
+   * \param  dst_face      The destination face to fill.
+   * \param  exec_kind     The kind of the execution to fill the padding.
+   * \param  transfer_kind The kind of the transfer operation.
+   * \tparam Dim           The dimension of the destination face.
+   * \tparam Location      The location of the face to fill the padding for.
+   * \tparam Map           The padding for the face.
    */
   template <size_t Dim, FaceLocation Location, Mapping Map>
   auto fill_padding(
     Block&                            other,
     CopySpecifier<Dim, Location, Map> dst_face,
-    ExecutionKind                     exe,
-    bool use_transfer_stream = false) noexcept -> void {
-    if (exe == ExecutionKind::gpu) {
-      fill_padding_device(other, dst_face, use_transfer_stream);
+    ExecutionKind                     exec_kind,
+    TransferKind transfer_kind = TransferKind::synchronous) noexcept -> void {
+    if (exec_kind == ExecutionKind::gpu) {
+      fill_padding_device(other, dst_face, transfer_kind);
       return;
     }
     fill_padding_host(other, dst_face);
@@ -368,17 +376,18 @@ struct Block : MultiBlock<Block<T, Dimensions>> {
 
   //==--- [members] --------------------------------------------------------==//
 
-  HostBlock   host_data;               //!< Host block data.
-  DeviceBlock device_data;             //!< Device block data.
-  Index       indices       = {};      //!< Indices of the block.
-  Index       block_sizes   = {};      //!< Sizes of the blocks.
-  Index       global_sizes  = {};      //!< Global sizes.
-  Index       max_indices   = {};      //!< Max indices for each dimension.
-  uint32_t    gpu_id        = 0;       //!< Device index.
-  Stream      transer_stram = nullptr; //!< Transfer stream id.
-  DataState   data_state    = DataState::invalid; //!< Data state.
+  HostBlock   host_data;         //!< Host block data.
+  DeviceBlock device_data;       //!< Device block data.
+  Index       indices      = {}; //!< Indices of the block.
+  Index       block_sizes  = {}; //!< Sizes of the blocks.
+  Index       global_sizes = {}; //!< Global sizes.
+  Index       max_indices  = {}; //!< Max indices for each dimension.
+  uint32_t    gpu_id       = 0;  //!< Device index.
+  DataState   data_state   = DataState::invalid; //!< Data state.
 
  private:
+  Stream transfer_stream_ = nullptr; //!< Transfer stream id.
+
   /**
    * Creates a face specifier using the given Location, with a face
    * *opposite* to the one given in the face location.
@@ -442,57 +451,50 @@ struct Block : MultiBlock<Block<T, Dimensions>> {
    *
    * \note Note, this implementation is for execution on the device.
    *
-   * \param  other     The other block to use to fill the padding.
-   * \param  dest_face The destination face to fill.
-   * \tparam Dim       The dimension of the destination face.
-   * \tparam Location  The location of the face to fill the padding for.
-   * \tparam Map       The padding for the face.
+   * \param  other         The other block to use to fill the padding.
+   * \param  dest_face     The destination face to fill.
+   * \param  transfer_kind The kind of the transfer operation.
+   * \tparam Dim           The dimension of the destination face.
+   * \tparam Location      The location of the face to fill the padding for.
+   * \tparam Map           The padding for the face.
    */
   template <size_t Dim, FaceLocation Location, Mapping Map>
   auto fill_padding_device(
     Block&                            other,
     CopySpecifier<Dim, Location, Map> dest_face,
-    bool use_transfer_stream = false) noexcept -> void {
+    TransferKind                      transfer_kind) noexcept -> void {
     constexpr auto src_face = opp_face_for_src(dest_face);
     constexpr auto dst_face = same_face_for_dst(dest_face);
+
+    const bool async_transfer = transfer_kind == TransferKind::asynchronous;
 
     // If we are on the same gpu, then we can do the device to device copy,
     // otherwise we need to go through the host:
     if (topology().device_to_device_available(gpu_id, other.gpu_id)) {
       gpu::set_device(other.gpu_id);
-      auto stream = use_transfer_stream ? other.transfer_stream()
-                                        : other.stream();
+      auto stream = async_transfer ? other.transfer_stream() : other.stream();
       memcopy_padding(
         other.device_data, device_data, src_face, dst_face, stream);
-      // other.device_data.stream());
-      // if (other.gpu_id == gpu_id) {
       gpu::synchronize_stream(stream);
-      // gpu::synchronize_stream(other.device_data.stream());
-      //}
       return;
     }
 
-    auto this_stream  = use_transfer_stream ? transfer_stream() : stream();
-    auto other_stream = use_transfer_stream ? other.transfer_stream()
-                                            : other.stream();
-    // Here we can't do a device -> device copy, so go through the host:
-    // First copy from the other block's device data to this block's host data:
+    auto this_stream  = async_transfer ? transfer_stream() : stream();
+    auto other_stream = async_transfer ? other.transfer_stream()
+                                       : other.stream();
+
+    // Here we can't do a device -> device copy, so go
+    // through the host: First copy from the other block's
+    // device data to this block's host data, and wait for the
+    // transfer to complete.
     gpu::set_device(other.gpu_id);
-    // auto event = gpu::create_event(other.device_data.stream());
     memcopy_padding(
       other.device_data, host_data, src_face, src_face, other_stream);
-    // other.device_data.stream());
     gpu::synchronize_stream(other_stream);
-    // gpu::synchronize_stream(other.device_data.stream());
 
-    // Have to wait for the copy to finish ...
     // Then copy from this block's host data to this blocks device data:
     gpu::set_device(gpu_id);
-    // gpu::synchronize_stream(device_data.stream(), event);
     memcopy_padding(host_data, device_data, src_face, dst_face, this_stream);
-    // host_data, device_data, src_face, dst_face, device_data.stream());
-    // gpu::synchronize_stream(device_data.stream());
-    // gpu::destroy_event(event);
   }
 
   /**
