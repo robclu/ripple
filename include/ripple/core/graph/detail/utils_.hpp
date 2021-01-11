@@ -102,12 +102,15 @@ auto padding_if_iter(T&& t) noexcept -> size_t {
  * \note This will fail at compile time if the iterator does not iterator
  *       over a Block.
  *
- * \param  exec      The kind of the execution for the operation.
+ * \param  exec_kind The kind of the execution for the operation.
+ * \param  transfer  The kind of the transfer operation.
  * \param  it        The iterator to copy the face padding for.
  * \tparam Iterator  The type of the iterator.
  */
 template <typename Iterator>
-auto copy_face_padding(ExecutionKind exec, Iterator&& it) noexcept -> void {
+auto copy_face_padding(
+  ExecutionKind exec_kind, TransferKind transfer_kind, Iterator&& it) noexcept
+  -> void {
   static_assert(
     is_iterator_v<Iterator>, "Friend node adding requires iterator!");
   static_assert(
@@ -116,11 +119,17 @@ auto copy_face_padding(ExecutionKind exec, Iterator&& it) noexcept -> void {
   unrolled_for<iterator_traits_t<Iterator>::dimensions>([&](auto dim) {
     if (!it->first_in_dim(dim)) {
       it->fill_padding(
-        *it.offset(dim, -1), CopySpecifier<dim, FaceLocation::start>(), exec);
+        *it.offset(dim, -1),
+        CopySpecifier<dim, FaceLocation::start>(),
+        exec_kind,
+        transfer_kind);
     }
     if (!it->last_in_dim(dim)) {
       it->fill_padding(
-        *it.offset(dim, 1), CopySpecifier<dim, FaceLocation::end>(), exec);
+        *it.offset(dim, 1),
+        CopySpecifier<dim, FaceLocation::end>(),
+        exec_kind,
+        transfer_kind);
     }
   });
 }
@@ -171,17 +180,20 @@ auto add_friend_nodes(Node<Align, MinStorage>& node, Iterator&& it) noexcept
  * \note If the iterator iterates over a non-block enabled type then no node
  * is added to the graph.
  *
- * \param  graph        The graph to add the node to.
- * \param  exec_kind    The kind of execution for the node.
- * \param  it           The iterator to add a node for.
- * \param  is_exclusive If data requires exclusive access (i.e is written
- * to). \tparam GraphType    The type of the graph. \tparam Iterator     The
- * type of the iterator.
+ * \param  graph         The graph to add the node to.
+ * \param  exec_kind     The kind of execution for the node.
+ * \param  transfer_kind The kind of the transfer operation.
+ * \param  it            The iterator to add a node for.
+ * \param  is_exclusive  If data requires exclusive access (i.e is written
+ *                       to).
+ * \tparam GraphType     The type of the graph.
+ * \tparam Iterator      The type of the iterator.
  */
 template <typename GraphType, typename Iterator>
 auto add_padding_op_nodes_for_iter(
   GraphType&    graph,
   ExecutionKind exec_kind,
+  TransferKind  transfer_kind,
   Iterator&&    it,
   bool          is_exclusive) noexcept -> void {
   using IterValue = std::decay_t<decltype(*it)>;
@@ -191,8 +203,8 @@ auto add_padding_op_nodes_for_iter(
       const auto id   = NodeInfo::id_from_indices(it->indices);
       graph.emplace_named(
         NodeInfo(name, id, NodeKind::split, exec_kind),
-        [exec_kind](auto&& iter) {
-          copy_face_padding(exec_kind, ripple_forward(iter));
+        [exec_kind, transfer_kind](auto&& iter) {
+          copy_face_padding(exec_kind, transfer_kind, ripple_forward(iter));
         },
         ripple_forward(it));
 
@@ -211,12 +223,13 @@ auto add_padding_op_nodes_for_iter(
  * \note This overload is for iterator types and adds a padding node to the
  *       graph if the Modifier is a modifier.
  *
- * \param  graph      The graph to add the nodes to.
- * \param  exec_kind  The kind of execution for the nodes.
- * \param  arg        The argument to generate a padding node for.
- * \tparam Modifier   Modifier for how the argument data is accessed.
- * \tparam GraphType  The type of the graph.
- * \tparam Arg        The type of the arg.
+ * \param  graph         The graph to add the nodes to.
+ * \param  exec_kind     The kind of execution for the nodes.
+ * \param  transfer_kind The kind of the transfer operation.
+ * \param  arg           The argument to generate a padding node for.
+ * \tparam Modifier      Modifier for how the argument data is accessed.
+ * \tparam GraphType     The type of the graph.
+ * \tparam Arg           The type of the arg.
  */
 template <
   typename Modifier,
@@ -224,11 +237,18 @@ template <
   typename Arg,
   iterator_enable_t<Arg> = 0>
 auto add_padding_op_nodes_impl(
-  GraphType& graph, ExecutionKind exec_kind, Arg&& arg) noexcept -> void {
+  GraphType&    graph,
+  ExecutionKind exec_kind,
+  TransferKind  transfer_kind,
+  Arg&&         arg) noexcept -> void {
   using Traits = modification_traits_t<Modifier>;
   if constexpr (Traits::is_modifier) {
     add_padding_op_nodes_for_iter(
-      graph, exec_kind, ripple_forward(arg), Traits::is_exclusive);
+      graph,
+      exec_kind,
+      transfer_kind,
+      ripple_forward(arg),
+      Traits::is_exclusive);
   }
 }
 
@@ -237,12 +257,13 @@ auto add_padding_op_nodes_impl(
  *
  * \note This overload is for non-iterator types and does nothing.
  *
- * \param  graph      The graph to add the nodes to.
- * \param  exec_kind  The kind of execution for the nodes.
- * \param  arg        The argument to generate a padding node for.
- * \tparam Modifier   Modifier for how the argument data is accessed.
- * \tparam GraphType  The type of the graph.
- * \tparam Arg        The type of the arg.
+ * \param  graph         The graph to add the nodes to.
+ * \param  exec_kind     The kind of execution for the nodes.
+ * \param  transfer_kind The kind of the transfer operation.
+ * \param  arg           The argument to generate a padding node for.
+ * \tparam Modifier      Modifier for how the argument data is accessed.
+ * \tparam GraphType     The type of the graph.
+ * \tparam Arg           The type of the arg.
  */
 template <
   typename Modifier,
@@ -250,7 +271,10 @@ template <
   typename Arg,
   non_iterator_enable_t<Arg> = 0>
 auto add_padding_op_nodes_impl(
-  GraphType& graph, ExecutionKind exec_kind, Arg&& arg) noexcept -> void {}
+  GraphType&    graph,
+  ExecutionKind exec_kind,
+  TransferKind  transfer_kind,
+  Arg&&         arg) noexcept -> void {}
 
 // clang-format off
 /**
@@ -259,41 +283,48 @@ auto add_padding_op_nodes_impl(
  * arguments which are blocks are require padding based on the modifier for the
  * argument.
  *
- * \param  graph      The graph to add the nodes to.
- * \param  exec_kind  The kind of execution for the nodes.
- * \param  args       The arguments to generate padding nodes from.
- * \tparam Modifiers  Modifiers for how data is accessed.
- * \tparam GraphType  The type of the graph.
- * \tparam I          The indicies to access the modifiers for the args.
- * \tparam Args       The type of the args.
+ * \param  graph         The graph to add the nodes to.
+ * \param  exec_kind     The kind of execution for the nodes.
+ * \param  transfer_kind The kind of the transfer operation.
+ * \param  args          The arguments to generate padding nodes from.
+ * \tparam Modifiers     Modifiers for how data is accessed.
+ * \tparam GraphType     The type of the graph.
+ * \tparam I             The indicies to access the modifiers for the args.
+ * \tparam Args          The type of the args.
  */
 template <typename Modifiers, typename GraphType, size_t... I, typename... Args>
 auto add_padding_op_nodes_expanded(
-  GraphType&               graph,
-  ExecutionKind            exec_kind,
+  GraphType&                graph,
+  ExecutionKind             exec_kind,
+  TransferKind              transfer_kind,
   std::index_sequence<I...>,
-  Args&&...                args) noexcept -> void {
+  Args&&...                 args) noexcept -> void {
   // clang-format on
   (add_padding_op_nodes_impl<tuple_element_t<I, Modifiers>>(
-     graph, exec_kind, ripple_forward(args)),
+     graph, exec_kind, transfer_kind, ripple_forward(args)),
    ...);
 }
 
 /**
  * Adds padding operation nodes to the graph based on the modifiers.
- * \param  graph      The graph to add the nodes to.
- * \param  exec_kind  The kind of execution for the nodes.
- * \param  args       The arguments to generate padding nodes from.
- * \tparam Modifiers  Modifiers for how data is accessed.
- * \tparam GraphType  The type of the graph.
- * \tparam Args       The type of the args.
+ * \param  graph         The graph to add the nodes to.
+ * \param  exec_kind     The kind of execution for the nodes.
+ * \param  transfer_kind The kind of the transfer operation.
+ * \param  args          The arguments to generate padding nodes from.
+ * \tparam Modifiers     Modifiers for how data is accessed.
+ * \tparam GraphType     The type of the graph.
+ * \tparam Args          The type of the args.
  */
 template <typename Modifiers, typename GraphType, typename... Args>
 auto add_padding_op_nodes(
-  GraphType& graph, ExecutionKind exec_kind, Args&&... args) noexcept -> void {
+  GraphType&    graph,
+  ExecutionKind exec_kind,
+  TransferKind  transfer_kind,
+  Args&&... args) noexcept -> void {
   add_padding_op_nodes_expanded<Modifiers>(
     graph,
     exec_kind,
+    transfer_kind,
     std::make_index_sequence<sizeof...(Args)>(),
     ripple_forward(args)...);
 }

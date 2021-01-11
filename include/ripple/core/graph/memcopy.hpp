@@ -31,39 +31,51 @@ namespace ripple {
  */
 struct Memcopy {
  public:
+  // clang-format off
   /**
    * Adds neceasarry memcopy nodes if any of the arguments are tensors, creating
    * any necessary dependencies due to modifiers on the tensors.
    *
-   * \param  graph   The graph to add the memcopy nodes to.
-   * \param  exe     The kind of the execution for the operations.
-   * \param  args    The arguments for the functor.
-   * \tparam Graph   The type of the graph.
-   * \tparam Args    The type of the arguments.
+   * \param  graph    The graph to add the memcopy nodes to.
+   * \param  exec     The kind of the execution for the operations.
+   * \param  transfer The kind of the transfer operations.
+   * \param  args     The arguments for the functor.
+   * \tparam Graph    The type of the graph.
+   * \tparam Args     The type of the arguments.
    */
   template <typename Graph, typename... Args>
-  static auto
-  memcopy(Graph& graph, ExecutionKind exe, Args&&... args) noexcept -> void {
+  static auto memcopy(
+    Graph&        graph,
+    ExecutionKind exec,
+    TransferKind  transfer,
+    Args&&...     args) noexcept -> void {
+    // clang-format on
     memcopy_impl(
       graph,
-      exe,
+      exec,
+      transfer,
       BlockExtractor::extract_blocks_if_tensor(ripple_forward(args))...);
   }
 
  private:
+  // clang-format off
   /**
    * Implementation of the memcopy function. T
    *
-   * \param  graph  The graph to add the nodes to.
-   * \param  exe    The kind of the execution for the operations.
-   * \param  args   The arguments for the functor.
-   * \tparam Graph  The type of the graph.
-   * \tparam Args   The type of the args.
+   * \param  graph    The graph to add the nodes to.
+   * \param  exec     The kind of the execution for the operations.
+   * \param  transfer The kind of the transfer operations.
+   * \param  args     The arguments for the functor.
+   * \tparam Graph    The type of the graph.
+   * \tparam Args     The type of the args.
    */
   template <typename Graph, typename... Args>
-  static auto
-  memcopy_impl(Graph& graph, ExecutionKind exe, Args&&... args) noexcept
-    -> void {
+  static auto memcopy_impl(
+    Graph&        graph,
+    ExecutionKind exec,
+    TransferKind  transfer,
+    Args&&...     args) noexcept -> void {
+    // clang-format on
     using Modifiers = Tuple<std::decay_t<Args>...>;
 
     /* If any argument has a modifier, then padding nodes are needed, so add the
@@ -72,7 +84,7 @@ struct Memcopy {
       CpuExecutor(),
       [&](auto&&... unwrapped_args) {
         detail::add_padding_op_nodes<Modifiers>(
-          graph, exe, ripple_forward(unwrapped_args)...);
+          graph, exec, transfer, ripple_forward(unwrapped_args)...);
       },
       unwrap_modifiers(ripple_forward(args))...);
   }

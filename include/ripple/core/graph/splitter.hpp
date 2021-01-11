@@ -216,7 +216,10 @@ struct Splitter {
         CpuExecutor(),
         [&](auto&&... unwrapped_args) {
           detail::add_padding_op_nodes<Modifiers>(
-            graph, exe, ripple_forward(unwrapped_args)...);
+            graph,
+            exe,
+            TransferKind::synchronous,
+            ripple_forward(unwrapped_args)...);
         },
         unwrap_modifiers(ripple_forward(args))...);
 

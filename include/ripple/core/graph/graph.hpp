@@ -102,9 +102,7 @@ class Graph {
 
   /*==--- [construction] ---------------------------------------------------==*/
 
-  /**
-   * Creates a graph.
-   */
+  /** Creates a graph. */
   Graph() = default;
 
   /**
@@ -345,6 +343,15 @@ class Graph {
       info, ripple_forward(callable), ripple_forward(args)...);
   }
 
+  /*
+   * \note These synchronization functions need to be implemented here, to
+   *       ensure that the cuda functions are called when device functionality
+   *       is required.
+   *
+   *       If in a cpp file, then if compiled as c++ code and linked against
+   *       a cuda executable, the cuda synchronization won't run.
+   */
+
   /**
    * Emplaces a node into the graph which creates a sync point in the graph
    * which synchronizes *all* streams on *all* GPUs. To create only a submission
@@ -380,7 +387,28 @@ class Graph {
    * \tparam F        The type of the callable.
    * \tparam Args     The types of the arguments.
    */
-  auto gpu_fence() -> Graph&;
+  auto gpu_fence() -> Graph& {
+    join_ids_.emplace_back(nodes_.size());
+
+    NodeInfo info{NodeKind::normal, ExecutionKind::gpu};
+    for (auto& gpu : topology().gpus) {
+      gpu.prepare_fence();
+      emplace_named(info, [&gpu] { gpu.execute_fence(); });
+    }
+
+    join_ids_.emplace_back(nodes_.size());
+    info.kind = NodeKind::sync;
+    return emplace_named(info, [] {
+      size_t count = topology().num_gpus();
+      while (count > 0) {
+        for (const auto& gpu : topology().gpus) {
+          if (gpu.is_fence_down()) {
+            count--;
+          }
+        }
+      }
+    });
+  }
 
   /*==--- [then] -----------------------------------------------------------==*/
 
@@ -610,7 +638,8 @@ class Graph {
    */
   template <typename... Args>
   auto memcopy_padding(Args&&... args) noexcept -> Graph& {
-    Memcopy::memcopy(*this, execution_, ripple_forward(args)...);
+    Memcopy::memcopy(
+      *this, execution_, TransferKind::asynchronous, ripple_forward(args)...);
     return *this;
   }
 
@@ -632,9 +661,10 @@ class Graph {
    */
   template <typename... Args>
   auto then_memcopy_padding(Args&&... args) noexcept -> Graph& {
-    join_ids_.emplace_back(nodes_.size());
-    split_ids_.emplace_back(nodes_.size());
-    Memcopy::memcopy(*this, execution_, ripple_forward(args)...);
+    // join_ids_.emplace_back(nodes_.size());
+    // split_ids_.emplace_back(nodes_.size());
+    Memcopy::memcopy(
+      *this, execution_, TransferKind::synchronous, ripple_forward(args)...);
     return *this;
   }
 
