@@ -1,18 +1,16 @@
-//==--- ripple/core/arch/topology.hpp --------------------------- -*- C++ -*-
-//---==//
-//
-//                                Ripple
-//
-//                      Copyright (c) 2019 Rob Clucas.
-//
-//  This file is distributed under the MIT License. See LICENSE for details.
-//
-//==------------------------------------------------------------------------==//
-//
-/// \file  topology.hpp
-/// \brief This file defines a struct to store the topology of the system.
-//
-//==------------------------------------------------------------------------==//
+/**==--- ripple/core/arch/topology.hpp --------------------- -*- C++ -*- ---==**
+ *
+ *                                Ripple
+ *
+ *                 Copyright (c) 2019 - 2021 Rob Clucas.
+ *
+ *  This file is distributed under the MIT License. See LICENSE for details.
+ *
+ *==------------------------------------------------------------------------==**
+ * \file  topology.hpp
+ * \brief This file defines a struct to store the topology of the system.
+ *
+ *==------------------------------------------------------------------------==*/
 
 #ifndef RIPPLE_ARCH_TOPOLOGY_HPP
 #define RIPPLE_ARCH_TOPOLOGY_HPP
@@ -26,7 +24,7 @@ namespace ripple {
 /**
  * Defines a map type to map gpu indices to stream indices.
  */
-using StreamMap = std::map<ripple::GpuInfo::Index, ripple::GpuInfo::StreamId>;
+using StreamMap = std::map<ripple::GpuInfo::Index, ripple::GpuInfo::Id>;
 
 /**
  * The Topology struct stores information about the topology of the system. It
@@ -98,7 +96,8 @@ struct Topology {
 };
 
 /**
- * Returns a reference to the topology.
+ * Gets a reference to the system topology.
+ * \return A reference to the system topology.
  */
 static inline auto topology() noexcept -> Topology& {
   static Topology topo;
