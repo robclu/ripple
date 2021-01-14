@@ -1,17 +1,17 @@
-//==--- ripple/core/utility/forward.hpp -------------------- -*- C++ -*- ---==//
-//
-//                                Ripple
-//
-//                      Copyright (c) 2019, 2020 Rob Clucas.
-//
-//  This file is distributed under the MIT License. See LICENSE for details.
-//
-//==------------------------------------------------------------------------==//
-//
-/// \file  forward.hpp
-/// \brief This file defines macros for forwarding and moving.
-//
-//==------------------------------------------------------------------------==//
+/**==--- ripple/core/utility/forward.hpp ------------------- -*- C++ -*- ---==**
+ *
+ *                                Ripple
+ *
+ *                  Copyright (c) 2019 - 2021 Rob Clucas.
+ *
+ *  This file is distributed under the MIT License. See LICENSE for details.
+ *
+ *==------------------------------------------------------------------------==**
+ *
+ * \file  forward.hpp
+ * \brief This file defines macros for forwarding and moving.
+ *
+ *==------------------------------------------------------------------------==*/
 
 /*
  * std::forward and std::move require utility, which along with the need to do
