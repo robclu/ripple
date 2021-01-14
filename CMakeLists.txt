@@ -26,10 +26,16 @@ message("
 +| -DCMAKE_CXX_COMPILER       : Path to host compiler
 +| -DCMAKE_CUDA_HOST_COMPILER : Path to cuda host compiler
 +| -DCMAKE_INSTALL_PREFIX=    : Path to install to
-+| -DBUILD_APPS=              : {ON, OFF}
-+| -DBUILD_TESTS=             : {ON, OFF}
-+| -DBUILD_BENCHMARKS=        : {ON, OFF}
-+| -DBUILD_DOCS=              : {ON, OFF}
++|
++| [external]
++| -DFMT_PATH                 : Path to fmt lib
++|
++|==== [ripple options] =======================================================|
++|
++| -DRIPPLE_BUILD_APPS=       : {ON, OFF}
++| -DRIPPLE_BUILD_TESTS=      : {ON, OFF}
++| -DRIPPLE_BUILD_BENCHMARKS= : {ON, OFF}
++| -DRIPPLE_BUILD_DOCS=       : {ON, OFF}
 +|
 +|=============================================================================|
 ")
@@ -51,11 +57,13 @@ if (NOT EXISTS ${CUDA_PATH})
   message(FATAL_ERROR "-- CUDA : Can't continue without CUDA_PATH!"       )
 endif()
 
+# For some reason, cmake uses *this* variable to determine if the cuda compiler
+# is valid, rather than the the toolkit root directory, so this hack fixes that.
+#set(CMAKE_CUDA_COMPILER_LIBRARY_ROOT ${CUDA_PATH})
+
 set(CUDA_TOOLKIT_ROOT_DIR                  ${CUDA_PATH})
 set(CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES ${CUDA_TOOLKIT_ROOT_DIR}/include)
 
-# For some reason, cmake uses *this* variable to determine if the cuda compiler
-# is valid, rather than the the toolkit root directory, so this hack fixes that.
 set(CMAKE_CUDA_COMPILER_LIBRARY_ROOT ${CUDA_PATH})
 
 # Execute cuda compiler to check what we are using:
@@ -131,12 +139,13 @@ foreach(ARCH IN LISTS ARCH_LIST)
 endforeach()
 set(CMAKE_CUDA_ARCHITECTURES ${ARCH_LIST})
 
-add_compile_definitions(__STRICT_ANSI__=)
+add_compile_definitions(__STRICT_ANSI__=1)
 
 if (WIN32)
 
 else(APPLE)
   set(FLAGS_ERRORS  "-Wpedantic -Wextra -Wall -I${ripple_SOURCE_DIR}/include")
+  #set(FLAGS_PERF    "-O3 -pthread -Wno-c++1z-extensions")
   set(FLAGS_PERF    "-O3 -std=c++17 -pthread -Wno-c++1z-extensions")
   set(FLAGS_DEBUG   "-g")
   set(DEBUG_FLAGS   "${FLAGS_PERF} ${FLAGS_ERRORS} ${FLAGS_DEBUG}")
@@ -154,7 +163,7 @@ else(APPLE)
     set(CUDA_FLAGS     "-use_fast_math -O3 --std c++17 ${CUDA_EXP_FLAGS}")
     set(CUDA_FLAGS     "${CUDA_FLAGS} ${CUDA_ARCH_FLAGS}")
     set(CUDA_FLAGS     "${CUDA_FLAGS} -lineinfo -Xptxas=-v")
-    set(CUDA_FLAGS     "${CUDA_FLAGS} -fdiagnostic-color=always")
+    set(CUDA_FLAGS     "${CUDA_FLAGS} -allow-unsupported-compiler")
     if (${MAX_REG_COUNT})
       set(CUDA_FLAGS "${CUDA_FLAGS} -maxrregcount=${MAX_REG_COUNT}")
     endif()
@@ -164,10 +173,12 @@ else(APPLE)
     set(CUDA_FLAGS "${CUDA_FLAGS} --no-cuda-version-check -fcolor-diagnostics")
     set(CUDA_FLAGS 
       "${CUDA_FLAGS} -O3 -std=c++17 -ffast-math -ffp-contract=fast")
+    set(CUDA_FLAGS 
+      "${CUDA_FLAGS} -fcuda-flush-denormals-to-zero")
     if (CMAKE_BUILD_TYPE MATCHES Release)
       set(CUDA_FLAGS "${CUDA_FLAGS} -Xcuda-ptxas -v")
     else()
-      set(CUDA_FLAGS "${CUDA_FLAGS} -Xcuda-ptxas -lineinfo -v")
+      set(CUDA_FLAGS "${CUDA_FLAGS} -Xcuda-ptxas -lineinfo -Xcuda-ptxas -v")
     endif()
   endif()
 endif()
@@ -177,6 +188,7 @@ if(CMAKE_BUILD_TYPE MATCHES Release)
     CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS_RELEASE}" 
     CACHE STRING "CXX FLAGS" FORCE
   )
+  add_compile_definitions(RIPPLE_LOG_LEVEL_ERROR)
 else()
   set(
     CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS_DEBUG}"
@@ -193,6 +205,16 @@ set(CMAKE_CUDA_COMPILER_TOOLKIT_ROOT ${CUDA_TOOLKIT_ROOT_DIR})
 
 enable_language(CUDA)
 enable_language(CXX)
+
+#==--- [packages ------------------------------------------------------------==#
+
+if (${FMT_PATH})
+  set(CMAKE_MODULE_PATH "${FMT_PATH}" ${CMAKE_MODULE_PATH})
+endif()
+find_package(fmt REQUIRED)
+if (NOT fmt_FOUND)
+  message(ERROR "Fmt not found, please specift fmt path -DFMT_PATH=!")
+endif()
 
 #==--- [install] ------------------------------------------------------------==#
 
@@ -333,6 +355,8 @@ message("
 +|===== [build options] =======================================================|
 +|
 +| BUILD TYPE         : ${CMAKE_BUILD_TYPE}
++|
++| [compiler]
 +| CXX COMPILER       : ${CMAKE_CXX_COMPILER}
 +| CUDA COMPILER      : ${CMAKE_CUDA_COMPILER}
 +| CUDA HOST COMPILER : ${CMAKE_CUDA_HOST_COMPILER}
@@ -340,11 +364,18 @@ message("
 +| CUDA INCLUDE       : ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}
 +| CUDA LIB           : ${CUDA_LIB_DIRS}
 +| CUDA ARCHS         : ${ARCH_LIST}
++|
++| [external]
++| DFMT_PATH (opt)    : ${FMT_PATH}
++|
++| [options]
 +| BUILD_APPS         : ${RIPPLE_BUILD_APPS}
 +| BUILD_BENCHMARKS   : ${RIPPLE_BUILD_BENCHMARKS}
 +| BUILD_DOCS         : ${RIPPLE_BUILD_DOCS}
 +| BUILD_EXAMPLES     : ${RIPPLE_BUILD_EXAMPLES}
 +| BUILD_TESTS        : ${RIPPLE_BUILD_TESTS}
++|
++| [flags]
 +| CXX_FLAGS          : ${CXX_FLAG_STRING}
 +| CUDA_FLAGS         : ${CUDA_FLAG_STRING}
 +|
