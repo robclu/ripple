@@ -78,21 +78,6 @@ auto Graph::find_last_of(std::string name) noexcept
   return std::nullopt;
 }
 
-/*==--- [synchronization] --------------------------------------------------==*/
-
-auto Graph::gpu_fence() -> Graph& {
-  join_ids_.emplace_back(nodes_.size());
-
-  NodeInfo info{NodeKind::normal, ExecutionKind::gpu};
-  for (const auto& gpu : topology().gpus) {
-    emplace_named(info, [&gpu] { gpu.fence(); });
-  }
-
-  join_ids_.emplace_back(nodes_.size());
-  info.kind = NodeKind::sync;
-  return emplace_named(info, [] {});
-}
-
 /*==--- [private] ----------------------------------------------------------==*/
 
 auto Graph::connect(Graph& graph) noexcept -> void {
@@ -105,10 +90,10 @@ auto Graph::connect(Graph& graph) noexcept -> void {
       auto* this_node = nodes_[j];
 
       // clang-format off
-        const bool unmatched_split = 
-          other_node->kind() == this_node->kind() &&
-          other_node->id()   != this_node->id()   &&
-          this_node->kind()  == NodeKind::split;
+      const bool unmatched_split = 
+        other_node->kind() == this_node->kind() &&
+        other_node->id()   != this_node->id()   &&
+        this_node->kind()  == NodeKind::split;
       // clang-format on
 
       if (unmatched_split) {

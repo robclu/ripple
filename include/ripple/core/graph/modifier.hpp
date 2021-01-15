@@ -212,8 +212,8 @@ struct ExpansionParams {
  * \param The amount of expansion on each side of each dimension.
  * \return The expansion paramters defining the expansion.
  */
-auto with_expansion(ExpType expansion) noexcept -> ExpansionParams {
-  return ExpansionParams{expansion, 0};
+inline auto with_expansion(ExpType expansion) noexcept -> ExpansionParams {
+  return ExpansionParams{expansion, expansion};
 }
 
 /**
@@ -221,7 +221,7 @@ auto with_expansion(ExpType expansion) noexcept -> ExpansionParams {
  * \param The amount of overlap for each block of execution.
  * \return The expansion paramters defining the overlap.
  */
-auto with_overlap(ExpType overlap) noexcept -> ExpansionParams {
+inline auto with_overlap(ExpType overlap) noexcept -> ExpansionParams {
   return ExpansionParams{overlap, overlap};
 }
 
@@ -351,7 +351,8 @@ auto in_shared(T& t) noexcept {
  */
 template <typename T, typename Type = std::remove_reference_t<T>>
 auto expanded(T& t, ExpType expansion) noexcept {
-  return ModificationSpecifier<Type&, Modifier::expander>{t, expansion};
+  return ModificationSpecifier<Type&, Modifier::expander>{
+    t, expansion, expansion};
 }
 
 /**
