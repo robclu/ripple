@@ -40,7 +40,7 @@
  * Definitions for host, device, and host device functions
  * if CUDA is supported by either nvcc or clang.
  */
-#if defined(__CUDACC__) || (defined(__clang__) && defined(__CUDA__))
+#if defined(__CUDACC__) || (defined(__clang__) && defined(__CUDA__)) 
   /** Defines if GPU functionality is available. */
   #define ripple_gpu_available  true
   /** Defines if CUDA functionality is available */
@@ -122,6 +122,16 @@ using GpuStream =
 using GpuError =
 #if defined(ripple_cuda_available)
   cudaError_t;
+#else
+  int;
+#endif
+
+/**
+ * Defines an alias for a gpu event.
+ */
+using GpuEvent =
+#if defined(ripple_cuda_available)
+  cudaEvent_t;
 #else
   int;
 #endif
