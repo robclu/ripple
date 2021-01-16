@@ -195,6 +195,7 @@ else()
     CACHE STRING "CXX FLAGS" FORCE
   )
   set(CUDA_FLAGS "${CUDA_FLAGS} -G")
+  add_compile_definitions(RIPPLE_LOG_LEVEL_INFO)
 endif()
 
 set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} ${CUDA_FLAGS}")
