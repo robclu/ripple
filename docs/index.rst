@@ -26,6 +26,109 @@ This documentation contains the API, as well as a lot more information. Each
 section documents the rationale and intended use of the important functionality
 within the module that the section documents.
 
+Overview
+-----------
+
+Ripple is a multi-threaded heterogenous compute library. The goal of ripple is
+to allow code to be easily accelerated on the GPU with CUDA, with minimal
+programming effort, but with as close to optimal performance as possible.
+Writing code which is fast on the GPU is difficult. There are many components
+which need to be optimized. Ripple does a lot of the work for you, allowing you
+to focus on the actualy implementation of the algorithm, and to optimize that.
+
+Additionally, ripple allows for heterogeneous execution of *exactly* the same
+code, so you can run using a single CPU core or 8 GPUs. Currently there is no
+support for partitioning the workload across both the CPU cores and the GPUs on
+a node. While this is theoretically possible, it is very difficult to get right
+due to the differences in execution times of algorithms on the CPU and the GPU,
+as well as the fact that the most up to date data will live in different memory
+spaces. This is definitely an area with a lot of potential performance, and will
+be added at a later stage.
+
+The GPU partitions the workload into blocks which are then executed on the SMs
+(streaming multiprocessors). The threads in the block execute in lock-step, and
+the order of execution of the blocks is not defined. Ripple uses the same
+abstraction, but makes it simpler to write efficient code. The programming model
+for ripple can be broken down into two parts:
+
+- Invocables which are applied to each grid element
+- Graphs which define the invocables in an algorithm, and which are applied to
+  the grid data.
+
+The common saxpy example can be written as simply as the following:
+
+.. code-block:: cpp
+
+  using namespace ripple;
+  Grid<double, 1> x(1000), y(1000), z(1000);
+
+  Graph g;
+
+  g.emplace(
+    // Initialize the data to the global index in the x dimension.
+    [] ripple_host_device (auto& x_it, auto& y_it) -> void {
+      *x_it = global_idx(dim_x);
+      *y_it = global_idx(dim_x);
+    },
+    // Implicit synchronization between operations:
+    [] ripple_host_device (auto& x_it, auto& y_it, auto& z_it) -> void {
+      const double a = 2.0;
+      *z_it = a * (*x_it) + (*y_it);
+    });
+
+  g.execute(gpu_device, x, y, z);
+
+For following is an example of the graph for the Fast Iterative method:
+.. code-block:: cpp
+
+The following sections cover the features of both.
+
+Invocables & Blocks
+--------
+
+An invocable defines operations which are performed on an element in a Block,
+which runs out of order with other blocks in a Grid. The invocable is any object
+with a function call operator. It takes a multidimensional iterator to the
+element in the grid. For example, and invocable which doubles every element in
+the grid is as simple as:
+
+.. code-block:: cpp
+
+  auto double_func = [] ripple_host_device (auto& iterator) -> void {
+    *it *= 2;
+  }:
+
+The following features can be used when defining invocable objects:
+
+- Threads in a block can be synchronized with other threads in the block by
+  using `sync_block()`. This essentially creates a barrier that all 
+  *active* threads must reach before they continue.
+
+- Padding can be specified for blocks when running in shared memory. This is
+  useful for any application which uses stencil-type operations.
+
+- The invocable takes a multi-dimensional iterator over the block space, which
+  be offset in any dimension. Again this is useful for stencil-type operations
+  which require access to local neighbours. If access is required to neighbours
+  which are further apart than the padding amount, then the option to run the
+  invocable in global memory can be used, which will allow any data in grid to
+  be accessed from the same device.
+
+- It can be specified which grids should be run in shared memory, which is a
+  major component of good GPU performance. When specifying shared memory on the
+  CPU, a thread local cache is used to mimic the GPU block, which improves cache
+  hit rate.
+
+- Blocks dimensions can be specified simply, as well as shared memory size.
+
+- The data layout of the data can be changed between AoS and SoA with a single
+  line of code, but both layout have the same OO interface of the type.
+  
+- [Not yet implemented] A transformation of the input grid data to a shared
+  type can be specified. This is useful if the algorithm only applies to a
+  subset of the data type stored in the grid, and allows better occupancy when
+  running the invocables.
+
 Portability
 -----------
 
@@ -83,6 +186,8 @@ to specify both the start value as well as the increment, for example:
 
   for (int i : range(2, 10, 2))
     // Range from [2 : 8]
+
+
 
 
 

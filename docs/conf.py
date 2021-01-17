@@ -38,9 +38,6 @@ extensions = [
 ]
 
 # Setup the breathe extension.
-breathe_projects = {
-    "Ripple" : "./doxyoutput"
-}
 breathe_default_project = "Ripple"
 
 # Setup the exhale extensions.
