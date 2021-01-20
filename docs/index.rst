@@ -14,181 +14,320 @@ Welcome to Ripple's documentation!
    api/ripple_api_root.rst
 
   
-This is the official documentation for ripple. Ripple is a framework for
-solving large, complex, and possibly coupled fluid and solid dynamics problems
-with adaptive mesh refinement on massively parallel heterogeneous architectures.
+Ripple is a framework designed to make parallelization of large-scale 
+heterogeneous applications simple, with a focus on multiple gpus systems. 
+It is designed to reduce the difficulty of GPGPU programming, without 
+sacrificing performance.
 
-The interface provides conceptually simple block based structures which contain
-collections of cells. Iterators are provided for the blocks, and applications
-can implement evolvers for the iterable data.
+Currently it will use all available computational resources on a node (any
+number of CPUs and/or GPUs) and is currently being extended to support 
+multi-node systems.
 
-This documentation contains the API, as well as a lot more information. Each
-section documents the rationale and intended use of the important functionality
-within the module that the section documents.
+The target compute unit is the GPU, since it offers far superior performance
+compared to even large numbers of CPU cores, however, the user has a choice of
+which to use, and can use both, concurrently, if desired.
 
-Overview
------------
+Ripple uses a number of abstractions to facilitate the above, which allow for 
+simple, expressive code to run in parallel across many large systems (it has 
+been used to run physics simulations on grids consisting of billions of cells).
 
-Ripple is a multi-threaded heterogenous compute library. The goal of ripple is
-to allow code to be easily accelerated on the GPU with CUDA, with minimal
-programming effort, but with as close to optimal performance as possible.
-Writing code which is fast on the GPU is difficult. There are many components
-which need to be optimized. Ripple does a lot of the work for you, allowing you
-to focus on the actualy implementation of the algorithm, and to optimize that.
+The interface for specifying computational flow is the graph interface, which
+allows computational operations and dependencies to be specified expressively 
+and concisely, and from which ripple can determine efficient parallelization. 
+The graph interface scales well, and can scale up to 7.3x for 8 V100 GPUs for
+non-trivial real-world problems
 
-Additionally, ripple allows for heterogeneous execution of *exactly* the same
-code, so you can run using a single CPU core or 8 GPUs. Currently there is no
-support for partitioning the workload across both the CPU cores and the GPUs on
-a node. While this is theoretically possible, it is very difficult to get right
-due to the differences in execution times of algorithms on the CPU and the GPU,
-as well as the fact that the most up to date data will live in different memory
-spaces. This is definitely an area with a lot of potential performance, and will
-be added at a later stage.
+The documentation contains the API, main features, examples, and tutorials.
 
-The GPU partitions the workload into blocks which are then executed on the SMs
-(streaming multiprocessors). The threads in the block execute in lock-step, and
-the order of execution of the blocks is not defined. Ripple uses the same
-abstraction, but makes it simpler to write efficient code. The programming model
-for ripple can be broken down into two parts:
+Building Ripple
+----------------
 
-- Invocables which are applied to each grid element
-- Graphs which define the invocables in an algorithm, and which are applied to
-  the grid data.
+First, get ripple from github: `ripple <https://github.com/robclu/ripple>`_
 
-The common saxpy example can be written as simply as the following:
+Currently, Ripple **requires** CUDA, since some of the features require it,
+however, we are in the process of removing the CUDA dependency for the CPU only
+use case . Ripple has the following dependencies:
+
+.. code-block::
+
+  cmake >= 3.19
+  clang >= 9.0 with CUDA >= 9.0 or
+  gcc   >= 6.0 with CUDA >= 11.0
+
+.. note::
+  Ripple is written using C++ >= 17, which is why CUDA >= 11.0 is required if
+  used as the device compiler, where as clang >= 9.0 has C++-17 support and can
+  be used as both the host and device compiler.
+
+Ripple is built using cmake, specifying various options. To see all available
+options for building ripple, from the project root, run
+
+.. code-block::
+
+  cmake -DPRINT_OPTIONS=ON .
+
+which shows the required and optional options. 
+
+Cmake support for CUDA does not always work as expected, so to build ripple,
+the paths to the variable compilers, as well as cuda installation, need to be
+specified:
+
+.. code-block::
+
+  mkdir build && cd build
+  cmake  \
+    -DCMAKE_CUDA_COMPILER=<path to cuda compiler> \
+    -DCMAKE_CXX_COMPILER=<path to cxx compiler>   \
+    -DCUDA_PATH=<path to cuda toolkit root>       \
+    -DCMAKE_BUILD_TYPE=Release                    \
+    -DCUDA_ARCHS=80;86                            \     
+    ..
+
+.. note::  
+  Of the above parameters, the first three are **required**, while
+  the rest are optional.
+
+  If the cuda compiler is clang, then the CXX compiler is automatically set to
+  clang as well.
+
+  If the cuda compiler is set to nvcc, the cuda host compiler will be set to the
+  :code:`CMAKE_CXX_COMPILER`.
+
+.. note::
+  If :code:`-DCMAKE_BUILD_TYPE=Debug`, the cmake language feature sometimes 
+  fails to correctly verify that the cuda compiler is correct and working. The 
+  current fix for this is to first specify the build parameters as above using
+  :code:`-DCMAKE_BUILD_TYPE=Release`, and then simply execute 
+  :code:`-DCMAKE_BUILD_TYPE=Debug ..` after.
+
+.. note::
+  Ripple will print out the complete build configuration at the end of the
+  cmake command, so you can verify that the chosen parameters are correct.
+
+Getting Started
+-------------------
+
+The shortest code to help with getting started is the SAXPY example,
+which is as simple as the following:
 
 .. code-block:: cpp
 
-  using namespace ripple;
-  Grid<double, 1> x(1000), y(1000), z(1000);
+  using Tensor = ripple::Tensor<float, 1>;
+  constexpr size_t size_x       = 1000000;
+  constexpr size_t partitions_x = topology().num_gpus();
 
-  Graph g;
+  // Create the tensors. Partitions is always a vector, with each component
+  // specifying the number of partitions in the {x, y, z} dimension. Each
+  // partition will be reside and therefore execute on a separate gpu.
+  Tensor a{{partitions}, size_x};
+  Tensor b{{partitions}, size_x};
+  Tensor c{{partitions}, size_x};
+  float x = 2.0f;
 
-  g.emplace(
-    // Initialize the data to the global index in the x dimension.
-    [] ripple_host_device (auto& x_it, auto& y_it) -> void {
-      *x_it = global_idx(dim_x);
-      *y_it = global_idx(dim_x);
-    },
-    // Implicit synchronization between operations:
-    [] ripple_host_device (auto& x_it, auto& y_it, auto& z_it) -> void {
-      const double a = 2.0;
-      *z_it = a * (*x_it) + (*y_it);
-    });
+  // Create the graph, which splits the execution across the partitions of the
+  // tensor. The arguments to the functors are iterators which point to the
+  // cell in the tensor at the global thread indices.
+  ripple::Graph graph;
+  graph.split([] ripple_host_device (auto a, auto b, auto c, float x) {
+    // Set a and b to thread indices:
+    *a = a.global_idx(ripple::dimx());
+    *b = b.global_idx(ripple::dimx());
 
-  g.execute(gpu_device, x, y, z);
+    // Set the result:
+    *c = *a * x + *b;
+  }, a, b, c, x);
+  ripple::execute(graph);
+  ripple::fence();
 
-For following is an example of the graph for the Fast Iterative method:
+  for (size_t i = 0; i < c.size(ripple::dimx()); ++i) {
+    fmt::format("{} {}\n", i, *c(i));
+  } 
+
+Ripple has a lot more functionality, and the next best wat to explore some of
+it is to have a look through the benchmarks, which can be found in 
+:code:`benchmarks/`. If you want to build the benchmarks, then add
+:code:`-DRIPPLE_BUILD_BENCHMARKS=ON` to the cmake configuration.
+
+There is a lot more in depth information, which can be found through the 
+following links:
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Performance:
+
+   performance/saxpy.rst
+   performance/particle_update.rst
+   performance/force.rst
+   performance/eikonal_solver.rst
+
+
+Features
+------------
+
+There are three main components in ripple which provide all the functionality
+and hence features for simple parallel programming. They all work together, and
+are tensors, polymorphic data layout, and graphs. Each is given a brief
+overview here, but see the additional links for more detailed information and
+examples. Here we illustrate the main concepts with a simple example which
+computes the dot product of a vector with itself, and then computes the finite
+difference of the results. This is a contrived example, and real world examples
+can be found in the :code:`benchmarks/` folder, but it illustrates the concepts
+and is simple.
+
+Tensors
+^^^^^^^^^^
+
+Tensors are and extension of arrays to multiple dimensions, and are used to
+define the space on which computation is performed, they are templated over the
+data type and the number of dimensions, similar to :code:`std::array`, but with
+dynamic dimension sizes. The full use of tensors is only achieved when combined
+with graphs, to define the operations on the tensors, and also with user-defined
+classes which have polymorphic data layout. 
+
+For our example, we will define a 2D tensor with 1000x1000 elements, with
+padding element on each side of each dimension, so 1002x1002 total elements,
+with a custom vector class, which we will define in the next section. We also
+partition the tensor in the y dimension across all gpus.
+
 .. code-block:: cpp
 
-The following sections cover the features of both.
+  // Alias for SoA (strided) tensor:
+  using SoATensor = ripple::Tensor<Vec2<float, ripple::strided_view>, 2>;
 
-Invocables & Blocks
---------
+  // To create an AoS (contiguous) tensor is as simple as:
+  using AoSTensor = ripple::Tensor<Vec2<float, ripple::contiguous_view>, 2>;
 
-An invocable defines operations which are performed on an element in a Block,
-which runs out of order with other blocks in a Grid. The invocable is any object
-with a function call operator. It takes a multidimensional iterator to the
-element in the grid. For example, and invocable which doubles every element in
-the grid is as simple as:
+  constexpr size_t size_x  = 1000;
+  constexpr size_t size_y  = 1000;
+  constexpr size_t padding = 1;
+  std::vector partitions = {1, ripple::topology().num_gpus()};
+
+  // Create the tensors
+  SoATensor soa_x(partitions, padding, size_x, size_y);
+  SoATensor soa_y(partitions, padding, size_x, size_y);
+
+Polymorphic Data layout
+^^^^^^^^^^^^^^^^^^^^^^^
+
+For GPU codes, struct of array (SoA) data layout usually provided better
+performance since it results in coalesced memory access, and therefore less
+memory transactions and higher memory bandwidth. However, SoA can make software
+development difficult, so ripple enables user defined classes to have 
+polymorphic data layout, through a template parameters, which when used with a
+tensor, will store the data as either SoA or AoS, allowing Object Oriented
+classes but good performance, as well as being able to test the actual effects
+on performance by changing only a few lines of code.
+
+For our example, we will define the vector to have a polymorphic layout:
 
 .. code-block:: cpp
 
-  auto double_func = [] ripple_host_device (auto& iterator) -> void {
-    *it *= 2;
-  }:
+  // T      : Type of the data 
+  // Layout : The layout of the data
+  template <typename T, typename Layout>
+  struct Vec2 : ripple::PolymorphicLayout<Vec2<T, Layout>> {
+    // Required by ripple, define that we want 2 elements of type T.
+    using Desc    = ripple::StorageDescriptor<L, ripple::Vector<T, 2>>;
+    using Storage = typename Desc::Storage;
 
-The following features can be used when defining invocable objects:
+    // Actual storage, like an array.
+    Storage storage;
 
-- Threads in a block can be synchronized with other threads in the block by
-  using `sync_block()`. This essentially creates a barrier that all 
-  *active* threads must reach before they continue.
+    // Return the x component:
+    auto x() -> T& {
+      // Static index syntax:
+      //
+      // Index of element in type ---|
+      // Type index in storage ---|  |
+      //                          |  |
+      //                          |  |
+      //                          v  v
+      return storage.template get<0, 0>();
+    }
 
-- Padding can be specified for blocks when running in shared memory. This is
-  useful for any application which uses stencil-type operations.
+    // Return the x component:
+    auto y() -> T& {
+      return storage.template get<0, 1>();
+    }
 
-- The invocable takes a multi-dimensional iterator over the block space, which
-  be offset in any dimension. Again this is useful for stencil-type operations
-  which require access to local neighbours. If access is required to neighbours
-  which are further apart than the padding amount, then the option to run the
-  invocable in global memory can be used, which will allow any data in grid to
-  be accessed from the same device.
+    // Get the Ith element:
+    auto operator[](size_t i) const -> T& {
+      // Dynamic index syntax:
+      //
+      // Index of element in type --|
+      // Type index in storage      |
+      //                 |          |
+      //                 |   |------|
+      //                 v   v
+      return storage.get<0>(i);
+    }
 
-- It can be specified which grids should be run in shared memory, which is a
-  major component of good GPU performance. When specifying shared memory on the
-  CPU, a thread local cache is used to mimic the GPU block, which improves cache
-  hit rate.
+    template <typename OtherLayout>
+    auto dot(const Vec2<T, OtherLayout>& other) const -> T {
+      return 
+        storage.get<0, 0>() * other[0] + 
+        storage.get<0, 1>() * other[1];
+    }
+  };
 
-- Blocks dimensions can be specified simply, as well as shared memory size.
+Graphs
+^^^^^^^
 
-- The data layout of the data can be changed between AoS and SoA with a single
-  line of code, but both layout have the same OO interface of the type.
+Graphs are essentially the glue which bring it all together. They define the way
+that the tensor data is transformed, through function objects which operate on
+the tensor data, and allow the dependencies and memory transfer operations to
+be specified between the operations.
+
+All this results in a framework where a complete GPGPU program can be written 
+entriely in C++ with a very minimal knowledge of GPU programming. The only real
+change of mindset is that functors must be written to operate on a single 
+element in the tensor, so there is no looping.
+
+Lastly, for out example, define the graph which performs the dot product
+and then the central difference.
+
+.. note::
+  Here the boundary elements (elements next to the padding cells) will be invalid because the padding cells don't compute the dot product. Ripple
+  has a number of features to handle these situations, however, for simplicity,
+  we don't include that here.
+
+.. code-block:: cpp
+
+  // Note, we could initialze the graph as
+  // ripple::Graph graph(ripple::ExecutionKind::Gpu)
+  // to default to gpu execution.
+  ripple::Graph graph;
+
+  // Step 1: Intialize all data to have a thread index sum:
+  graph.split(
+    ripple::ExecutionKind::Gpu,
+    [] ripple_host_device (auto x) {
+      x->x() = x.global_idx(ripple::dimx());
+      x->y() = y.global_idx(ripple::dimy());
+    }, soa_x);
   
-- [Not yet implemented] A transformation of the input grid data to a shared
-  type can be specified. This is useful if the algorithm only applies to a
-  subset of the data type stored in the grid, and allows better occupancy when
-  running the invocables.
+  // Step 2: Set y to the dot product of x with itself:
+  // This must be submitted after the previous operation, hence then_split
+  graph.then_split(
+    ripple::ExecutionKind::Gpu,
+    [] ripple_host_device (auto x, auto y) {
+    const float dot = x->dot(*x);
+      y->x() = dot;
+      y->y() = dot;
+  }, soa_x, soa_y);
 
-Portability
------------
+  // Step 3: Set x to the central difference using y.
+  // Because there is a partition, we use concurrent data access, which will
+  // perform a copy of the padding data from neighbouring partitions (i.e, the
+  // neighbour dot product result computed on any adjacent cells on a different 
+  // gpu:
+  graph.then_split(ripple::ExecutionKind::Gpu,
+    [] ripple_host_device (auto x, auto y) {
+    x->x() = y.offset(ripple::dimx(), -1) + y.offset(ripple::dimx(), 1);
+    x->y() = y.offset(ripple::dimy(), -1) + y.offset(ripple::dimy(), 1);
+  }, soa_x, ripple::concurrent_padded_access(soa_y));
 
-The header ``portability.hpp`` can be included for cross platform and cross
-architecture functionality. The most important components are the macros for
-marking functions as host and device. Any function, especially kernels, which is
-intended to be usable on either a CPU or GPU should be marked as
-``ripple_host_device``, while functions intended explicitly for execution on
-the device should be marked ``ripple_device_only``. For host only functions,
-the ``ripple_host_only`` macro can be used, however, by default, functions
-which are not marked are host only functions. For CUDA kernels, used the marco
-``ripple_global``.
-
-Type Traits
------------
-
-Numerous general purpose type traits are provided which allows compile time
-information to be used, overloades to be enabled and disabled, etc. Anything
-which is a trait and which is general should be added here. Traits specific to
-some entity, however, should be added there. For example, traits related to
-Arrays should be added in the relevant files where they can be used in the
-specific instances where they are appropriate. As of this writing, the latest
-version of C++ which is supported on both the host and the device is c++14, for
-which many of the ``_t`` and ``_v`` traits are not implement. When it is the
-case that one of these traits is required, add it in the ``std::`` namespace in
-the ``type_traits.hpp`` file. For example, ``std::is_same_v<T, U>`` is only
-available in c++17, so to make the transition to c++17 easier, a wrapper
-``std::is_same_v<T, U>`` implementation is added in the ``std::`` namespace in
-the ``type_traits.hpp`` file.
-
-Range
------
-
-The ``range()`` functionality is provides python-like ranges in C++. This makes
-for loops cleaner and makes the resulting code more readable. For example,
-instead of doing something like:
-
-.. code-block:: cpp
-  
-  for (int i = 0; i < 10; ++i)
-    // Do something ..
-
-With the range functionality, the above becomes:
-
-.. code-block:: cpp
-
-  for (int i : range(10)):
-    // Do Something ...
-
-The ``range()`` functionality infers the type of the range index from the type
-passed, and automatically starts from 0, with an increment of 1. It's possible
-to specify both the start value as well as the increment, for example:
-
-.. code-block:: cpp
-
-  for (int i : range(2, 10, 2))
-    // Range from [2 : 8]
-
-
-
-
-
-
+  // Graph is done, just needs execution:
+  ripple::execute(graph);
+  ripple::fence(); // wait until finished
+   
