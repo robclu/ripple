@@ -55,14 +55,14 @@ struct CopySpecifier {};
  * \tparam Location The location of the face in the dimension.
  */
 template <FaceLocation Location>
-using CopySpecifierX = CopySpecifier<dimx_t::value, Location>;
+using CopySpecifierX = CopySpecifier<DimX::value, Location>;
 
 /**
  * Alias for a copy from a face in the y dimension with a given location.
  * \tparam Location The location of the face in the dimension.
  */
 template <FaceLocation Location>
-using CopySpecifierY = CopySpecifier<dimy_t::value, Location>;
+using CopySpecifierY = CopySpecifier<DimY::value, Location>;
 
 /*==--- [padding utilites] -------------------------------------------------==*/
 
@@ -70,8 +70,9 @@ using CopySpecifierY = CopySpecifier<dimy_t::value, Location>;
  * Parameters for offseting the iterator to the storage.
  */
 struct OffsetParam {
-  int dimension = -1; //!< The dimension to offset in.
-  int amount    = 0;  //!< The amount to offset.
+  int dimension       = -1; //!< The first dimension to offset in.
+  int amount          = 0;  //!< The amount to offset.
+  int dimension_other = -1; //!< The second dimension to offset in.
 };
 
 /**
@@ -98,20 +99,25 @@ auto storage_ptr(
   constexpr bool pad   = Map == Mapping::padding;
   int            shift = 0;
   if constexpr (Location == FaceLocation::start) {
-    /* If a pointer into the padding is required then we need to offset by the
-     * amount of the padding, since the iterator points to the first valid cell.
-     */
+    // If a pointer into the padding is required then we need to offset by the
+    // amount of the padding, since the iterator points to the first valid cell.
     shift = (pad ? -1 : 0) * block.padding();
   } else {
-    /* If a pointer into the domain is required then we need to subtract the
-     * padding amount from the size of the domain, since the size of the block
-     * given the end of the domain (or start of the padding):
-     */
-    shift = block.size(dim) - block.padding() * (pad ? 0 : 1);
+    // If a pointer into the domain is required then we need to subtract the
+    // padding amount from the size of the domain, since the size of the block
+    // given the end of the domain (or start of the padding):
+    shift = block.size(dim) + (pad ? 0 : -1) * block.padding();
   }
+
+  // Since begin() gives a pointer to the first **internal** cell, we need to
+  // offset either **into** the internal region, or **away** from it and
+  // **into** the padding:
   auto it = block.begin().offset(dim, shift);
   if (offset.dimension != -1) {
-    it.shift(offset.dimension == 0 ? dimx() : dimy(), offset.amount);
+    it.shift(offset.dimension, offset.amount);
+  }
+  if (offset.dimension_other != -1) {
+    it.shift(offset.dimension_other, offset.amount);
   }
 
   if constexpr (is_storage_accessor_v<decltype(it.storage())>) {
@@ -121,7 +127,8 @@ auto storage_ptr(
   }
 }
 
-/*==--- [1D face padding copy] ---------------------------------------------==*/
+/*==--- [1D face padding copy]
+ * ---------------------------------------------==*/
 
 /**
  * Copies the relevant padding data from the source block into the destination
@@ -154,7 +161,9 @@ auto memcopy_padding(
   DstBlock&                   dst_block,
   CopySpecifierX<SrcLocation> src_specifier,
   CopySpecifierX<DstLocation> dst_specifier) -> void {
-  if (dst_block.padding() == 0) { return; }
+  if (dst_block.padding() == 0) {
+    return;
+  }
   using Allocator = typename block_traits_t<SrcBlock>::Allocator;
 
   const auto  copy_type = src_block.template get_copy_type<DstBlock>();
@@ -162,7 +171,8 @@ auto memcopy_padding(
   const void* src_ptr   = padding_ptr(src_block, src_specifier);
   void*       dst_ptr   = padding_ptr(dst_block, dst_specifier);
 
-  ripple_if_cuda(cudaMemcpyAsync(
+  // TODO: Add implmentation when there is no cuda ...
+  ripple_check_cuda_result(cudaMemcpyAsync(
     dst_ptr,
     src_ptr,
     copy_size,
@@ -214,14 +224,16 @@ auto memcopy_padding(
   CopySpecifier<Dim, DstLocation, DstMapping> dst_specifier,
   GpuStream                                   stream = 0) -> void {
   using Allocator = typename block_traits_t<SrcBlock>::Allocator;
-  static_assert(Dim <= dimy_t::value, "Invalid dimension!");
-  if (dst_block.padding() == 0) { return; }
+  static_assert(Dim <= DimY::value, "Invalid dimension!");
+  if (dst_block.padding() == 0) {
+    return;
+  }
 
   OffsetParam p{
-    Dim == dimx() ? dimy_t::value : dimx_t::value,
+    Dim == dimx() ? DimY::value : DimX::value,
     -1 * static_cast<int>(src_block.padding())};
 
-  constexpr size_t num_types = Allocator::num_different_types();
+  constexpr size_t num_types = Allocator::strided_types();
   constexpr bool   is_accessor =
     is_storage_accessor_v<decltype(storage_ptr(src_block, src_specifier, p))>;
 
@@ -245,7 +257,7 @@ auto memcopy_padding(
 
   const auto type = src_block.template get_copy_type<DstBlock>();
   unrolled_for<num_types>([&](auto i) {
-    constexpr size_t bytes = Allocator::template byte_size<i>();
+    constexpr size_t bytes = Allocator::template element_byte_size<i>();
     constexpr size_t elems = Allocator::template num_elements<i>();
 
     /* Pitch is always the number of elements (including padding elements)
@@ -268,8 +280,8 @@ auto memcopy_padding(
     const size_t height =
       (Dim == dimx() ? src_block.pitch(dimy()) : src_block.padding()) * elems;
 
-    ripple_check_cuda_result(ripple_if_cuda(cudaMemcpy2DAsync(
-      dst_ptrs[i], pitch, src_ptrs[i], pitch, width, height, type, stream)));
+    ripple_check_cuda_result(cudaMemcpy2DAsync(
+      dst_ptrs[i], pitch, src_ptrs[i], pitch, width, height, type, stream));
   });
 }
 
@@ -313,23 +325,24 @@ auto memcopy_padding(
   CopySpecifier<Dim, DstLocation, DstMapping> dst_specifier,
   GpuStream                                   stream = 0) -> void {
   using Allocator = typename block_traits_t<SrcBlock>::Allocator;
-  static_assert(Dim <= dimz_t::value, "Invalid dimension!");
-  if (dst_block.padding() == 0) { return; }
+  static_assert(Dim <= DimZ::value, "Invalid dimension!");
+  if (dst_block.padding() == 0) {
+    return;
+  }
 
   OffsetParam p{
-    Dim == dimx() ? dimy_t::value : dimx_t::value,
-    -1 * static_cast<int>(src_block.padding())};
+    (Dim + 1) % 3, -1 * static_cast<int>(src_block.padding()), (Dim + 2) % 3};
 
-  constexpr size_t num_types = Allocator::num_different_types();
+  constexpr size_t num_types = Allocator::strided_types();
   constexpr bool   is_accessor =
     is_storage_accessor_v<decltype(storage_ptr(src_block, src_specifier, p))>;
 
   std::vector<const void*> src_ptrs;
   std::vector<void*>       dst_ptrs;
-  /* If the storage is a storage accessor then it may be strided and have
-   * multiple types for which the memory needs to be copied, so here we create
-   * vector of all the pointers to copy, from which we can then do the generic
-   * implementation. */
+  // If the storage is a storage accessor then it may be strided and have
+  // multiple types for which the memory needs to be copied, so here we create
+  // vector of all the pointers to copy, from which we can then do the generic
+  // implementation.
   if constexpr (is_accessor) {
     for (auto* p : storage_ptr(src_block, src_specifier, p).data_ptrs()) {
       src_ptrs.push_back(p);
@@ -344,18 +357,21 @@ auto memcopy_padding(
 
   const auto type = src_block.template get_copy_type<DstBlock>();
   unrolled_for<num_types>([&](auto i) {
-    constexpr size_t bytes = Allocator::template byte_size<i>();
+    constexpr size_t bytes = Allocator::template element_byte_size<i>();
     constexpr size_t elems = Allocator::template num_elements<i>();
 
-    /* Pitch is always the number of elements (including padding elements)
-     * multiplied by the number of bytes. */
+    // NOTE: This only seems to work for the z dimension, which is strange ...
+    //       need to fix!
 
-    /* This pitch here is tricky. At the very least, the pich is:
+    // NOTE: Pitch is always the number of elements (including padding elements)
+    //        multiplied by the number of bytes.
+
+    /* This pitch here is tricky. At the very least, the pitch is:
      *
-     *  - bytes per element * elements in dim x
+     * - bytes per element * elements in dim x
      *
-     * then, if we are copying in y or z, we multiply by the number of elements
-     * for the strided case.
+     * then, if we are copying in y or z, we multiply by the number of
+     * elements for the strided case.
      *
      * Lastly, for the z-case, we want to copy padding number of x-y planes,
      * for which the data in the plane is contiguous, and each plane for the
@@ -364,7 +380,7 @@ auto memcopy_padding(
      */
     const size_t pitch = bytes * src_block.pitch(dimx()) *
                          (Dim == dimx() ? 1 : elems) *
-                         (Dim == dimz() ? src_block.padding() : 1);
+                         (Dim == dimz() ? src_block.pitch(dimy()) : 1);
 
     /* If copying in x dimension, we just need to copy the padding width,
      * otherwise if in the y dimension, we need to copy the whole width of
@@ -382,7 +398,7 @@ auto memcopy_padding(
      * a single element, so we need to multiply by the number of elements to
      * copy all the data. */
     const size_t height =
-      Dim == dimz() ? 1
+      Dim == dimz() ? src_block.padding()
                     : src_block.pitch(dimz()) *
                         (Dim != dimx() ? 1 : src_block.pitch(dimy()) * elems);
 
