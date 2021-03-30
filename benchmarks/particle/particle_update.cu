@@ -43,7 +43,7 @@ int main(int argc, char** argv) {
   init.split(
     [] ripple_host_device(auto&& it) {
       ripple::unrolled_for<dims>([&](auto dim) {
-        it->x(dim) = it.global_idx(ripple::dim_x);
+        it->x(dim) = it.global_idx(ripple::dimx());
         it->v(dim) = 1.4f * static_cast<Real>(dim);
       });
     },
