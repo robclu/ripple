@@ -7,7 +7,12 @@
 #==--------------------------------------------------------------------------==#
 
 cmake_minimum_required(VERSION 3.8 FATAL_ERROR)
-project(ripple VERSION 0.1.0 LANGUAGES NONE)
+project(
+ripple 
+VERSION 0.1.0 
+DESCRIPTION "A library for simplified distributed heterogeneous programming."
+HOMEPAGE_URL "https://robclu.github.io/ripple_docs/"
+LANGUAGES NONE)
 
 #==--- [print options] ------------------------------------------------------==#
 
@@ -147,6 +152,7 @@ else(APPLE)
   set(FLAGS_ERRORS  "-Wpedantic -Wextra -Wall -I${ripple_SOURCE_DIR}/include")
   #set(FLAGS_PERF    "-O3 -pthread -Wno-c++1z-extensions")
   set(FLAGS_PERF    "-O3 -std=c++17 -pthread -Wno-c++1z-extensions")
+  set(FLAGS_PERF    "${FLAGS_PERF} -ftime-trace")
   set(FLAGS_DEBUG   "-g")
   set(DEBUG_FLAGS   "${FLAGS_PERF} ${FLAGS_ERRORS} ${FLAGS_DEBUG}")
   set(WARN_FLAGS    "-Wno-gnu-string-literal-operator-template")
@@ -195,7 +201,7 @@ else()
     CACHE STRING "CXX FLAGS" FORCE
   )
   set(CUDA_FLAGS "${CUDA_FLAGS} -G")
-  add_compile_definitions(RIPPLE_LOG_LEVEL_INFO)
+  add_compile_definitions(RIPPLE_LOG_LEVEL_DEBUG)
 endif()
 
 set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} ${CUDA_FLAGS}")
@@ -224,27 +230,18 @@ file(
   GLOB_RECURSE 
   headers
   RELATIVE ${PROJECT_SOURCE_DIR} 
-  "include/ripple/core/*.hpp" "include/ripple/core/*.cuh")
+  "include/ripple/*.hpp" "include/ripple/*.cuh")
 
-set(sources "")  
-file(
-  GLOB_RECURSE 
-  sources 
-  RELATIVE ${PROJECT_SOURCE_DIR} 
-  "src/*.cpp" "src/*.cu")
-
-# Currently this doesn't work because of the custom cuda build configuration.
-# TODO: Change this to use built-in cmake cuda support now that it has been
-#       updated.
-add_library(ripple SHARED ${sources})
+add_library(ripple INTERFACE ${sources})
 add_library(ripple::ripple ALIAS ripple)
-target_include_directories(ripple PUBLIC 
+target_include_directories(ripple INTERFACE 
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<BUILD_INTERFACE:${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}>
 )
-target_include_directories(ripple SYSTEM PUBLIC
+target_include_directories(ripple SYSTEM INTERFACE
   $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include>
 )
+target_compile_features(ripple INTERFACE cxx_std_17)
 
 # Setup package config
 include(CMakePackageConfigHelpers)
@@ -306,12 +303,6 @@ endif()
 option(RIPPLE_BUILD_DOCS "build docs" OFF)
 if(${RIPPLE_BUILD_DOCS})
   add_subdirectory(docs)
-endif()
-
-option(RIPPLE_BUILD_EXAMPLES "build examples" ON)
-if (${RIPPLE_BUILD_EXAMPLES} OR 
-  (CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR))
-    add_subdirectory(examples)
 endif()
 
 option(RIPPLE_BUILD_TESTS "build tests" OFF)
