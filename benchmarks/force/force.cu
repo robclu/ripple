@@ -16,9 +16,9 @@
 #include "eos.hpp"
 #include "flux.hpp"
 #include "state.hpp"
-#include <ripple/core/container/tensor.hpp>
-#include <ripple/core/execution/executor.hpp>
-#include <ripple/core/utility/timer.hpp>
+#include <ripple/container/tensor.hpp>
+#include <ripple/execution/executor.hpp>
+#include <ripple/utility/timer.hpp>
 #include <iostream>
 
 /*
@@ -68,8 +68,9 @@ int main(int argc, char** argv) {
       using namespace ripple;
       constexpr auto flux = Force();
 
-      auto f = flux(*xit, *xit.offset(dim_x, 1), eos, dim_x, dtdh) -
-               flux(*xit.offset(dim_x, -1), *xit, eos, dim_x, dtdh);
+      auto f = flux(*xit, *xit.offset(dimx(), 1), eos, dimx(), dtdh) -
+               flux(*xit.offset(dimx(), -1), *xit, eos, dimx(), dtdh);
+
       ripple::unrolled_for<dims - 1>([&](auto d) {
         constexpr auto dim = (d + 1) % dims;
         f += flux(*xit, *xit.offset(dim, 1), eos, dim, dtdh) -

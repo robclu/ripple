@@ -16,7 +16,7 @@
 #ifndef RIPPLE_BENCHMARKS_FLUX_FLUX_HPP
 #define RIPPLE_BENCHMARKS_FLUX_FLUX_HPP
 
-#include <ripple/core/iterator/iterator_traits.hpp>
+#include <ripple/iterator/iterator_traits.hpp>
 
 /**
  * The LaxFriedrichs type computes the flux between a left and a right state
@@ -131,9 +131,10 @@ struct Richtmyer {
     Dim&&             dim,
     T                 sc) const noexcept -> typename StateImplL::ContigState {
     using ResultType = typename StateImplL::ContigState;
-    return ResultType{T{0.5} * (l + r +
-                                sc * (l.flux(eos, ripple_forward(dim)) -
-                                      r.flux(eos, ripple_forward(dim))))}
+    return ResultType{
+      T{0.5} * (l + r +
+                sc * (l.flux(eos, ripple_forward(dim)) -
+                      r.flux(eos, ripple_forward(dim))))}
       .flux(eos, ripple_forward(dim));
   }
 };

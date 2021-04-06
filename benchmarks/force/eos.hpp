@@ -1,22 +1,22 @@
-//==--- ripple/benchmark/flux/eos.hpp ---------------------- -*- C++ -*- ---==//
-//
-//                                Ripple
-//
-//                      Copyright (c) 2019, 2020 Rob Clucas
-//
-//  This file is distributed under the MIT License. See LICENSE for details.
-//
-//==------------------------------------------------------------------------==//
-//
-/// \file  eos.hpp
-/// \brief This file implements and equations of state for an ideal gas.
-///
-//==------------------------------------------------------------------------==//
+/**=--- ripple/benchmarks/force.hpp ------------------------ -*- C++ -*- ---==**
+ *
+ *                                  Ripple
+ *
+ *                      Copyright (c) 2019 - 2021 Rob Clucas.
+ *
+ *  This file is distributed under the MIT License. See LICENSE for details.
+ *
+ *==-------------------------------------------------------------------------==*
+ *
+ * \file  eos.hpp
+ * \brief This file implements and equations of state for an ideal gas.
+ *
+ *==------------------------------------------------------------------------==*/
 
 #ifndef RIPPLE_BENCHMARK_FLUX_EOS_HPP
 #define RIPPLE_BENCHMARK_FLUX_EOS_HPP
 
-#include <ripple/core/utility/portability.hpp>
+#include <ripple/utility/portability.hpp>
 #include <cmath>
 #include <type_traits>
 

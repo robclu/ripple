@@ -17,9 +17,9 @@
 #ifndef RIPPLE_BENCHMARK_FORCE_STATE_HPP
 #define RIPPLE_BENCHMARK_FORCE_STATE_HPP
 
-#include <ripple/core/container/array.hpp>
-#include <ripple/core/math/math.hpp>
-#include <ripple/core/storage/storage_descriptor.hpp>
+#include <ripple/container/array.hpp>
+#include <ripple/math/math.hpp>
+#include <ripple/storage/storage_descriptor.hpp>
 
 /**
  * Forward declaration of state class.
@@ -424,9 +424,9 @@ class State : public ripple::PolymorphicLayout<State<T, Dims, Layout>>,
     FluxVec    f;
     const auto p = pressure(eos);
 
-    f.template at<0>() = rho_v(dim);
-    f.template at<1>() = v(dim) * (energy() + p);
-    f[v_offset + dim]  = rho_v(dim) * v(dim) + p;
+    f.component(0)    = rho_v(dim);
+    f.component(1)    = v(dim) * (energy() + p);
+    f[v_offset + dim] = rho_v(dim) * v(dim) + p;
 
     // Set the remaining velocity components:
     size_t shift = 0;
@@ -449,7 +449,7 @@ class State : public ripple::PolymorphicLayout<State<T, Dims, Layout>>,
   template <typename EosImpl>
   ripple_host_device auto
   wavespeed(const EosImpl& eos) const noexcept -> ValueType {
-    ValueType s = std::abs(rho_v<ripple::dim_x>());
+    ValueType s = std::abs(rho_v<ripple::dimx()>());
     ripple::unrolled_for<dims - 1>([&](auto d) {
       constexpr auto dim = size_t{d} + 1;
       s                  = std::max(s, std::abs(rho_v<dim>()));
