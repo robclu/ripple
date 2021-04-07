@@ -1,18 +1,17 @@
-//==--- ripple/benchmark/force/state.hpp --------------------- -*- C++ -*-
-//---==//
-//
-//                                Fracture
-//
-//                      Copyright (c) 2020 Rob Clucas.
-//
-//  This file is distributed under the MIT License. See LICENSE for details.
-//
-//==------------------------------------------------------------------------==//
-//
-/// \file  fluid_state.hpp
-/// \brief This file defines an implementation for a fluid state.
-//
-//==------------------------------------------------------------------------==//
+/**=--- ripple/benchmarks/state.hpp ------------------------ -*- C++ -*- ---==**
+ *
+ *                                  Ripple
+ *
+ *                      Copyright (c) 2019 - 2021 Rob Clucas.
+ *
+ *  This file is distributed under the MIT License. See LICENSE for details.
+ *
+ *==-------------------------------------------------------------------------==*
+ *
+ * \file  fluid_state.hpp
+ * \brief This file defines an implementation for a fluid state.
+ *
+ *==------------------------------------------------------------------------==*/
 
 #ifndef RIPPLE_BENCHMARK_FORCE_STATE_HPP
 #define RIPPLE_BENCHMARK_FORCE_STATE_HPP
@@ -30,7 +29,8 @@ class State;
 namespace ripple {
 
 /**
- * Specialization of the ripple ArrayTraits for the state.
+ * Specialization of the ripple ArrayTraits for the state, so that the state
+ * type can inherit all array indexing and math op functionality.
  */
 template <typename T, typename Dims, typename LayoutType>
 struct ArrayTraits<State<T, Dims, LayoutType>> {

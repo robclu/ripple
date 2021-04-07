@@ -1,17 +1,17 @@
-//==--- ripple/benchmark/force/flux.hpp -------------------- -*- C++ -*- ---==//
-//
-//                                Ripple
-//
-//                      Copyright (c) 2020 Rob Clucas
-//
-//  This file is distributed under the MIT License. See LICENSE for details.
-//
-//==------------------------------------------------------------------------==//
-//
-/// \file  lax_friedrichs.hpp
-/// \brief This file defines an implementation of the Lax-Friedrichs flux.
-//
-//==------------------------------------------------------------------------==//
+/**=--- ripple/benchmarks/flux.hpp ------------------------ -*- C++ -*- ---==**
+ *
+ *                                  Ripple
+ *
+ *                      Copyright (c) 2019 - 2021 Rob Clucas.
+ *
+ *  This file is distributed under the MIT License. See LICENSE for details.
+ *
+ *==-------------------------------------------------------------------------==*
+ *
+ * \file  lax_friedrichs.hpp
+ * \brief This file defines an implementation of the Lax-Friedrichs flux.
+ *
+ *==------------------------------------------------------------------------==*/
 
 #ifndef RIPPLE_BENCHMARKS_FLUX_FLUX_HPP
 #define RIPPLE_BENCHMARKS_FLUX_FLUX_HPP

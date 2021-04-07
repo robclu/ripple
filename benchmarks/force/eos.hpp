@@ -21,8 +21,9 @@
 #include <type_traits>
 
 /**
- * The IdealGas type implements the equation of state interface which
- * represents an ideal gas.
+ * The IdealGas type implements and equation of state which can be used to
+ * define the behavious of an ideal gas.
+ *
  * \tparam T  The type of the data for the ideal gas.
  */
 template <typename T>
