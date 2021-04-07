@@ -357,18 +357,22 @@ class Graph {
    * which synchronizes *all* streams on *all* GPUs. To create only a submission
    * synchronization point, \sa sync.
    *
+   * \note This is less restrictive than a barrier, which fully synchronizes
+   *       each device. This just places a synchronization point into the
+   *       graph.
+   *
    * \param  callable The callable which defines the node's operation.
    * \param  args     Arguments for the callable.
    * \tparam F        The type of the callable.
    * \tparam Args     The types of the arguments.
    */
   template <typename F, typename... Args, non_node_enable_t<F> = 0>
-  auto sync_gpus(F&& callable, Args&&... args) -> Graph& {
+  auto gpu_fence(F&& callable, Args&&... args) -> Graph& {
     join_ids_.emplace_back(nodes_.size());
 
     NodeInfo info{NodeKind::normal, ExecutionKind::gpu};
     for (const auto& gpu : topology().gpus) {
-      emplace_named(info, [&gpu] { gpu.synchronize(); });
+      emplace_named(info, [&gpu] { gpu.synchronize_streams(); });
     }
 
     join_ids_.emplace_back(nodes_.size());
@@ -378,7 +382,7 @@ class Graph {
   }
 
   /**
-   * Emplaces a node into the graph which creates a fence for each gpu,
+   * Emplaces a node into the graph which creates a barrier for each gpu,
    * which will block until all gpus have finished their currently submitted
    * work.
    *
@@ -387,13 +391,13 @@ class Graph {
    * \tparam F        The type of the callable.
    * \tparam Args     The types of the arguments.
    */
-  auto gpu_fence() -> Graph& {
+  auto gpu_barrier() -> Graph& {
     join_ids_.emplace_back(nodes_.size());
 
     NodeInfo info{NodeKind::normal, ExecutionKind::gpu};
     for (auto& gpu : topology().gpus) {
-      gpu.prepare_fence();
-      emplace_named(info, [&gpu] { gpu.execute_fence(); });
+      gpu.prepare_barrier();
+      emplace_named(info, [&gpu] { gpu.execute_barrier(); });
     }
 
     join_ids_.emplace_back(nodes_.size());
@@ -402,7 +406,7 @@ class Graph {
       size_t count = topology().num_gpus();
       while (count > 0) {
         for (const auto& gpu : topology().gpus) {
-          if (gpu.is_fence_down()) {
+          if (gpu.is_barrier_down()) {
             count--;
           }
         }

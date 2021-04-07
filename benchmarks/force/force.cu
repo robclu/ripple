@@ -61,7 +61,7 @@ int main(int argc, char** argv) {
 
       // Set the velocity value in  each dimension, this is unrolled at
       // compile time:
-      ripple::unrolled_for<dims>([&](auto dim) { xit->set_v(dim, 1.0); });
+      ripple::unrolled_for<dims>([&](auto dim) { x_iter->set_v(dim, 1.0); });
     },
     x,
     eos);
@@ -94,7 +94,7 @@ int main(int argc, char** argv) {
   // This will start the timer:
   ripple::Timer timer;
   ripple::execute(flux);
-  ripple::fence();
+  ripple::barrier();
 
   double elapsed = timer.elapsed_msec();
   std::cout << "Size: " << elements << "x" << elements

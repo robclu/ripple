@@ -8,7 +8,7 @@
  *
  *==-------------------------------------------------------------------------==*
  *
- * \file  lax_friedrichs.hpp
+ * \file  flux.hpp
  * \brief This file defines an implementation of the Lax-Friedrichs flux.
  *
  *==------------------------------------------------------------------------==*/

@@ -65,9 +65,16 @@ inline auto
 execute_until(Graph& graph, Pred&& pred, Args&&... args) noexcept -> void;
 
 /**
- * Creates a fence, synchronizing all execution at the fence.
+ * Creates a fence, synchronizing all execution on all accelerators at the
+ * fence.
  */
 inline auto fence() noexcept -> void;
+
+/**
+ * Creates a barrier, waiting for all pending operaitons on all host cores
+ * and accelerators.
+ */
+inline auto barrier() noexcept -> void;
 
 /** Index of a thread for the executor. */
 static thread_local uint32_t thread_id = 0;
@@ -174,20 +181,41 @@ class Executor {
    * Creates a fence, waiting for all threads to finish execution, synchronizing
    * the gpu work.
    */
-  auto fence() noexcept -> void {
+  auto barrier() noexcept -> void {
+    size_t gpu_id = 0;
+    for (const auto& thread_state : thread_states_) {
+      if (gpu_id >= topology().num_gpus()) {
+        break;
+      }
+      if (thread_state.has_gpu_priority()) {
+        topology().gpus[gpu_id++].execute_barrier();
+      }
+    }
     auto& state = thread_states_[thread_id];
     while (has_unfinished_work()) {
       execute_node_work(state, state.first_priority());
       execute_node_work(state, state.second_priority());
     }
+  }
+
+  /**
+   * Creates a fence, waiting for all threads to finish execution, synchronizing
+   * the gpu work.
+   */
+  auto fence() noexcept -> void {
     size_t gpu_id = 0;
-    for (const auto& state : thread_states_) {
+    for (const auto& thread_state : thread_states_) {
       if (gpu_id >= topology().num_gpus()) {
         break;
       }
-      if (state.has_gpu_priority()) {
-        topology().gpus[gpu_id++].synchronize();
+      if (thread_state.has_gpu_priority()) {
+        topology().gpus[gpu_id++].synchronize_streams();
       }
+    }
+    auto& state = thread_states_[thread_id];
+    while (has_unfinished_work()) {
+      execute_node_work(state, state.first_priority());
+      execute_node_work(state, state.second_priority());
     }
   }
 
@@ -664,10 +692,17 @@ execute_until(Graph& graph, Pred&& pred, Args&&... args) noexcept -> void {
 }
 
 /**
- * Creates a fence, flushing all pending operations.
+ * Creates a fence, flushing all pending operations on all accelerators.
  */
 inline auto fence() noexcept -> void {
   executor().fence();
+}
+
+/**
+ * Creates a barrier, waiting for all operations on all devices.
+ */
+inline auto barrier() noexcept -> void {
+  executor().barrier();
 }
 
 } // namespace ripple

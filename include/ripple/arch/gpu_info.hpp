@@ -33,7 +33,7 @@ struct GpuInfo {
   /** The number of streams for the gpu. */
   static constexpr size_t compute_streams  = 1;
   /** The number of transfer streams for the gpu. */
-  static constexpr size_t transfer_streams = 7;
+  static constexpr size_t transfer_streams = 2;
   /** The total number of streams for the gpu. */
   static constexpr size_t total_streams    = compute_streams + transfer_streams;
   // clang-format on
@@ -225,10 +225,9 @@ struct GpuInfo {
   }
 
   /**
-   * Synchronizes the streams for the gpu.
-   * \todo Rename this to barrier.
+   * Synchronizes all streams for the GPU.
    */
-  auto synchronize() const noexcept -> void {
+  auto synchronize_streams() const noexcept -> void {
     if (index == invalid) {
       return;
     }
@@ -243,32 +242,33 @@ struct GpuInfo {
   }
 
   /**
-   * Prepares he fence for asynchronous execution, setting that the fence is
+   * Prepares he barrier for asynchronous execution, setting that the barrier is
    * up and should be waited on.
-   * This will then be set as down once the fence is executed.
+   * This will then be set as down once the barrier is executed.
    */
-  auto prepare_fence() noexcept -> void {
-    fence_up = true;
+  auto prepare_barrier() noexcept -> void {
+    barrier_up = true;
   }
 
   /**
-   * Creates a fence on the gpu, blocking until the device is synchronized.
+   * Creates a barrier on all accelerators, blocking until the device is
+   * synchronized.
    */
-  auto execute_fence() noexcept -> void {
+  auto execute_barrier() noexcept -> void {
     if (index == invalid) {
       return;
     }
 
     gpu::set_device(index);
     gpu::synchronize_device();
-    fence_up = false;
+    barrier_up = false;
   }
 
   /**
-   * Returns true if the fence is down.
+   * Returns true if the barrier is down.
    */
-  auto is_fence_down() const noexcept -> bool {
-    return !fence_up;
+  auto is_barrier_down() const noexcept -> bool {
+    return !barrier_up;
   }
 
   StreamContainer streams     = {};      //!< Streams for the device.
@@ -278,8 +278,8 @@ struct GpuInfo {
   uint64_t        mem_alloc   = 0;       //!< Amount of device  memory.
   Id              compute_id  = 0;       //!< Id of the current compute stream.
   Id              transfer_id = 0;       //!< Id of the next transfer stream.
-  bool            fence_up    = false;
-  uint8_t         pad[padding_size]; //!< Padding for false sharing.
+  bool            barrier_up  = false;   //!< If the barrier is up.
+  uint8_t         pad[padding_size];     //!< Padding for false sharing.
 };
 
 } // namespace ripple
