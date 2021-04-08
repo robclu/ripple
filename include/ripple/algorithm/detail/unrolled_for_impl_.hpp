@@ -47,7 +47,7 @@ struct Unroll : public Unroll<(Amount <= 1 ? 0 : Amount - 1)> {
    * \tparam Args      The type of the arguments to invoke with.
    */
   template <typename Functor, typename... Args>
-  ripple_host_device constexpr Unroll(
+  ripple_all constexpr Unroll(
     Functor&& functor, Args&&... args) noexcept
   : PreviousLevel{ripple_forward(functor), ripple_forward(args)...} {
     functor(Num<previous_level>(), ripple_forward(args)...);
@@ -70,7 +70,7 @@ struct Unroll<1> {
    * \tparam Args      The type of the arguments to invoke with.
    */
   template <typename Functor, typename... Args>
-  ripple_host_device constexpr Unroll(
+  ripple_all constexpr Unroll(
     Functor&& functor, Args&&... args) noexcept {
     functor(Num<0>(), ripple_forward(args)...);
   }
@@ -93,7 +93,7 @@ struct Unroll<0> {
    * \tparam Args      The type of the arguments.
    */
   template <typename Functor, typename... Args>
-  ripple_host_device constexpr Unroll(
+  ripple_all constexpr Unroll(
     Functor&& functor, Args&&... args) noexcept {}
 };
 

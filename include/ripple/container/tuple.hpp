@@ -34,13 +34,13 @@ class Tuple<> {
 
  public:
   /** Intializes the Tuple with no elements. */
-  ripple_host_device constexpr Tuple() noexcept {}
+  ripple_all constexpr Tuple() noexcept {}
 
   /**
    * Gets the size of the tuple.
    * \return The number of elements in the tuple.
    */
-  ripple_host_device constexpr auto size() const noexcept -> size_t {
+  ripple_all constexpr auto size() const noexcept -> size_t {
     return 0;
   }
 };
@@ -70,7 +70,7 @@ class Tuple {
    * \tparam I         The indices for for extracting each element.
    */
   template <typename T, size_t... I>
-  ripple_host_device constexpr explicit Tuple(
+  ripple_all constexpr explicit Tuple(
     T&& other, std::index_sequence<I...> extractor) noexcept
   : storage_{detail::get_impl<I>(ripple_forward(other.data()))...} {}
 
@@ -80,14 +80,14 @@ class Tuple {
   /**
    * Performs default initialization of the tuple types.
    */
-  ripple_host_device constexpr Tuple() noexcept
+  ripple_all constexpr Tuple() noexcept
   : storage_{std::decay_t<Ts>()...} {}
 
   /**
    * Intializes the tuple with a variadic list of const ref elements.
    * \param es The elements to store in the tuple.
    */
-  ripple_host_device constexpr Tuple(const Ts&... es) noexcept
+  ripple_all constexpr Tuple(const Ts&... es) noexcept
   : storage_{es...} {}
 
   /**
@@ -100,7 +100,7 @@ class Tuple {
    * \tparam Types The types of the elements.
    */
   template <typename... Types, non_tuple_enable_t<Types...> = 0>
-  ripple_host_device constexpr Tuple(Types&&... es) noexcept
+  ripple_all constexpr Tuple(Types&&... es) noexcept
   : storage_{ripple_forward(es)...} {}
 
   /*==--- [move constructor] -----------------------------------------------==*/
@@ -115,7 +115,7 @@ class Tuple {
    * \tparam T     The type of the other tuple.
    */
   template <typename T, tuple_enable_t<T> = 0>
-  ripple_host_device constexpr explicit Tuple(T&& other) noexcept
+  ripple_all constexpr explicit Tuple(T&& other) noexcept
   : Tuple{ripple_forward(other), std::make_index_sequence<elements>{}} {}
 
   /*==--- [interface] ------------------------------------------------------==*/
@@ -124,7 +124,7 @@ class Tuple {
    * Gets the number of elements in the tuple.
    * \return The number of elements in the tuple.
    */
-  ripple_host_device constexpr auto size() const noexcept -> size_t {
+  ripple_all constexpr auto size() const noexcept -> size_t {
     return elements;
   }
 
@@ -133,7 +133,7 @@ class Tuple {
    * elements.
    * \return A reference to the data for the tuple.
    */
-  ripple_host_device auto data() noexcept -> Storage& {
+  ripple_all auto data() noexcept -> Storage& {
     return storage_;
   }
 
@@ -142,7 +142,7 @@ class Tuple {
    * holds the elements.
    * \return A const reference to the data for the tuple.
    */
-  ripple_host_device auto data() const noexcept -> const Storage& {
+  ripple_all auto data() const noexcept -> const Storage& {
     return storage_;
   }
 };
@@ -160,7 +160,7 @@ class Tuple {
  * \return A const reference to the Ith element.
  * */
 template <size_t I, typename... Ts>
-ripple_host_device constexpr inline auto get(const Tuple<Ts...>& tuple) noexcept
+ripple_all constexpr inline auto get(const Tuple<Ts...>& tuple) noexcept
   -> const std::decay_t<nth_element_t<I, Ts...>>& {
   return detail::get_impl<I>(tuple.data());
 }
@@ -177,7 +177,7 @@ ripple_host_device constexpr inline auto get(const Tuple<Ts...>& tuple) noexcept
  * \return A reference to the Ith element.
  */
 template <size_t I, typename... Ts>
-ripple_host_device constexpr inline auto get(Tuple<Ts...>& tuple) noexcept
+ripple_all constexpr inline auto get(Tuple<Ts...>& tuple) noexcept
   -> std::remove_reference_t<nth_element_t<I, Ts...>>& {
   return detail::get_impl<I>(tuple.data());
 }
@@ -194,7 +194,7 @@ ripple_host_device constexpr inline auto get(Tuple<Ts...>& tuple) noexcept
  * \return An rvalue reference to to the element.
  */
 template <size_t I, typename... Ts>
-ripple_host_device constexpr inline auto get(Tuple<Ts...>&& tuple) noexcept
+ripple_all constexpr inline auto get(Tuple<Ts...>&& tuple) noexcept
   -> std::remove_reference_t<nth_element_t<I, Ts...>>&& {
   using DataType = decltype(tuple.data());
   return detail::get_impl<I>(
@@ -213,7 +213,7 @@ ripple_host_device constexpr inline auto get(Tuple<Ts...>&& tuple) noexcept
  * \return A const rvalue reference to the element.
  */
 template <size_t I, typename... Ts>
-ripple_host_device constexpr inline auto
+ripple_all constexpr inline auto
 get(const Tuple<Ts...>&& tuple) noexcept
   -> const std::decay_t<nth_element_t<I, Ts...>>&& {
   using DataType = decltype(tuple.data());
@@ -264,7 +264,7 @@ get(const Tuple<Ts...>&& tuple) noexcept
  * \return A tuple containing the values.
  */
 template <typename... Ts>
-ripple_host_device constexpr inline auto
+ripple_all constexpr inline auto
 make_tuple(Ts&&... values) noexcept -> Tuple<std::decay_t<Ts>...> {
   return Tuple<std::decay_t<Ts>...>{ripple_forward(values)...};
 }

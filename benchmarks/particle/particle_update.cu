@@ -54,7 +54,7 @@ int main(int argc, char** argv) {
   // ripple:::Graph init(ripple::ExecutionKind::cpu);
   ripple::Graph init;
   init.split(
-    [] ripple_host_device(auto&& it) {
+    [] ripple_all(auto&& it) {
       for (const auto dim : ripple::range(dims)) {
         it->x(dim) = it.global_idx(ripple::dimx());
         it->v(dim) = 1.4f * dim;
@@ -67,7 +67,7 @@ int main(int argc, char** argv) {
   const Real    dt = 0.1;
   ripple::Graph update;
   update.split(
-    [] ripple_host_device(auto&& it, Real dt) { it->update(dt); }, x, dt);
+    [] ripple_all(auto&& it, Real dt) { it->update(dt); }, x, dt);
 
   ripple::Timer timer;
   ripple::execute(update);

@@ -34,7 +34,7 @@ struct ConstLoader : public PaddingLoader<ConstLoader<T>> {
    * Constructor, sets  the constant value to load as the padding value.
    * \param v The value for the padding.
    */
-  ripple_host_device ConstLoader(T v) noexcept : value(v) {}
+  ripple_all ConstLoader(T v) noexcept : value(v) {}
 
   /**
    * Loads the front padding in the given dimension, using the value of
@@ -46,7 +46,7 @@ struct ConstLoader : public PaddingLoader<ConstLoader<T>> {
    * \tparam Dim      The type of the dimension specifier.
    */
   template <typename Iterator, typename Dim>
-  ripple_host_device constexpr auto
+  ripple_all constexpr auto
   load_front(Iterator&& it, int index, Dim&& dim) const noexcept -> void {
     *it = value;
   }
@@ -61,7 +61,7 @@ struct ConstLoader : public PaddingLoader<ConstLoader<T>> {
    * \tparam Dim      The type of the dimension specifier.
    */
   template <typename Iterator, typename Dim>
-  ripple_host_device constexpr auto
+  ripple_all constexpr auto
   load_back(Iterator&& it, int index, Dim&& dim) const noexcept -> void {
     *it = value;
   }

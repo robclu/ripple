@@ -44,7 +44,7 @@ struct Array {
    * \param i The index of the element to return.
    * \return The element at position i in the array.
    */
-  ripple_host_device constexpr decltype(auto) operator[](size_t i) noexcept {
+  ripple_all constexpr decltype(auto) operator[](size_t i) noexcept {
     return impl()->operator[](i);
   }
 
@@ -56,7 +56,7 @@ struct Array {
    *
    * \param i The index of the element to return.
    */
-  ripple_host_device constexpr decltype(auto)
+  ripple_all constexpr decltype(auto)
   operator[](size_t i) const noexcept {
     return impl()->operator[](i);
   }
@@ -65,7 +65,7 @@ struct Array {
    * Gets the number of elements in the array.
    * \return The number of elements in the array.
    */
-  ripple_host_device constexpr auto size() const noexcept -> size_t {
+  ripple_all constexpr auto size() const noexcept -> size_t {
     return array_traits_t<Impl>::size;
   }
 
@@ -78,7 +78,7 @@ struct Array {
    * \return true if all elements of both arrays are the same, false otherwise.
    */
   template <typename ImplOther>
-  ripple_host_device constexpr auto
+  ripple_all constexpr auto
   operator==(const Array<ImplOther>& other) noexcept -> bool {
     assert_size_match<ImplOther>();
     for (size_t i = 0; i < elements; ++i) {
@@ -101,7 +101,7 @@ struct Array {
    * \return true if all array elements are equal to the value.
    */
   template <typename T, array_value_enable_t<T, Impl> = 0>
-  ripple_host_device constexpr auto operator==(T val) const noexcept -> bool {
+  ripple_all constexpr auto operator==(T val) const noexcept -> bool {
     for (size_t i = 0; i < elements; ++i) {
       if (impl()->operator[](i) != val) {
         return false;
@@ -117,7 +117,7 @@ struct Array {
    * \return true if any element of the arrays are not equal, false otherwise.
    */
   template <typename ImplOther>
-  ripple_host_device constexpr auto
+  ripple_all constexpr auto
   operator!=(const Array<ImplOther>& other) noexcept -> bool {
     return !(*this == other);
   }
@@ -130,7 +130,7 @@ struct Array {
    * \return true if any elements of the array are not equal to the value.
    */
   template <typename T, array_value_enable_t<T, Impl> = 0>
-  ripple_host_device constexpr auto operator!=(T val) const noexcept -> bool {
+  ripple_all constexpr auto operator!=(T val) const noexcept -> bool {
     for (size_t i = 0; i < elements; ++i) {
       if (impl()->operator[](i) != val) {
         return true;
@@ -147,7 +147,7 @@ struct Array {
    *         elements in the other array.
    */
   template <typename ImplOther>
-  ripple_host_device constexpr auto
+  ripple_all constexpr auto
   operator<=(const Array<ImplOther>& other) noexcept -> bool {
     for (size_t i = 0; i < elements; ++i) {
       if (impl()->operator[](i) > other[i]) {
@@ -165,7 +165,7 @@ struct Array {
    * \return true if all elements are less than or equal to the given value.
    */
   template <typename T, array_value_enable_t<T, Impl> = 0>
-  ripple_host_device constexpr auto operator<=(T val) const noexcept -> bool {
+  ripple_all constexpr auto operator<=(T val) const noexcept -> bool {
     for (size_t i = 0; i < elements; ++i) {
       if (impl()->operator[](i) > val) {
         return false;
@@ -183,7 +183,7 @@ struct Array {
    *         elements in the other array.
    */
   template <typename ImplOther>
-  ripple_host_device constexpr auto
+  ripple_all constexpr auto
   operator>=(const Array<ImplOther>& other) noexcept -> bool {
     for (size_t i = 0; i < elements; ++i) {
       if (impl()->operator[](i) < other[i]) {
@@ -201,7 +201,7 @@ struct Array {
    * \return true if all elements are greater than or equal to the given value.
    */
   template <typename T, array_value_enable_t<T, Impl> = 0>
-  ripple_host_device constexpr auto operator>=(T val) const noexcept -> bool {
+  ripple_all constexpr auto operator>=(T val) const noexcept -> bool {
     for (size_t i = 0; i < elements; ++i) {
       if (impl()->operator[](i) < val) {
         return false;
@@ -218,7 +218,7 @@ struct Array {
    *         elements.
    */
   template <typename ImplOther>
-  ripple_host_device constexpr auto
+  ripple_all constexpr auto
   operator<(const Array<ImplOther>& other) const noexcept -> bool {
     for (size_t i = 0; i < elements; ++i) {
       if (impl()->operator[](i) >= other[i]) {
@@ -236,7 +236,7 @@ struct Array {
    * \return true if all array elements are less than the given value.
    */
   template <typename T, array_value_enable_t<T, Impl> = 0>
-  ripple_host_device constexpr auto operator<(T val) const noexcept -> bool {
+  ripple_all constexpr auto operator<(T val) const noexcept -> bool {
     for (size_t i = 0; i < elements; ++i) {
       if (impl()->operator[](i) >= val) {
         return false;
@@ -253,7 +253,7 @@ struct Array {
    *         the other array.
    */
   template <typename ImplOther>
-  ripple_host_device constexpr auto
+  ripple_all constexpr auto
   operator>(const Array<ImplOther>& a) const noexcept -> bool {
     for (size_t i = 0; i < elements; ++i) {
       if (impl()->operator[](i) <= a[i]) {
@@ -271,7 +271,7 @@ struct Array {
    * \return true if all elements in the array are greater than the given value.
    */
   template <typename T, array_value_enable_t<T, Impl> = 0>
-  ripple_host_device constexpr auto operator>(T val) const noexcept -> bool {
+  ripple_all constexpr auto operator>(T val) const noexcept -> bool {
     for (size_t i = 0; i < elements; ++i) {
       if (impl()->operator[](i) <= val) {
         return false;
@@ -293,7 +293,7 @@ struct Array {
    * \return A reference to the modified array.
    */
   template <typename ImplOther>
-  ripple_host_device constexpr auto
+  ripple_all constexpr auto
   operator+=(const Array<ImplOther>& other) noexcept -> Impl& {
     assert_size_match<ImplOther>();
     unrolled_for_bounded<elements>(
@@ -313,7 +313,7 @@ struct Array {
    * \return A reference to the modified array.
    */
   template <typename T, array_value_enable_t<T, Impl> = 0>
-  ripple_host_device constexpr auto operator+=(T val) noexcept -> Impl& {
+  ripple_all constexpr auto operator+=(T val) noexcept -> Impl& {
     using Value = typename array_traits_t<Impl>::Value;
     unrolled_for_bounded<elements>(
       [&](auto i) { impl()->operator[](i) += static_cast<Value>(val); });
@@ -329,7 +329,7 @@ struct Array {
    *         implemenation type of the other array, or the fallback type.
    */
   template <typename ImplOther, typename R = array_impl_t<Impl, ImplOther>>
-  ripple_host_device constexpr auto
+  ripple_all constexpr auto
   operator+(const Array<ImplOther>& other) const noexcept -> R {
     R result;
     unrolled_for_bounded<elements>(
@@ -353,7 +353,7 @@ struct Array {
     typename T,
     typename R                    = array_impl_t<Impl, Impl>,
     array_value_enable_t<T, Impl> = 0>
-  ripple_host_device constexpr auto operator+(T val) const noexcept -> R {
+  ripple_all constexpr auto operator+(T val) const noexcept -> R {
     R result;
     using Value = typename array_traits_t<Impl>::Value;
     unrolled_for_bounded<elements>([&](auto i) {
@@ -376,7 +376,7 @@ struct Array {
    * \return A reference to the modified array.
    */
   template <typename ImplOther>
-  ripple_host_device constexpr auto
+  ripple_all constexpr auto
   operator-=(const Array<ImplOther>& other) noexcept -> Impl& {
     assert_size_match<ImplOther>();
     unrolled_for_bounded<elements>(
@@ -396,7 +396,7 @@ struct Array {
    * \return A reference to the modified array.
    */
   template <typename T, array_value_enable_t<T, Impl> = 0>
-  ripple_host_device constexpr auto operator-=(T val) noexcept -> Impl& {
+  ripple_all constexpr auto operator-=(T val) noexcept -> Impl& {
     using Value = typename array_traits_t<Impl>::Value;
     unrolled_for_bounded<elements>(
       [&](auto i) { impl()->operator[](i) -= static_cast<Value>(val); });
@@ -414,7 +414,7 @@ struct Array {
    *         implemenation type of the other array, or the fallback type.
    */
   template <typename ImplOther, typename R = array_impl_t<Impl, ImplOther>>
-  ripple_host_device constexpr auto
+  ripple_all constexpr auto
   operator-(const Array<ImplOther>& other) const noexcept -> R {
     R result;
     unrolled_for_bounded<elements>(
@@ -438,7 +438,7 @@ struct Array {
     typename T,
     typename R                    = array_impl_t<Impl, Impl>,
     array_value_enable_t<T, Impl> = 0>
-  ripple_host_device constexpr auto operator-(T val) const noexcept -> R {
+  ripple_all constexpr auto operator-(T val) const noexcept -> R {
     R result;
     using Value = typename array_traits_t<Impl>::Value;
     unrolled_for_bounded<elements>([&](auto i) {
@@ -461,7 +461,7 @@ struct Array {
    * \return A reference to the modified array.
    */
   template <typename ImplOther>
-  ripple_host_device constexpr auto
+  ripple_all constexpr auto
   operator*=(const Array<ImplOther>& other) noexcept -> Impl& {
     assert_size_match<ImplOther>();
     unrolled_for_bounded<elements>(
@@ -481,7 +481,7 @@ struct Array {
    * \return A reference to the modified array.
    */
   template <typename T, array_value_enable_t<T, Impl> = 0>
-  ripple_host_device constexpr auto operator*=(T val) noexcept -> Impl& {
+  ripple_all constexpr auto operator*=(T val) noexcept -> Impl& {
     using Value = typename array_traits_t<Impl>::Value;
     unrolled_for_bounded<elements>(
       [&](auto i) { impl()->operator[](i) *= static_cast<Value>(val); });
@@ -499,7 +499,7 @@ struct Array {
    *         implemenation type of the other array, or the fallback type.
    */
   template <typename ImplOther, typename R = array_impl_t<Impl, ImplOther>>
-  ripple_host_device constexpr auto
+  ripple_all constexpr auto
   operator*(const Array<ImplOther>& other) const noexcept -> R {
     R result;
     unrolled_for_bounded<elements>(
@@ -524,7 +524,7 @@ struct Array {
     typename T,
     typename R                    = array_impl_t<Impl, Impl>,
     array_value_enable_t<T, Impl> = 0>
-  ripple_host_device constexpr auto operator*(T val) const noexcept -> R {
+  ripple_all constexpr auto operator*(T val) const noexcept -> R {
     R result;
     using Value = typename array_traits_t<Impl>::Value;
     unrolled_for_bounded<elements>([&](auto i) {
@@ -547,7 +547,7 @@ struct Array {
    * \return A reference to the modified array.
    */
   template <typename ImplOther>
-  ripple_host_device constexpr auto
+  ripple_all constexpr auto
   operator/=(const Array<ImplOther>& other) noexcept -> Impl& {
     assert_size_match<ImplOther>();
     unrolled_for_bounded<elements>(
@@ -566,7 +566,7 @@ struct Array {
    * \return A reference to the modified array.
    */
   template <typename T, array_value_enable_t<T, Impl> = 0>
-  ripple_host_device constexpr auto operator/=(T val) noexcept -> Impl& {
+  ripple_all constexpr auto operator/=(T val) noexcept -> Impl& {
     using Value = typename array_traits_t<Impl>::Value;
     unrolled_for_bounded<elements>(
       [&](auto i) { impl()->operator[](i) /= static_cast<Value>(val); });
@@ -586,7 +586,7 @@ struct Array {
    *         implemenation type of the other array, or the fallback type.
    */
   template <typename ImplOther, typename R = array_impl_t<Impl, ImplOther>>
-  ripple_host_device constexpr auto
+  ripple_all constexpr auto
   operator/(const Array<ImplOther>& other) const noexcept -> R {
     R result;
     unrolled_for_bounded<elements>(
@@ -609,7 +609,7 @@ struct Array {
     typename T,
     typename R                    = array_impl_t<Impl, Impl>,
     array_value_enable_t<T, Impl> = 0>
-  ripple_host_device constexpr auto operator/(T val) const noexcept -> R {
+  ripple_all constexpr auto operator/(T val) const noexcept -> R {
     R result;
     using Value = typename array_traits_t<Impl>::Value;
     unrolled_for_bounded<elements>([&](auto i) {
@@ -623,7 +623,7 @@ struct Array {
    * Gets a pointer to the implementation of the interface.
    * \return A pointer to the implementation type.
    */
-  ripple_host_device constexpr auto impl() noexcept -> Impl* {
+  ripple_all constexpr auto impl() noexcept -> Impl* {
     return static_cast<Impl*>(this);
   }
 
@@ -631,7 +631,7 @@ struct Array {
    * Gets a pointer to constant implementation of the interface.
    * \return A pointer to a const implementation type.
    */
-  ripple_host_device constexpr auto impl() const noexcept -> const Impl* {
+  ripple_all constexpr auto impl() const noexcept -> const Impl* {
     return static_cast<const Impl*>(this);
   }
 
@@ -641,7 +641,7 @@ struct Array {
    * \tparam ImplOther The implementation type of the array to check.
    */
   template <typename ImplOther>
-  ripple_host_device constexpr auto assert_size_match() const noexcept -> void {
+  ripple_all constexpr auto assert_size_match() const noexcept -> void {
     constexpr size_t size_other = array_traits_t<ImplOther>::size;
     static_assert(
       size_other == elements, "Arrays have different number of elements");
@@ -666,7 +666,7 @@ template <
   typename Impl,
   typename R                    = array_impl_t<Impl, Impl>,
   array_value_enable_t<T, Impl> = 0>
-ripple_host_device constexpr auto
+ripple_all constexpr auto
 operator+(T val, const Array<Impl>& a) noexcept -> R {
   using Value = typename array_traits_t<Impl>::Value;
   using Type  = std::decay_t<T>;
@@ -698,7 +698,7 @@ template <
   typename Impl,
   typename R                    = array_impl_t<Impl, Impl>,
   array_value_enable_t<T, Impl> = 0>
-ripple_host_device constexpr auto
+ripple_all constexpr auto
 operator-(T val, const Array<Impl>& a) noexcept -> R {
   using Value = typename array_traits_t<Impl>::Value;
   using Type  = std::decay_t<T>;
@@ -730,7 +730,7 @@ template <
   typename Impl,
   typename R                    = array_impl_t<Impl, Impl>,
   array_value_enable_t<T, Impl> = 0>
-ripple_host_device constexpr auto
+ripple_all constexpr auto
 operator*(T val, const Array<Impl>& a) noexcept -> R {
   using Value = typename array_traits_t<Impl>::Value;
   using Type  = std::decay_t<T>;
@@ -762,7 +762,7 @@ template <
   typename Impl,
   typename R                    = array_impl_t<Impl, Impl>,
   array_value_enable_t<T, Impl> = 0>
-ripple_host_device constexpr auto
+ripple_all constexpr auto
 operator/(T val, const Array<Impl>& a) noexcept -> R {
   using Value = typename array_traits_t<Impl>::Value;
   using Type  = std::decay_t<T>;

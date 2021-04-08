@@ -34,7 +34,7 @@ namespace ripple {
  * \param amount The amount to offset ptr by.
  * \return A new pointer at the offset location.
  */
-ripple_host_device static inline auto
+ripple_all static inline auto
 offset_ptr(const void* ptr, uint32_t amount) noexcept -> void* {
   return reinterpret_cast<void*>(uintptr_t(ptr) + amount);
 }
@@ -48,7 +48,7 @@ offset_ptr(const void* ptr, uint32_t amount) noexcept -> void* {
  * \param ptr       The pointer to align.
  * \param alignment The alignment to ensure.
  */
-ripple_host_device static inline auto
+ripple_all static inline auto
 align_ptr(const void* ptr, size_t alignment) noexcept -> void* {
   assert(
     !(alignment & (alignment - 1)) &&

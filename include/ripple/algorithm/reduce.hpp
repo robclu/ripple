@@ -48,7 +48,7 @@ struct SumReducer {
    * \tparam T    The type of the iterator.
    */
   template <typename T>
-  ripple_host_device auto inplace(T& a, const T& b) const noexcept -> void {
+  ripple_all auto inplace(T& a, const T& b) const noexcept -> void {
     *a += *b;
   }
 
@@ -60,7 +60,7 @@ struct SumReducer {
    * \return The addition of the two elements.
    */
   template <typename T>
-  ripple_host_device auto
+  ripple_all auto
   operator()(const T& a, const T& b) const noexcept -> T {
     return T{a + b};
   }
@@ -78,7 +78,7 @@ struct SubtractionReducer {
    * \tparam T The type of the iterator.
    */
   template <typename T>
-  ripple_host_device auto inplace(T& a, const T& b) const noexcept -> void {
+  ripple_all auto inplace(T& a, const T& b) const noexcept -> void {
     *a -= *b;
   }
 
@@ -90,7 +90,7 @@ struct SubtractionReducer {
    * \return The subtraction of b from a.
    */
   template <typename T>
-  ripple_host_device auto
+  ripple_all auto
   operator()(const T& a, const T& b) const noexcept -> T {
     return a - b;
   }
@@ -109,7 +109,7 @@ struct MaxReducer {
    */
 
   template <typename T>
-  ripple_host_device auto inplace(T& a, const T& b) const noexcept -> void {
+  ripple_all auto inplace(T& a, const T& b) const noexcept -> void {
     *a = std::max(*a, *b);
   }
 
@@ -121,7 +121,7 @@ struct MaxReducer {
    * \return The max of a and b.
    */
   template <typename T>
-  ripple_host_device auto
+  ripple_all auto
   operator()(const T& a, const T& b) const noexcept -> T {
     return std::max(a, b);
   }
@@ -139,7 +139,7 @@ struct MinReducer {
    * \tparam T The type of the iterator.
    */
   template <typename T>
-  ripple_host_device auto operator()(T& a, const T& b) const noexcept -> void {
+  ripple_all auto operator()(T& a, const T& b) const noexcept -> void {
     *a = std::min(*a, *b);
   }
 
@@ -151,7 +151,7 @@ struct MinReducer {
    * \return The min of a and b.
    */
   template <typename T>
-  ripple_host_device auto
+  ripple_all auto
   operator()(const T& a, const T& b) const noexcept -> T {
     return std::min(a, b);
   }
@@ -165,12 +165,12 @@ struct MinReducer {
  * The pred must have the following overloads form:
  *
  * ~~~.cpp
- * ripple_host_device auto inplace(T<&> into, <const> T<&> from) const ->
+ * ripple_all auto inplace(T<&> into, <const> T<&> from) const ->
  *   -> void {}
  *
  * and
  *
- * ripple_host_device auto operator()(const T<&> a, <const> T<&> b) const
+ * ripple_all auto operator()(const T<&> a, <const> T<&> b) const
  *  -> T {}'
  * ~~~
  *
@@ -205,12 +205,12 @@ auto reduce(const DeviceBlock<T, Dims>& block, Pred&& pred) noexcept -> T {
  * The pred must have the following overloads form:
  *
  * ~~~.cpp
- * ripple_host_device auto inplace(T<&> into, <const> T<&> from) const ->
+ * ripple_all auto inplace(T<&> into, <const> T<&> from) const ->
  *   -> void {}
  *
  * and
  *
- * ripple_host_device auto operator()(const T<&> a, <const> T<&> b) const
+ * ripple_all auto operator()(const T<&> a, <const> T<&> b) const
  *  -> T {}'
  * ~~~
  *

@@ -35,7 +35,7 @@ struct CopyLoader : public InternalLoader<CopyLoader> {
    * \tparam IteratorTo   The type of the to iterator.
    */
   template <typename IteratorFrom, typename IteratorTo>
-  ripple_host_device constexpr auto
+  ripple_all constexpr auto
   load(IteratorFrom&& from, IteratorTo&& to) const noexcept -> void {
     static_assert_iterator(to);
     static_assert_iterator(from);

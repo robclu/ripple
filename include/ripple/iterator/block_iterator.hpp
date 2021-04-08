@@ -99,7 +99,7 @@ class BlockIterator {
    * poly layout type stores a pointer like wrapper rather than a pointer.
    * \return A reference to the iterated type.
    */
-  ripple_host_device auto deref_impl(PolyLayoutOverload) noexcept -> Ref {
+  ripple_all auto deref_impl(PolyLayoutOverload) noexcept -> Ref {
     return Ref{data_ptr_};
   }
 
@@ -108,7 +108,7 @@ class BlockIterator {
    * poly layout type stores a poitner like wrapper rather than a pointer.
    * \return A constant reference to the iterated type.
    */
-  ripple_host_device auto
+  ripple_all auto
   deref_impl(PolyLayoutOverload) const noexcept -> ConstRef {
     return ConstRef{data_ptr_};
   }
@@ -119,7 +119,7 @@ class BlockIterator {
    * required here.
    * \return A refereneceto the iterated type.
    */
-  ripple_host_device auto deref_impl(NonPolyLayoutOverload) noexcept -> Ref {
+  ripple_all auto deref_impl(NonPolyLayoutOverload) noexcept -> Ref {
     return *data_ptr_;
   }
 
@@ -129,7 +129,7 @@ class BlockIterator {
    * required here.
    * \return A const reference to the iterated type.
    */
-  ripple_host_device auto
+  ripple_all auto
   deref_impl(NonPolyLayoutOverload) const noexcept -> ConstRef {
     return *data_ptr_;
   }
@@ -144,7 +144,7 @@ class BlockIterator {
    *
    * \return A wrapper type over the data with pointer semantics.
    */
-  ripple_host_device auto access_impl(PolyLayoutOverload) noexcept -> Ptr {
+  ripple_all auto access_impl(PolyLayoutOverload) noexcept -> Ptr {
     return Ptr{Value{data_ptr_}};
   }
 
@@ -157,7 +157,7 @@ class BlockIterator {
    *
    * \return A const wrapper type over the data, with pointer semantics.
    */
-  ripple_host_device auto
+  ripple_all auto
   access_impl(PolyLayoutOverload) const noexcept -> ConstPtr {
     return ConstPtr{Value{data_ptr_}};
   }
@@ -166,7 +166,7 @@ class BlockIterator {
    * Implementation of accessing for non polymorphic layout types.
    * \return A pointer to the iterated type.
    */
-  ripple_host_device auto access_impl(NonPolyLayoutOverload) noexcept -> Ptr {
+  ripple_all auto access_impl(NonPolyLayoutOverload) noexcept -> Ptr {
     return data_ptr_;
   }
 
@@ -174,7 +174,7 @@ class BlockIterator {
    * Implementation of accessing for non polymorphic layout types.
    * \return A const pointer to the iterated type.
    */
-  ripple_host_device auto
+  ripple_all auto
   access_impl(NonPolyLayoutOverload) const noexcept -> ConstPtr {
     return data_ptr_;
   }
@@ -186,7 +186,7 @@ class BlockIterator {
    * polymorphic layout types.
    * \return A copy of the iterated type.
    */
-  ripple_host_device auto
+  ripple_all auto
   unwrap_impl(PolyLayoutOverload) const noexcept -> CopyType {
     return CopyType{data_ptr_};
   }
@@ -196,7 +196,7 @@ class BlockIterator {
    * non polymorphic layout types.
    * \return A copy of the iterated type.
    */
-  ripple_host_device auto
+  ripple_all auto
   unwrap_impl(NonPolyLayoutOverload) const noexcept -> CopyType {
     return CopyType{*data_ptr_};
   }
@@ -222,7 +222,7 @@ class BlockIterator {
    * \param data_ptr A pointer (or type which points) to the data.
    * \param space    The space over which the iterator can iterate.
    */
-  ripple_host_device BlockIterator(Storage data_ptr, Space space) noexcept
+  ripple_all BlockIterator(Storage data_ptr, Space space) noexcept
   : data_ptr_{data_ptr}, space_{space} {}
 
   /*==--- [operator overloading] -------------------------------------------==*/
@@ -232,7 +232,7 @@ class BlockIterator {
    * the iterator.
    * \return A reference to the type stored in the iterator.
    */
-  ripple_host_device auto operator*() noexcept -> Ref {
+  ripple_all auto operator*() noexcept -> Ref {
     return deref_impl(is_poly_layout_overload);
   }
 
@@ -241,7 +241,7 @@ class BlockIterator {
    * the iterator.
    * \return A const reference to the type T pointer to by the iterator.
    */
-  ripple_host_device auto operator*() const noexcept -> ConstRef {
+  ripple_all auto operator*() const noexcept -> ConstRef {
     return deref_impl(is_poly_layout_overload);
   }
 
@@ -250,7 +250,7 @@ class BlockIterator {
    * Overload of the access operator to access the underlying data.
    * \return A pointer, or pointer-like object for the iterated type.
    */
-  ripple_host_device auto operator->() noexcept -> Ptr {
+  ripple_all auto operator->() noexcept -> Ptr {
     return access_impl(is_poly_layout_overload);
   }
 
@@ -258,7 +258,7 @@ class BlockIterator {
    * Overload of the access operator to access the underlying data.
    * \return A pointer, or pointer-like oject to the iterated type.
    */
-  ripple_host_device auto operator->() const noexcept -> ConstPtr {
+  ripple_all auto operator->() const noexcept -> ConstPtr {
     return access_impl(is_poly_layout_overload);
   }
   // clang-format on
@@ -267,7 +267,7 @@ class BlockIterator {
    * Unwraps the iterated type.
    * \return A copy of the data to which the iterator points.
    */
-  ripple_host_device auto unwrap() const noexcept -> CopyType {
+  ripple_all auto unwrap() const noexcept -> CopyType {
     return unwrap_impl(is_poly_layout_overload);
   }
 
@@ -282,7 +282,7 @@ class BlockIterator {
    * \return A new iterator to the the offset location.
    */
   template <typename Dim>
-  ripple_host_device constexpr auto
+  ripple_all constexpr auto
   offset(Dim&& dim, int amount) const noexcept -> BlockIterator {
     return BlockIterator{
       Offsetter::offset(data_ptr_, space_, ripple_forward(dim), amount),
@@ -297,7 +297,7 @@ class BlockIterator {
    * \tparam Dim    The type of the dimension specifier.
    */
   template <typename Dim>
-  ripple_host_device constexpr auto
+  ripple_all constexpr auto
   shift(Dim&& dim, int amount) noexcept -> void {
     Offsetter::shift(data_ptr_, space_, ripple_forward(dim), amount);
   }
@@ -306,7 +306,7 @@ class BlockIterator {
    * Provides access to the underlying data for the iterator.
    * \return A pointer to the underlying data.
    */
-  ripple_host_device auto data() noexcept -> RawPtr {
+  ripple_all auto data() noexcept -> RawPtr {
     if constexpr (is_storage_accessor_v<Storage>) {
       return data_ptr_.data();
     } else {
@@ -318,7 +318,7 @@ class BlockIterator {
    * Provides const access to the underlying data for the iterator.
    * \return A pointer to the underlying data.
    */
-  ripple_host_device auto data() const noexcept -> ConstRawPtr {
+  ripple_all auto data() const noexcept -> ConstRawPtr {
     if constexpr (is_storage_accessor_v<Storage>) {
       return data_ptr_.data();
     } else {
@@ -329,7 +329,7 @@ class BlockIterator {
   /**
    * Returns a reference to the storage type.
    */
-  ripple_host_device decltype(auto) storage() noexcept {
+  ripple_all decltype(auto) storage() noexcept {
     if constexpr (is_storage_accessor_v<Storage>) {
       return data_ptr_;
     } else {
@@ -340,7 +340,7 @@ class BlockIterator {
   /**
    * Returns a reference to the storage type.
    */
-  ripple_host_device decltype(auto) storage() const noexcept {
+  ripple_all decltype(auto) storage() const noexcept {
     if constexpr (is_storage_accessor_v<Storage>) {
       return data_ptr_;
     } else {
@@ -356,7 +356,7 @@ class BlockIterator {
    * \return true if the iterator is valid.
    */
   template <typename Dim>
-  ripple_host_device auto is_valid(Dim&& dim) const noexcept -> bool {
+  ripple_all auto is_valid(Dim&& dim) const noexcept -> bool {
     return ::ripple::global_idx(ripple_forward(dim)) <
            size(ripple_forward(dim));
   }
@@ -367,7 +367,7 @@ class BlockIterator {
    * Provides the number of dimension for the iterator.
    * \return The number of dimensions for the iterator.
    */
-  ripple_host_device constexpr auto dimensions() const noexcept -> size_t {
+  ripple_all constexpr auto dimensions() const noexcept -> size_t {
     return dims;
   }
 
@@ -399,7 +399,7 @@ class BlockIterator {
    *         the given dimension.
    */
   template <typename Dim>
-  ripple_host_device constexpr auto
+  ripple_all constexpr auto
   backward_diff(Dim&& dim, int amount = 1) const noexcept -> CopyType {
     return deref_impl(is_poly_layout_overload) -
            *offset(ripple_forward(dim), -amount);
@@ -431,7 +431,7 @@ class BlockIterator {
    *         this iterator in the given dimension.
    */
   template <typename Dim>
-  ripple_host_device constexpr auto
+  ripple_all constexpr auto
   forward_diff(Dim&& dim, int amount = 1) const noexcept -> CopyType {
     return *offset(ripple_forward(dim), amount) -
            deref_impl(is_poly_layout_overload);
@@ -465,7 +465,7 @@ class BlockIterator {
    *         this iterator in the given dimension.
    */
   template <typename Dim, typename Index>
-  ripple_host_device constexpr auto
+  ripple_all constexpr auto
   central_diff(Dim&& dim, Index&& index, int amount) const noexcept
     -> UnderlyingType {
     // TODO: Do compile time check that underlying type has a component member.
@@ -501,7 +501,7 @@ class BlockIterator {
    *         this iterator in the given dimension.
    */
   template <typename Dim>
-  ripple_host_device constexpr auto
+  ripple_all constexpr auto
   central_diff(Dim&& dim, int amount = 1) const noexcept -> CopyType {
     return *offset(ripple_forward(dim), amount) -
            *offset(ripple_forward(dim), -amount);
@@ -536,7 +536,7 @@ class BlockIterator {
    * \return The second difference in the given dimension.
    */
   template <typename Dim>
-  ripple_host_device constexpr auto
+  ripple_all constexpr auto
   second_diff(Dim&& dim, int amount = 1) const noexcept -> CopyType {
     return *offset(ripple_forward(dim), amount) +
            *offset(ripple_forward(dim), -amount) - (T(2) * this->operator*());
@@ -575,7 +575,7 @@ class BlockIterator {
    * \return The second difference in the given dimension.
    */
   template <typename Dim1, typename Dim2>
-  ripple_host_device constexpr auto
+  ripple_all constexpr auto
   second_partial_diff(Dim1&& dim1, Dim2&& dim2, int amount = 1) const noexcept
     -> CopyType {
     const auto scale   = 0.25;
@@ -617,7 +617,7 @@ class BlockIterator {
    *         the gradient in the given dimension.
    */
   template <typename DataType>
-  ripple_host_device constexpr auto
+  ripple_all constexpr auto
   grad(DataType dh = 1) const noexcept -> Vec {
     Vec result{};
     unrolled_for<dims>([&](auto d) { result[d] = grad_dim(d, dh); });
@@ -645,7 +645,7 @@ class BlockIterator {
    * \return The gradient of the iterated data in the given dimension.
    */
   template <typename Dim, typename DataType>
-  ripple_host_device constexpr auto
+  ripple_all constexpr auto
   grad_dim(Dim&& dim, DataType dh = 1) const noexcept -> CopyType {
     // NOTE: Have to do something different depending on the data type
     // because the optimization for 0.5 / dh doesn't work if dh is integral
@@ -683,7 +683,7 @@ class BlockIterator {
    * \return The norm of the iterated data.
    */
   template <typename DataType>
-  ripple_host_device constexpr auto
+  ripple_all constexpr auto
   norm(DataType dh = DataType(1)) const noexcept -> Vec {
     Vec      result{};
     DataType mag{1e-15};
@@ -728,7 +728,7 @@ class BlockIterator {
    * \return The norm of the iterated data.
    */
   template <typename DataType>
-  ripple_host_device constexpr auto
+  ripple_all constexpr auto
   norm_sd(DataType dh = 1) const noexcept -> Vec {
     // NOTE: Here we do not use the grad() function to save some loops.
     // If grad was used, then an extra multiplication would be required per
@@ -760,7 +760,7 @@ class BlockIterator {
    * \return A value of the curvature.
    */
   template <typename DataType>
-  ripple_host_device constexpr auto
+  ripple_all constexpr auto
   curvature(DataType dh = 1) const noexcept -> DataType {
     if constexpr (dims == 2) {
       return curvature_2d(dh);
@@ -783,7 +783,7 @@ class BlockIterator {
    * \return A value of the curvature.
    */
   template <typename DataType>
-  ripple_host_device constexpr auto
+  ripple_all constexpr auto
   curvature_2d(DataType dh = 1) const noexcept -> DataType {
     const auto px      = grad_dim(dimx(), dh);
     const auto py      = grad_dim(dimy(), dh);
@@ -815,7 +815,7 @@ class BlockIterator {
    * \return A value of the curvature.
    */
   template <typename DataType>
-  ripple_host_device constexpr auto
+  ripple_all constexpr auto
   curvature_3d(DataType dh = 1) const noexcept -> DataType {
     const auto px    = grad_dim(dimx(), dh);
     const auto py    = grad_dim(dimy(), dh);
@@ -851,7 +851,7 @@ class BlockIterator {
    * \note The size *does not* include padding elements.
    * \return The total number of elements in the iteration space.
    */
-  ripple_host_device constexpr auto size() const noexcept -> size_t {
+  ripple_all constexpr auto size() const noexcept -> size_t {
     return space_.internal_size();
   }
 
@@ -864,7 +864,7 @@ class BlockIterator {
    *         dimension.
    */
   template <typename Dim>
-  ripple_host_device constexpr auto size(Dim&& dim) const noexcept -> size_t {
+  ripple_all constexpr auto size(Dim&& dim) const noexcept -> size_t {
     return space_.internal_size(ripple_forward(dim));
   }
 
@@ -872,7 +872,7 @@ class BlockIterator {
    * Resizes the given dimension to the given number of elements.
    */
   template <typename Dim>
-  ripple_host_device constexpr auto
+  ripple_all constexpr auto
   resize(Dim&& dim, size_t size) noexcept -> void {
     space_.resize_dim(ripple_forward(dim), size);
   }
@@ -886,7 +886,7 @@ class BlockIterator {
    * \return The amount of padding for a single side of a dimension in the
    *         iteration space.
    */
-  ripple_host_device constexpr auto padding() const noexcept -> size_t {
+  ripple_all constexpr auto padding() const noexcept -> size_t {
     return space_.padding();
   }
 };

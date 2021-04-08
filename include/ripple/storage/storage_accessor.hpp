@@ -36,7 +36,7 @@ struct StorageAccessor {
    * Gets a constant pointer to the implementation type.
    * \return A const pointer to the implementation type.
    */
-  ripple_host_device constexpr auto impl() const noexcept -> const Impl* {
+  ripple_all constexpr auto impl() const noexcept -> const Impl* {
     return static_cast<const Impl*>(this);
   }
 
@@ -44,7 +44,7 @@ struct StorageAccessor {
    * Gets a pointer to the implementation type.
    * \return A pointer to the implementation type.
    */
-  ripple_host_device constexpr auto impl() noexcept -> Impl* {
+  ripple_all constexpr auto impl() noexcept -> Impl* {
     return static_cast<Impl*>(this);
   }
 
@@ -55,7 +55,7 @@ struct StorageAccessor {
    * \tparam ImplOhter The type of the other storage.
    */
   template <typename Other>
-  ripple_host_device auto copy(const Other& other) noexcept -> void {
+  ripple_all auto copy(const Other& other) noexcept -> void {
     impl()->copy(other);
   }
 
@@ -67,7 +67,7 @@ struct StorageAccessor {
    * \return The number of components in the Ith element.
    */
   template <size_t I>
-  ripple_host_device constexpr auto components_of() const noexcept -> size_t {
+  ripple_all constexpr auto components_of() const noexcept -> size_t {
     return impl()->template components_of<I>();
   }
 
@@ -77,7 +77,7 @@ struct StorageAccessor {
    * \return A reference to the Ith type.
    */
   template <size_t I>
-  ripple_host_device decltype(auto) get() noexcept {
+  ripple_all decltype(auto) get() noexcept {
     return impl()->template get<I>();
   }
 
@@ -87,7 +87,7 @@ struct StorageAccessor {
    * \return A const reference to the Ith type.
    */
   template <size_t I>
-  ripple_host_device decltype(auto) get() const noexcept {
+  ripple_all decltype(auto) get() const noexcept {
     return impl()->template get<I>();
   }
 
@@ -104,7 +104,7 @@ struct StorageAccessor {
    * \return A reference to the Jth component of the Ith type.
    */
   template <size_t I, size_t J>
-  ripple_host_device decltype(auto) get() noexcept {
+  ripple_all decltype(auto) get() noexcept {
     return impl()->template get<I, J>();
   }
 
@@ -122,7 +122,7 @@ struct StorageAccessor {
    * \return A const reference to the Jth component of the Ith type.
    */
   template <size_t I, size_t J>
-  ripple_host_device decltype(auto) get() const noexcept {
+  ripple_all decltype(auto) get() const noexcept {
     return impl()->template get<I, J>();
   }
 
@@ -133,7 +133,7 @@ struct StorageAccessor {
    * \return A reference to the jth component of the Ith type.
    */
   template <size_t I>
-  ripple_host_device decltype(auto) get(size_t j) noexcept {
+  ripple_all decltype(auto) get(size_t j) noexcept {
     return impl()->get<I>(j);
   }
 
@@ -144,7 +144,7 @@ struct StorageAccessor {
    * \return A const reference to the jth component of the Ith type.
    */
   template <size_t I>
-  ripple_host_device decltype(auto) get(size_t j) const noexcept {
+  ripple_all decltype(auto) get(size_t j) const noexcept {
     return impl()->get<I>(j);
   }
 };
@@ -176,7 +176,7 @@ template <
   typename ImplFrom,
   typename ImplTo,
   vec_element_enable_t<TypeI> = 0>
-ripple_host_device auto
+ripple_all auto
 copy_from_to(const ImplFrom& from, ImplTo& to) noexcept -> void {
   unrolled_for<Values>([&](auto j) {
     constexpr auto J        = size_t{j};
@@ -209,7 +209,7 @@ template <
   typename ImplFrom,
   typename ImplTo,
   non_vec_element_enable_t<TypeI> = 0>
-ripple_host_device auto copy_from_to(const ImplFrom& from, ImplTo& to) -> void {
+ripple_all auto copy_from_to(const ImplFrom& from, ImplTo& to) -> void {
   to.template get<I>() = from.template get<I>();
 }
 

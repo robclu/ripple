@@ -38,13 +38,13 @@ struct Particle : ripple::PolymorphicLayout<Particle<T, Dims, Layout>> {
    * Constructor from storage, which is required.
    * \param s The storage to create the particle from.
    */
-  ripple_host_device Particle(Storage s) noexcept : storage_{s} {}
+  ripple_all Particle(Storage s) noexcept : storage_{s} {}
 
   /**
    * Constructor from another particle.
    * \param p The other particle to set this one from.
    */
-  ripple_host_device Particle(const Particle& p) noexcept
+  ripple_all Particle(const Particle& p) noexcept
   : storage_{p.storage_} {}
 
   /**
@@ -53,14 +53,14 @@ struct Particle : ripple::PolymorphicLayout<Particle<T, Dims, Layout>> {
    * \tparam L The layout of the other particle.
    */
   template <typename L>
-  ripple_host_device Particle(const Particle<T, Dims, L>& p) noexcept
+  ripple_all Particle(const Particle<T, Dims, L>& p) noexcept
   : storage_{p.storage_} {}
 
   /**
    * Copy assignment from a particle of the same type.
    * \param p The other particle to copy from.
    */
-  ripple_host_device auto operator=(const Particle& p) noexcept {
+  ripple_all auto operator=(const Particle& p) noexcept {
     storage_ = p.storage_;
   }
 
@@ -70,7 +70,7 @@ struct Particle : ripple::PolymorphicLayout<Particle<T, Dims, Layout>> {
    * \tparam L The layout of the other particle.
    */
   template <typename L>
-  ripple_host_device auto operator=(const Particle<T, Dims, L>& s) noexcept {
+  ripple_all auto operator=(const Particle<T, Dims, L>& s) noexcept {
     storage_ = s.storage_;
   }
 
@@ -80,7 +80,7 @@ struct Particle : ripple::PolymorphicLayout<Particle<T, Dims, Layout>> {
    * Gets the position in the given dimension.
    * \param i The dimension to get the position for.
    */
-  ripple_host_device auto x(size_t i) noexcept -> T& {
+  ripple_all auto x(size_t i) noexcept -> T& {
     return storage_.template get<0>(i);
   }
 
@@ -88,7 +88,7 @@ struct Particle : ripple::PolymorphicLayout<Particle<T, Dims, Layout>> {
    * Gets the position in the given dimension.
    * \param i The dimension to get the position for.
    */
-  ripple_host_device auto x(size_t i) const noexcept -> const T& {
+  ripple_all auto x(size_t i) const noexcept -> const T& {
     return storage_.template get<0>(i);
   }
 
@@ -97,7 +97,7 @@ struct Particle : ripple::PolymorphicLayout<Particle<T, Dims, Layout>> {
    * \tparam I The dimension to get the position in.
    */
   template <size_t I>
-  ripple_host_device auto x() noexcept -> T& {
+  ripple_all auto x() noexcept -> T& {
     return storage_.template get<0, I>();
   }
 
@@ -106,7 +106,7 @@ struct Particle : ripple::PolymorphicLayout<Particle<T, Dims, Layout>> {
    * \tparam I The dimension to get the position in.
    */
   template <size_t I>
-  ripple_host_device auto x() const noexcept -> const T& {
+  ripple_all auto x() const noexcept -> const T& {
     return storage_.template get<0, I>();
   }
 
@@ -114,7 +114,7 @@ struct Particle : ripple::PolymorphicLayout<Particle<T, Dims, Layout>> {
    * Gets the velocity in the given dimension.
    * \param i The index of the velocity component to get.
    */
-  ripple_host_device auto v(size_t i) noexcept -> T& {
+  ripple_all auto v(size_t i) noexcept -> T& {
     return storage_.template get<1>(i);
   }
 
@@ -122,7 +122,7 @@ struct Particle : ripple::PolymorphicLayout<Particle<T, Dims, Layout>> {
    * Gets the velocity in the given dimension.
    * \param i The index of the velocity component to get.
    */
-  ripple_host_device auto v(size_t i) const noexcept -> const T& {
+  ripple_all auto v(size_t i) const noexcept -> const T& {
     return storage_.template get<1>(i);
   }
 
@@ -131,7 +131,7 @@ struct Particle : ripple::PolymorphicLayout<Particle<T, Dims, Layout>> {
    * \tparam I The dimension to get the velocity component in.
    */
   template <size_t I>
-  ripple_host_device auto v() noexcept -> T& {
+  ripple_all auto v() noexcept -> T& {
     return storage_.template get<1, I>();
   }
 
@@ -140,7 +140,7 @@ struct Particle : ripple::PolymorphicLayout<Particle<T, Dims, Layout>> {
    * \tparam I The dimension to get the velocity component in.
    */
   template <size_t I>
-  ripple_host_device auto v() const noexcept -> const T& {
+  ripple_all auto v() const noexcept -> const T& {
     return storage_.template get<1, I>();
   }
 
@@ -149,7 +149,7 @@ struct Particle : ripple::PolymorphicLayout<Particle<T, Dims, Layout>> {
    * delta.
    * \param dt The time delta to use to update the position.
    */
-  ripple_host_device auto update(T dt) noexcept -> void {
+  ripple_all auto update(T dt) noexcept -> void {
     ripple::unrolled_for<dims>([this, dt](auto dim) {
       this->template x<dim>() += dt * this->template v<dim>();
     });

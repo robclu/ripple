@@ -69,7 +69,7 @@ template <
   typename Iterator,
   typename Weights,
   array_size_enable_t<Weights, 1> = 0>
-ripple_host_device auto lerp(Iterator&& it, const Weights& weights) noexcept ->
+ripple_all auto lerp(Iterator&& it, const Weights& weights) noexcept ->
   typename iterator_traits_t<Iterator>::CopyType {
   static_assert(
     is_iterator_v<Iterator>, "Linear interpolation requires an iterator.");
@@ -141,7 +141,7 @@ template <
   typename Iterator,
   typename Weights,
   array_size_enable_t<Weights, 2> = 0>
-ripple_host_device auto
+ripple_all auto
 lerp(const Iterator& it, const Weights& weights) noexcept ->
   typename iterator_traits_t<Iterator>::CopyType {
   static_assert(
@@ -227,7 +227,7 @@ template <
   typename Iterator,
   typename Weights,
   array_size_enable_t<Weights, 3> = 0>
-ripple_host_device auto lerp(Iterator&& it, const Weights& weights) ->
+ripple_all auto lerp(Iterator&& it, const Weights& weights) ->
   typename iterator_traits_t<Iterator>::CopyType {
   static_assert(
     is_array_v<Weights>, "Linear interpolation requires a weight array.");

@@ -40,7 +40,7 @@ struct Upwinder<1> {
    * \tparam F  The type of the speed function.
    */
   template <typename It, typename T, typename F>
-  ripple_host_device auto operator()(It&& it, T dh, F&& f) const noexcept -> T {
+  ripple_all auto operator()(It&& it, T dh, F&& f) const noexcept -> T {
     using namespace ripple;
     return std::min(
              it.offset(dimx(), -1)->value(), it.offset(dimx(), 1)->value()) +
@@ -64,7 +64,7 @@ struct Upwinder<2> {
    * \tparam F  The type of the speed function.
    */
   template <typename It, typename T, typename F>
-  ripple_host_device auto operator()(It&& it, T dh, F&& f) const noexcept -> T {
+  ripple_all auto operator()(It&& it, T dh, F&& f) const noexcept -> T {
     using namespace ripple;
     const T a =
       std::min(it.offset(dimx(), -1)->value(), it.offset(dimx(), 1)->value());
@@ -95,7 +95,7 @@ struct Upwinder<3> {
    * \tparam F  The type of the speed function.
    */
   template <typename It, typename T, typename F>
-  ripple_host_device auto operator()(It&& it, T dh, F&& f) const noexcept -> T {
+  ripple_all auto operator()(It&& it, T dh, F&& f) const noexcept -> T {
     using namespace ripple;
     const T aa =
       std::min(it.offset(dimx(), -1)->value(), it.offset(dimx(), 1)->value());

@@ -114,7 +114,7 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
      * \return The scaling factor for ofsetting in the x dimension.
      */
     template <size_t I>
-    ripple_host_device static constexpr auto
+    ripple_all static constexpr auto
     offset_scale(Num<I>, DimX) noexcept -> size_t {
       return 1;
     }
@@ -125,7 +125,7 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
      * \return The scaling factor for ofsetting in the y dimension.
      */
     template <size_t I>
-    ripple_host_device static constexpr auto
+    ripple_all static constexpr auto
     offset_scale(Num<I>, DimY) noexcept -> size_t {
       return nth_element_components<I>;
     }
@@ -137,7 +137,7 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
      * \return The scaling factor for ofsetting in the z dimension.
      */
     template <size_t I>
-    ripple_host_device static constexpr auto
+    ripple_all static constexpr auto
     offset_scale(Num<I>, DimZ) noexcept -> size_t {
       return nth_element_components<I>;
     }
@@ -149,7 +149,7 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
      * \return The scaling factor for offsetting in the given dimension.
      */
     template <size_t I>
-    ripple_host_device static constexpr auto
+    ripple_all static constexpr auto
     offset_scale(Num<I>, size_t dim) noexcept -> size_t {
       return dim == 0 ? 1 : nth_element_components<I>;
     }
@@ -167,7 +167,7 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
      * \param elements The number of elements to allocate.
      * \return The number of bytes required to allocate the number of elements.
      */
-    ripple_host_device static constexpr auto
+    ripple_all static constexpr auto
     allocation_size(size_t elements) noexcept -> size_t {
       return storage_byte_size * elements;
     }
@@ -182,7 +182,7 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
      * \return The number of bytes required to allocated the number of elements.
      */
     template <size_t Elements>
-    ripple_host_device static constexpr auto
+    ripple_all static constexpr auto
     allocation_size() noexcept -> size_t {
       return storage_byte_size * Elements;
     }
@@ -228,7 +228,7 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
      * \return A new strided storage offset by the given amount.
      */
     template <typename SpaceImpl, typename Dim>
-    ripple_host_device static auto offset(
+    ripple_all static auto offset(
       const Storage&                  storage,
       const MultidimSpace<SpaceImpl>& space,
       Dim&&                           dim,
@@ -255,7 +255,7 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
      * \return A new strided storage offset by the given amount.
      */
     template <typename SpaceImpl, typename Dim>
-    ripple_host_device static auto shift(
+    ripple_all static auto shift(
       Storage&                        storage,
       const MultidimSpace<SpaceImpl>& space,
       Dim&&                           dim,
@@ -285,7 +285,7 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
      * \return A new strided storage pointing to given pointer.
      */
     template <typename SpaceImpl>
-    ripple_host_device static auto
+    ripple_all static auto
     create(void* ptr, const MultidimSpace<SpaceImpl>& space) noexcept
       -> Storage {
       Storage r;
@@ -343,7 +343,7 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
    * \tparam Impl The implementation of the StorageAccessor.
    */
   template <typename Impl>
-  ripple_host_device
+  ripple_all
   StridedStorageView(const StorageAccessor<Impl>& other) noexcept {
     copy(static_cast<const Impl&>(other));
   }
@@ -352,7 +352,7 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
    * Copy constructor to set the strided storage from the other storage.
    * \param other The other storage to set this one from.
    */
-  ripple_host_device
+  ripple_all
   StridedStorageView(const StridedStorageView& other) noexcept
   : stride_{other.stride_} {
     unrolled_for<num_types>([&](auto i) { data_[i] = other.data_[i]; });
@@ -362,7 +362,7 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
    * Move constructor to move the other storage into this one.
    * \param other The other storage to move into this one.
    */
-  ripple_host_device StridedStorageView(StridedStorageView&& other) noexcept
+  ripple_all StridedStorageView(StridedStorageView&& other) noexcept
   : stride_{other.stride_} {
     unrolled_for<num_types>([&](auto i) {
       data_[i]       = other.data_[i];
@@ -379,7 +379,7 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
    * StorageAccessor. \return A reference to the created storage view.
    */
   template <typename Impl>
-  ripple_host_device auto operator=(const StorageAccessor<Impl>& other) noexcept
+  ripple_all auto operator=(const StorageAccessor<Impl>& other) noexcept
     -> StridedStorageView& {
     copy(static_cast<const Impl&>(other));
     return *this;
@@ -391,7 +391,7 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
    * strided storage to copy from. \return A reference to the created storage
    * view.
    */
-  ripple_host_device auto
+  ripple_all auto
   operator=(const StridedStorageView& other) noexcept -> StridedStorageView& {
     copy(other);
     return *this;
@@ -404,7 +404,7 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
    *\param  other The strided storage to move from.
    * \return A reference to the created storage view.
    */
-  ripple_host_device auto
+  ripple_all auto
   operator=(StridedStorageView&& other) noexcept -> StridedStorageView& {
     stride_ = other.stride_;
     unrolled_for<num_types>([&](auto i) {
@@ -419,7 +419,7 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
    * Gets a pointer to the data for the storage.
    * \return A pointer to the data for the storage.
    */
-  ripple_host_device auto data() noexcept -> Ptr {
+  ripple_all auto data() noexcept -> Ptr {
     return &data_[0];
   }
 
@@ -427,14 +427,14 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
    * Gets a const pointer to the data.
    * \return A const pointer to the data for the storage.
    */
-  ripple_host_device auto data() const noexcept -> ConstPtr {
+  ripple_all auto data() const noexcept -> ConstPtr {
     return &data_[0];
   }
 
   /**
    * Returns a reference to the data pointers for the storage.
    */
-  ripple_host_device auto data_ptrs() noexcept -> std::vector<Ptr> {
+  ripple_all auto data_ptrs() noexcept -> std::vector<Ptr> {
     std::vector<Ptr> p;
     unrolled_for<num_types>([&](auto i) { p.push_back(data_[i]); });
     return p;
@@ -450,7 +450,7 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
    * \tparam Other The type of the other storage to copy from.
    */
   template <typename Other>
-  ripple_host_device auto copy(const Other& other) noexcept -> void {
+  ripple_all auto copy(const Other& other) noexcept -> void {
     static_assert(
       is_storage_accessor_v<Other>,
       "Can only copy from storage accessor types!");
@@ -470,7 +470,7 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
    * \return The number of components in the Ith type.
    */
   template <size_t I>
-  ripple_host_device constexpr auto components_of() const noexcept -> size_t {
+  ripple_all constexpr auto components_of() const noexcept -> size_t {
     return nth_element_components<I>;
   }
 
@@ -484,7 +484,7 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
     size_t I,
     typename T                  = nth_element_t<I, Ts...>,
     non_vec_element_enable_t<T> = 0>
-  ripple_host_device auto get() noexcept -> element_value_t<T>& {
+  ripple_all auto get() noexcept -> element_value_t<T>& {
     return *static_cast<element_value_t<T>*>(data_[I]);
   }
 
@@ -498,7 +498,7 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
     size_t I,
     typename T                  = nth_element_t<I, Ts...>,
     non_vec_element_enable_t<T> = 0>
-  ripple_host_device auto get() const noexcept -> const element_value_t<T>& {
+  ripple_all auto get() const noexcept -> const element_value_t<T>& {
     return *static_cast<const element_value_t<T>*>(data_[I]);
   }
 
@@ -516,7 +516,7 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
     size_t J,
     typename T              = nth_element_t<I, Ts...>,
     vec_element_enable_t<T> = 0>
-  ripple_host_device auto get() noexcept -> element_value_t<T>& {
+  ripple_all auto get() noexcept -> element_value_t<T>& {
     static_assert(
       J < element_components<T>, "Out of range access for element!");
     return static_cast<element_value_t<T>*>(data_[I])[J * stride_];
@@ -536,7 +536,7 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
     size_t J,
     typename T              = nth_element_t<I, Ts...>,
     vec_element_enable_t<T> = 0>
-  ripple_host_device auto get() const noexcept -> const element_value_t<T>& {
+  ripple_all auto get() const noexcept -> const element_value_t<T>& {
     static_assert(
       J < element_components<T>, "Out of range access for element!");
     return static_cast<const element_value_t<T>*>(data_[I])[J * stride_];
@@ -554,7 +554,7 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
     size_t I,
     typename T              = nth_element_t<I, Ts...>,
     vec_element_enable_t<T> = 0>
-  ripple_host_device auto get(size_t j) noexcept -> element_value_t<T>& {
+  ripple_all auto get(size_t j) noexcept -> element_value_t<T>& {
     return static_cast<element_value_t<T>*>(data_[I])[j * stride_];
   }
 
@@ -569,7 +569,7 @@ class StridedStorageView : public StorageAccessor<StridedStorageView<Ts...>> {
     size_t I,
     typename T              = nth_element_t<I, Ts...>,
     vec_element_enable_t<T> = 0>
-  ripple_host_device auto
+  ripple_all auto
   get(size_t j) const noexcept -> const element_value_t<T>& {
     return static_cast<const element_value_t<T>*>(data_[I])[j * stride_];
   }
@@ -634,7 +634,7 @@ class StridedStorageView<Type>
      * \return The scaling factor for offsetting in the given dimension.
      */
     template <typename Dim>
-    ripple_host_device static constexpr auto
+    ripple_all static constexpr auto
     offset_scale(Dim&& dim) noexcept -> size_t {
       if constexpr (is_cx_number_v<Dim>) {
         if constexpr (std::decay_t<Dim>::value == DimX::value) {
@@ -659,7 +659,7 @@ class StridedStorageView<Type>
      * \param elements The number of elements to allocate.
      * \return The number of bytes required to allocate the number of elements.
      */
-    ripple_host_device static constexpr auto
+    ripple_all static constexpr auto
     allocation_size(size_t elements) noexcept -> size_t {
       return storage_byte_size * elements;
     }
@@ -674,7 +674,7 @@ class StridedStorageView<Type>
      * \return The number of bytes required to allocated the number of elements.
      */
     template <size_t Elements>
-    ripple_host_device static constexpr auto
+    ripple_all static constexpr auto
     allocation_size() noexcept -> size_t {
       return storage_byte_size * Elements;
     }
@@ -718,7 +718,7 @@ class StridedStorageView<Type>
      * \return A new strided storage offset by the given amount.
      */
     template <typename SpaceImpl, typename Dim>
-    ripple_host_device static auto offset(
+    ripple_all static auto offset(
       const Storage&                  storage,
       const MultidimSpace<SpaceImpl>& space,
       Dim&&                           dim,
@@ -740,7 +740,7 @@ class StridedStorageView<Type>
      * \return A new strided storage offset by the given amount.
      */
     template <typename SpaceImpl, typename Dim>
-    ripple_host_device static auto shift(
+    ripple_all static auto shift(
       Storage&                        storage,
       const MultidimSpace<SpaceImpl>& space,
       Dim&&                           dim,
@@ -765,7 +765,7 @@ class StridedStorageView<Type>
      * \return A new strided storage pointing to given pointer.
      */
     template <typename SpaceImpl>
-    ripple_host_device static auto
+    ripple_all static auto
     create(void* ptr, const MultidimSpace<SpaceImpl>& space) noexcept
       -> Storage {
       Storage r;
@@ -796,7 +796,7 @@ class StridedStorageView<Type>
    * \tparam Impl The implementation of the StorageAccessor.
    */
   template <typename Impl>
-  ripple_host_device
+  ripple_all
   StridedStorageView(const StorageAccessor<Impl>& other) noexcept {
     copy(static_cast<const Impl&>(other));
   }
@@ -805,7 +805,7 @@ class StridedStorageView<Type>
    * Copy constructor to set the strided storage from the other storage.
    * \param other The other storage to set this one from.
    */
-  ripple_host_device
+  ripple_all
   StridedStorageView(const StridedStorageView& other) noexcept
   : data_{other.data_}, stride_{other.stride_} {}
 
@@ -813,7 +813,7 @@ class StridedStorageView<Type>
    * Move constructor to move the other storage into this one.
    * \param other The other storage to move into this one.
    */
-  ripple_host_device StridedStorageView(StridedStorageView&& other) noexcept
+  ripple_all StridedStorageView(StridedStorageView&& other) noexcept
   : data_{other.data_}, stride_{other.stride_} {
     other.data_ = nullptr;
   }
@@ -827,7 +827,7 @@ class StridedStorageView<Type>
    * StorageAccessor. \return A reference to the created storage view.
    */
   template <typename Impl>
-  ripple_host_device auto operator=(const StorageAccessor<Impl>& other) noexcept
+  ripple_all auto operator=(const StorageAccessor<Impl>& other) noexcept
     -> StridedStorageView& {
     copy(static_cast<const Impl&>(other));
     return *this;
@@ -839,7 +839,7 @@ class StridedStorageView<Type>
    * strided storage to copy from. \return A reference to the created storage
    * view.
    */
-  ripple_host_device auto
+  ripple_all auto
   operator=(const StridedStorageView& other) noexcept -> StridedStorageView& {
     copy(other);
     return *this;
@@ -852,7 +852,7 @@ class StridedStorageView<Type>
    *\param  other The strided storage to move from.
    * \return A reference to the created storage view.
    */
-  ripple_host_device auto
+  ripple_all auto
   operator=(StridedStorageView&& other) noexcept -> StridedStorageView& {
     stride_     = other.stride_;
     data_       = other.data_;
@@ -866,7 +866,7 @@ class StridedStorageView<Type>
    * Gets a pointer to the data for the storage.
    * \return A pointer to the data for the storage.
    */
-  ripple_host_device auto data() noexcept -> Ptr {
+  ripple_all auto data() noexcept -> Ptr {
     return &data_;
   }
 
@@ -874,14 +874,14 @@ class StridedStorageView<Type>
    * Gets a const pointer to the data.
    * \return A const pointer to the data for the storage.
    */
-  ripple_host_device auto data() const noexcept -> ConstPtr {
+  ripple_all auto data() const noexcept -> ConstPtr {
     return &data_;
   }
 
   /**
    * Returns a reference to the data pointers for the storage.
    */
-  ripple_host_device auto data_ptrs() noexcept -> std::vector<Ptr> {
+  ripple_all auto data_ptrs() noexcept -> std::vector<Ptr> {
     return std::vector<Ptr>{data_};
   }
 
@@ -895,7 +895,7 @@ class StridedStorageView<Type>
    * \tparam Other The type of the other storage to copy from.
    */
   template <typename Other>
-  ripple_host_device auto copy(const Other& other) noexcept -> void {
+  ripple_all auto copy(const Other& other) noexcept -> void {
     static_assert(
       is_storage_accessor_v<Other>,
       "Can only copy from storage accessor types!");
@@ -910,7 +910,7 @@ class StridedStorageView<Type>
    * \return The number of components in the Ith type.
    */
   template <size_t I>
-  ripple_host_device constexpr auto components_of() const noexcept -> size_t {
+  ripple_all constexpr auto components_of() const noexcept -> size_t {
     return element_components;
   }
 
@@ -923,7 +923,7 @@ class StridedStorageView<Type>
     size_t I,
     typename T                  = nth_element_t<I, Type>,
     non_vec_element_enable_t<T> = 0>
-  ripple_host_device auto get() noexcept -> ValueType& {
+  ripple_all auto get() noexcept -> ValueType& {
     static_assert(I == 0, "Element only has one type!");
     return *data_;
   }
@@ -937,7 +937,7 @@ class StridedStorageView<Type>
     size_t I,
     typename T                  = nth_element_t<I, Type>,
     non_vec_element_enable_t<T> = 0>
-  ripple_host_device auto get() const noexcept -> const ValueType& {
+  ripple_all auto get() const noexcept -> const ValueType& {
     static_assert(I == 0, "Element only has one type!");
     return *data_;
   }
@@ -951,7 +951,7 @@ class StridedStorageView<Type>
    * \return A reference to the Jth element in the Ith type.
    */
   template <size_t I, size_t J, vec_element_enable_t<Type> = 0>
-  ripple_host_device auto get() noexcept -> ValueType& {
+  ripple_all auto get() noexcept -> ValueType& {
     static_assert(I == 0, "Element only has one type!");
     static_assert(J < element_components, "Out of range access for element!");
     return data_[J * stride_];
@@ -966,7 +966,7 @@ class StridedStorageView<Type>
    * \return A const reference to the Jth element of the Ith type.
    */
   template <size_t I, size_t J, vec_element_enable_t<Type> = 0>
-  ripple_host_device auto get() const noexcept -> const ValueType& {
+  ripple_all auto get() const noexcept -> const ValueType& {
     static_assert(I == 0, "Element only has one type!");
     static_assert(J < element_components, "Out of range access for element!");
     return data_[J * stride_];
@@ -980,7 +980,7 @@ class StridedStorageView<Type>
    * \return A reference to the jth element of the Ith type.
    */
   template <size_t I, vec_element_enable_t<Type> = 0>
-  ripple_host_device auto get(size_t j) noexcept -> ValueType& {
+  ripple_all auto get(size_t j) noexcept -> ValueType& {
     return data_[j * stride_];
   }
 
@@ -992,7 +992,7 @@ class StridedStorageView<Type>
    * of the Ith type.
    */
   template <size_t I, vec_element_enable_t<Type> = 0>
-  ripple_host_device auto get(size_t j) const noexcept -> const ValueType& {
+  ripple_all auto get(size_t j) const noexcept -> const ValueType& {
     return data_[j * stride_];
   }
 };

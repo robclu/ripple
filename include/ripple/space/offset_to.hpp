@@ -57,7 +57,7 @@ namespace ripple {
  *  \tparam Indices      The types of the indices.
  */
 template <typename SpatialImpl, typename... Indices>
-ripple_host_device auto offset_to_soa(
+ripple_all auto offset_to_soa(
   const MultidimSpace<SpatialImpl>& space,
   size_t                            element_size,
   Indices&&... indices) -> size_t {
@@ -131,7 +131,7 @@ ripple_host_device auto offset_to_soa(
  *  \tparam Indices      The types of the indices.
  */
 template <typename SpatialImpl, typename... Indices>
-ripple_host_device auto offset_to_aos(
+ripple_all auto offset_to_aos(
   const MultidimSpace<SpatialImpl>& space,
   size_t                            element_size,
   Indices&&... indices) -> size_t {

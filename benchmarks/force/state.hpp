@@ -127,13 +127,13 @@ class State : public ripple::PolymorphicLayout<State<T, Dims, Layout>>,
   /*==--- [construction] ---------------------------------------------------==*/
 
   /** Default constructor which creates the state. */
-  ripple_host_device State() noexcept {}
+  ripple_all State() noexcept {}
 
   /**
    * Constructor to set all state elements to \p value.
    * \param value The value to set all elements to.
    */
-  ripple_host_device State(ValueType value) noexcept {
+  ripple_all State(ValueType value) noexcept {
     ripple::unrolled_for<elements>(
       [&](auto I) { storage_.template get<0, I>() = value; });
   }
@@ -142,7 +142,7 @@ class State : public ripple::PolymorphicLayout<State<T, Dims, Layout>>,
    * Constructor to create the state from the storage type.
    * \param storage The storage to create this state with.
    */
-  ripple_host_device State(Storage storage) noexcept : storage_(storage) {}
+  ripple_all State(Storage storage) noexcept : storage_(storage) {}
 
   /**
    * Constructor to create the state from another fluid type with a potentially
@@ -151,7 +151,7 @@ class State : public ripple::PolymorphicLayout<State<T, Dims, Layout>>,
    * \param  other The other fluid state to create this one from.
    * \tparam OtherLayout The storage layout of the other type.
    */
-  ripple_host_device State(const State& other) noexcept
+  ripple_all State(const State& other) noexcept
   : storage_{other.storage_} {}
 
   /**
@@ -162,7 +162,7 @@ class State : public ripple::PolymorphicLayout<State<T, Dims, Layout>>,
    * \tparam OtherLayout The storage layout of the other type.
    */
   template <typename OtherLayout>
-  ripple_host_device State(const State<T, Dims, OtherLayout>& other) noexcept
+  ripple_all State(const State<T, Dims, OtherLayout>& other) noexcept
   : storage_{other.storage_} {}
 
   /**
@@ -171,7 +171,7 @@ class State : public ripple::PolymorphicLayout<State<T, Dims, Layout>>,
    * \tparam ArrayImpl The type of the array implementation.
    */
   template <typename ArrayImpl, ripple::array_enable_t<ArrayImpl> = 0>
-  ripple_host_device State(const ArrayImpl& arr) noexcept {
+  ripple_all State(const ArrayImpl& arr) noexcept {
     copy(arr);
   }
 
@@ -182,7 +182,7 @@ class State : public ripple::PolymorphicLayout<State<T, Dims, Layout>>,
    * \p value.
    * \param value the value to set all the state data to.
    */
-  ripple_host_device auto operator=(ValueType value) noexcept -> State& {
+  ripple_all auto operator=(ValueType value) noexcept -> State& {
     ripple::unrolled_for<elements>(
       [&](auto I) { storage_.template get<0, I>() = value; });
     return *this;
@@ -194,7 +194,7 @@ class State : public ripple::PolymorphicLayout<State<T, Dims, Layout>>,
    * \param  other The other fluid state to create this one from.
    * \tparam OtherLayout The storage layout of the other type.
    */
-  ripple_host_device auto operator=(const State& other) noexcept -> State& {
+  ripple_all auto operator=(const State& other) noexcept -> State& {
     copy(other);
     return *this;
   }
@@ -206,7 +206,7 @@ class State : public ripple::PolymorphicLayout<State<T, Dims, Layout>>,
    * \tparam OtherLayout The storage layout of the other type.
    */
   template <typename OtherLayout>
-  ripple_host_device auto
+  ripple_all auto
   operator=(const State<T, Dims, OtherLayout>& other) noexcept -> State& {
     copy(other);
     return *this;
@@ -218,7 +218,7 @@ class State : public ripple::PolymorphicLayout<State<T, Dims, Layout>>,
    * \tparam ArrayImpl The type of the array implementation.
    */
   template <typename ArrayImpl, ripple::array_enable_t<ArrayImpl> = 0>
-  ripple_host_device auto operator=(const ArrayImpl& arr) noexcept -> State& {
+  ripple_all auto operator=(const ArrayImpl& arr) noexcept -> State& {
     copy(arr);
     return *this;
   }
@@ -228,7 +228,7 @@ class State : public ripple::PolymorphicLayout<State<T, Dims, Layout>>,
    * returns a reference to the \p ith stored element.
    * \param i The index of the element to return.
    */
-  ripple_host_device auto operator[](size_t i) noexcept -> ValueType& {
+  ripple_all auto operator[](size_t i) noexcept -> ValueType& {
     return storage_.template get<0>(i);
   }
 
@@ -237,7 +237,7 @@ class State : public ripple::PolymorphicLayout<State<T, Dims, Layout>>,
    * returns a constant reference to the \p ith stored element.
    * \param i The index of the element to return.
    */
-  ripple_host_device auto
+  ripple_all auto
   operator[](size_t i) const noexcept -> const ValueType& {
     return storage_.template get<0>(i);
   }
@@ -245,28 +245,28 @@ class State : public ripple::PolymorphicLayout<State<T, Dims, Layout>>,
   /**
    * Returns the size of the state.
    */
-  ripple_host_device constexpr auto size() const noexcept -> size_t {
+  ripple_all constexpr auto size() const noexcept -> size_t {
     return elements;
   }
 
   /**
    * Returns the number of spatial dimensions for the state.
    */
-  ripple_host_device constexpr auto dimensions() const noexcept -> size_t {
+  ripple_all constexpr auto dimensions() const noexcept -> size_t {
     return dims;
   }
 
   /**
    * Returns a reference to the density of the fluid.
    */
-  ripple_host_device auto rho() noexcept -> ValueType& {
+  ripple_all auto rho() noexcept -> ValueType& {
     return storage_.template get<0, 0>();
   }
 
   /**
    * Returns a const reference to the density of the fluid.
    */
-  ripple_host_device auto rho() const noexcept -> const ValueType& {
+  ripple_all auto rho() const noexcept -> const ValueType& {
     return storage_.template get<0, 0>();
   }
 
@@ -278,7 +278,7 @@ class State : public ripple::PolymorphicLayout<State<T, Dims, Layout>>,
    * \tparam Dim The type of the dimension specifier.
    */
   template <typename Dim>
-  ripple_host_device auto rho_v(Dim&& dim) const noexcept -> ValueType {
+  ripple_all auto rho_v(Dim&& dim) const noexcept -> ValueType {
     return v(dim) * rho();
   }
 
@@ -288,7 +288,7 @@ class State : public ripple::PolymorphicLayout<State<T, Dims, Layout>>,
    * \tparam Dim The type of the dimension specifier.
    */
   template <size_t Dim>
-  ripple_host_device auto rho_v() const noexcept -> ValueType {
+  ripple_all auto rho_v() const noexcept -> ValueType {
     return v<Dim>() * rho();
   }
 
@@ -298,7 +298,7 @@ class State : public ripple::PolymorphicLayout<State<T, Dims, Layout>>,
    * \tparam Dim The type of the dimension specifier.
    */
   template <typename Dim>
-  ripple_host_device auto v(Dim&& dim) noexcept -> ValueType& {
+  ripple_all auto v(Dim&& dim) noexcept -> ValueType& {
     return storage_.template get<0>(v_offset + static_cast<size_t>(dim));
   }
 
@@ -308,7 +308,7 @@ class State : public ripple::PolymorphicLayout<State<T, Dims, Layout>>,
    * \tparam Dim The type of the dimension specifier.
    */
   template <typename Dim>
-  ripple_host_device auto v(Dim&& dim) const noexcept -> const ValueType& {
+  ripple_all auto v(Dim&& dim) const noexcept -> const ValueType& {
     return storage_.template get<0>(v_offset + static_cast<size_t>(dim));
   }
 
@@ -318,7 +318,7 @@ class State : public ripple::PolymorphicLayout<State<T, Dims, Layout>>,
    * \tparam Dim The dimension to get the velocity for.
    */
   template <size_t Dim>
-  ripple_host_device auto v() const noexcept -> const ValueType& {
+  ripple_all auto v() const noexcept -> const ValueType& {
     return storage_.template get<0>(v_offset + static_cast<size_t>(Dim));
   }
 
@@ -328,7 +328,7 @@ class State : public ripple::PolymorphicLayout<State<T, Dims, Layout>>,
    * \tparam Dim The dimension to get the velocity for.
    */
   template <size_t Dim>
-  ripple_host_device auto v() noexcept -> ValueType& {
+  ripple_all auto v() noexcept -> ValueType& {
     return storage_.template get<0>(v_offset + static_cast<size_t>(Dim));
   }
 
@@ -339,7 +339,7 @@ class State : public ripple::PolymorphicLayout<State<T, Dims, Layout>>,
    * \tparam Dim   The type of the dimension specifier.
    */
   template <typename Dim>
-  ripple_host_device auto set_v(Dim&& dim, ValueType value) noexcept -> void {
+  ripple_all auto set_v(Dim&& dim, ValueType value) noexcept -> void {
     v(ripple_forward(dim)) = value;
   }
 
@@ -350,14 +350,14 @@ class State : public ripple::PolymorphicLayout<State<T, Dims, Layout>>,
    * \tparam Dim   The dimension to set the velocity in.
    */
   template <size_t Dim>
-  ripple_host_device auto set_v(ValueType value) noexcept -> void {
+  ripple_all auto set_v(ValueType value) noexcept -> void {
     v<Dim>() = value;
   }
 
   /**
    * Returns a vector of the velocities.
    */
-  ripple_host_device auto vel() noexcept -> VelocityVec {
+  ripple_all auto vel() noexcept -> VelocityVec {
     VelocityVec vel;
     ripple::unrolled_for<dims>([&](auto d) { vel[d] = v<d>(); });
     return vel;
@@ -368,14 +368,14 @@ class State : public ripple::PolymorphicLayout<State<T, Dims, Layout>>,
   /**
    * Returns a reference to the energy of the fluid.
    */
-  ripple_host_device auto energy() noexcept -> ValueType& {
+  ripple_all auto energy() noexcept -> ValueType& {
     return storage_.template get<0, 1>();
   }
 
   /*
    * Returns a constant reference to the energy of the fluid.
    */
-  ripple_host_device auto energy() const noexcept -> const ValueType& {
+  ripple_all auto energy() const noexcept -> const ValueType& {
     return storage_.template get<0, 1>();
   }
 
@@ -388,7 +388,7 @@ class State : public ripple::PolymorphicLayout<State<T, Dims, Layout>>,
    * \tparam EosImpl The implementation of the equation of state interface.
    */
   template <typename EosImpl>
-  ripple_host_device auto
+  ripple_all auto
   pressure(const EosImpl& eos) const noexcept -> ValueType {
     const auto v_sq = v_squared_sum();
     return (eos.adi() - one) * (energy() - ValueType{0.5} * rho() * v_sq);
@@ -403,7 +403,7 @@ class State : public ripple::PolymorphicLayout<State<T, Dims, Layout>>,
    * \tparam EosImpl The implementation of the equation of state interface.
    */
   template <typename EosImpl>
-  ripple_host_device auto
+  ripple_all auto
   set_pressure(ValueType p, const EosImpl& eos) noexcept -> void {
     const auto v_sq = v_squared_sum();
     energy()        = p / (eos.adi() - one) + (ValueType{0.5} * v_sq * rho());
@@ -419,7 +419,7 @@ class State : public ripple::PolymorphicLayout<State<T, Dims, Layout>>,
    * \tparam Dim     The type of the dimension specifier.
    */
   template <typename EosImpl, typename Dim>
-  ripple_host_device auto
+  ripple_all auto
   flux(const EosImpl& eos, Dim&& dim) const noexcept -> FluxVec {
     FluxVec    f;
     const auto p = pressure(eos);
@@ -447,7 +447,7 @@ class State : public ripple::PolymorphicLayout<State<T, Dims, Layout>>,
    * \tparam EosImpl The implemenation of the equation of state interface.
    */
   template <typename EosImpl>
-  ripple_host_device auto
+  ripple_all auto
   wavespeed(const EosImpl& eos) const noexcept -> ValueType {
     ValueType s = std::abs(rho_v<ripple::dimx()>());
     ripple::unrolled_for<dims - 1>([&](auto d) {
@@ -463,7 +463,7 @@ class State : public ripple::PolymorphicLayout<State<T, Dims, Layout>>,
   /**
    * Returns the sum of the rho_v components squared.
    */
-  ripple_host_device auto rho_v_squared_sum() const noexcept -> ValueType {
+  ripple_all auto rho_v_squared_sum() const noexcept -> ValueType {
     ValueType v_sq = ValueType{0};
     ripple::unrolled_for<dims>(
       [&](auto d) { v_sq += rho_v<d>() * rho_v<d>(); });
@@ -473,7 +473,7 @@ class State : public ripple::PolymorphicLayout<State<T, Dims, Layout>>,
   /**
    * Returns the sum of the velocity components squared.
    */
-  ripple_host_device auto v_squared_sum() const noexcept -> ValueType {
+  ripple_all auto v_squared_sum() const noexcept -> ValueType {
     ValueType v_sq = ValueType{0};
     ripple::unrolled_for<dims>([&](auto d) { v_sq += v<d>() * v<d>(); });
     return v_sq;
@@ -485,7 +485,7 @@ class State : public ripple::PolymorphicLayout<State<T, Dims, Layout>>,
    * \tparam Arr The type of the array.
    */
   template <typename Arr>
-  ripple_host_device auto copy(const Arr& arr) noexcept -> void {
+  ripple_all auto copy(const Arr& arr) noexcept -> void {
     ripple::unrolled_for<elements>([&](auto _i) {
       constexpr size_t i            = _i;
       storage_.template get<0, i>() = arr[i];

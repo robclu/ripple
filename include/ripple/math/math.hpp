@@ -31,7 +31,7 @@ namespace ripple::math {
  * \return The result of tanh(x).
  */
 template <typename T>
-ripple_host_device constexpr auto tanh(T x) noexcept -> T {
+ripple_all constexpr auto tanh(T x) noexcept -> T {
   // TOOD: Test performance on the GPU.
   return std::tanh(x);
 }
@@ -43,7 +43,7 @@ ripple_host_device constexpr auto tanh(T x) noexcept -> T {
  * \return The result of cosh(x).
  */
 template <typename T>
-ripple_host_device constexpr auto cosh(T x) noexcept -> T {
+ripple_all constexpr auto cosh(T x) noexcept -> T {
   // TOOD: Test performance on the GPU.
   return std::cosh(x);
 }
@@ -55,7 +55,7 @@ ripple_host_device constexpr auto cosh(T x) noexcept -> T {
  * \return The resutl of exp(x).
  */
 template <typename T>
-ripple_host_device constexpr auto fast_exp(T x) noexcept -> T {
+ripple_all constexpr auto fast_exp(T x) noexcept -> T {
 #if defined(ripple_gpu_compile)
   return __expf(x);
 #else
@@ -74,7 +74,7 @@ ripple_host_device constexpr auto fast_exp(T x) noexcept -> T {
  * \param input The input of to compute the hash of.
  * \return The hash of the input.
  */
-ripple_host_device constexpr auto
+ripple_all constexpr auto
 hash(char const* input) noexcept -> unsigned int {
   return *input ? static_cast<unsigned int>(*input) + 33 * hash(input + 1)
                 : 5381;
@@ -91,7 +91,7 @@ hash(char const* input) noexcept -> unsigned int {
  * \param b The second input for the hash.
  * \return The combined hash of the two inputs.
  */
-ripple_host_device constexpr auto
+ripple_all constexpr auto
 hash_combine(uint32_t a, uint32_t b) noexcept -> uint64_t {
   constexpr uint64_t div_factor = 2;
   uint64_t           x = a, y = b;
@@ -104,7 +104,7 @@ namespace literals {
  * Literal operator to perform a hash on string literals.
  * \tparam input The input string to hash.
  */
-ripple_host_device constexpr auto
+ripple_all constexpr auto
 operator"" _hash(const char* input, unsigned long) noexcept -> unsigned int {
   return hash(input);
 }
@@ -119,7 +119,7 @@ namespace detail {
  *
  * \return A random 32 bit integer in the range [0, 2^32 - 1].
  */
-ripple_host_device static inline auto xorshift_32() noexcept -> uint32_t {
+ripple_all static inline auto xorshift_32() noexcept -> uint32_t {
   static uint32_t rand_seed = 123456789;
   uint32_t        x         = rand_seed;
   x ^= x << 13;
@@ -137,7 +137,7 @@ ripple_host_device static inline auto xorshift_32() noexcept -> uint32_t {
  * \return The sign of the input.
  */
 template <typename T>
-ripple_host_device constexpr auto sign(T x, std::false_type) noexcept -> T {
+ripple_all constexpr auto sign(T x, std::false_type) noexcept -> T {
   return T(0) < x;
 }
 
@@ -149,7 +149,7 @@ ripple_host_device constexpr auto sign(T x, std::false_type) noexcept -> T {
  * \return The sign of the input.
  */
 template <typename T>
-ripple_host_device constexpr auto sign(T x, std::true_type) noexcept -> T {
+ripple_all constexpr auto sign(T x, std::true_type) noexcept -> T {
   return (T(0) < x) - (x < T(0));
 }
 
@@ -162,7 +162,7 @@ ripple_host_device constexpr auto sign(T x, std::true_type) noexcept -> T {
  * \param value The value to find log base 2 of.
  * \return The log of the input.
  */
-ripple_host_device constexpr auto log_2(uint32_t value) noexcept -> uint32_t {
+ripple_all constexpr auto log_2(uint32_t value) noexcept -> uint32_t {
   // clang-format off
   uint32_t result = 0, shift = 0;
   result = (value > 0xFFFF) << 4; value >>= result;
@@ -187,7 +187,7 @@ ripple_host_device constexpr auto log_2(uint32_t value) noexcept -> uint32_t {
  * \param end   The end value of the range.
  * \return A uniformly distributed random number in the given range.
  */
-ripple_host_device static inline auto
+ripple_all static inline auto
 randint(uint32_t start, uint32_t end) noexcept -> uint32_t {
   const uint32_t range = end - start;
   return (detail::xorshift_32() >> (32 - log_2(range) - 1)) % range + start;
@@ -204,7 +204,7 @@ randint(uint32_t start, uint32_t end) noexcept -> uint32_t {
  * \return The square root of the value.
  */
 template <typename T, non_array_enable_t<T> = 0>
-ripple_host_device constexpr auto sqrt(const T& v) noexcept -> T {
+ripple_all constexpr auto sqrt(const T& v) noexcept -> T {
   return std::sqrt(v);
 }
 
@@ -215,7 +215,7 @@ ripple_host_device constexpr auto sqrt(const T& v) noexcept -> T {
  * \return A new array with all elements square rooted.
  */
 template <typename Impl, array_enable_t<Impl> = 0>
-ripple_host_device constexpr auto
+ripple_all constexpr auto
 sqrt(const Array<Impl>& arr) noexcept -> Impl {
   auto r = Impl{};
   unrolled_for<array_traits_t<Impl>::size>([&](auto _i) {
@@ -233,7 +233,7 @@ sqrt(const Array<Impl>& arr) noexcept -> Impl {
  * \return The sign of the input.
  */
 template <typename T>
-ripple_host_device constexpr auto sign(T x) noexcept -> T {
+ripple_all constexpr auto sign(T x) noexcept -> T {
   return detail::sign(x, std::is_signed<T>());
 }
 
@@ -247,7 +247,7 @@ ripple_host_device constexpr auto sign(T x) noexcept -> T {
  * \tparam T The type of the value.
  */
 template <typename T, non_array_enable_t<T> = 0>
-ripple_host_device constexpr auto abs(T x) noexcept -> T {
+ripple_all constexpr auto abs(T x) noexcept -> T {
   return sign(x) * x;
 }
 
@@ -258,7 +258,7 @@ ripple_host_device constexpr auto abs(T x) noexcept -> T {
  * \return A new array with each element abs valued.
  */
 template <typename Impl, array_enable_t<Impl> = 0>
-ripple_host_device constexpr auto abs(const Array<Impl>& arr) noexcept -> Impl {
+ripple_all constexpr auto abs(const Array<Impl>& arr) noexcept -> Impl {
   auto r = Impl{};
   unrolled_for<array_traits_t<Impl>::size>([&](auto _i) {
     constexpr auto i = size_t{_i};
@@ -279,7 +279,7 @@ ripple_host_device constexpr auto abs(const Array<Impl>& arr) noexcept -> Impl {
  * \return true if the input is nan.
  */
 template <typename T, std::enable_if_t<std::is_arithmetic<T>::value, int> = 0>
-ripple_host_device constexpr auto isnan(T a) noexcept -> bool {
+ripple_all constexpr auto isnan(T a) noexcept -> bool {
   return std::isnan(a);
 }
 
@@ -290,7 +290,7 @@ ripple_host_device constexpr auto isnan(T a) noexcept -> bool {
  * \return true if any of the elements are nan.
  */
 template <typename Impl, array_enable_t<Impl> = 0>
-ripple_host_device constexpr auto isnan(const Array<Impl>& a) noexcept -> bool {
+ripple_all constexpr auto isnan(const Array<Impl>& a) noexcept -> bool {
   for (size_t i = 0; i < a.size(); ++i) {
     if (std::isnan(a[i])) {
       return true;
@@ -310,7 +310,7 @@ ripple_host_device constexpr auto isnan(const Array<Impl>& a) noexcept -> bool {
  * \return The ceil of the division of num and denom.
  */
 template <typename T, typename F = float>
-ripple_host_device auto div_then_ceil(T num, T denom) noexcept -> T {
+ripple_all auto div_then_ceil(T num, T denom) noexcept -> T {
   return static_cast<T>(std::ceil(static_cast<F>(num) / denom));
 }
 
@@ -326,7 +326,7 @@ ripple_host_device auto div_then_ceil(T num, T denom) noexcept -> T {
  * \return The min of a and b.
  */
 template <typename T, non_array_enable_t<T> = 0>
-ripple_host_device constexpr auto min(const T& a, const T& b) noexcept -> T {
+ripple_all constexpr auto min(const T& a, const T& b) noexcept -> T {
   return std::min(a, b);
 }
 
@@ -340,7 +340,7 @@ ripple_host_device constexpr auto min(const T& a, const T& b) noexcept -> T {
  *         elements.
  */
 template <typename ImplA, typename ImplB, array_enable_t<ImplA> = 0>
-ripple_host_device constexpr auto
+ripple_all constexpr auto
 min(const Array<ImplA>& a, const Array<ImplB>& b) noexcept
   -> array_impl_t<ImplA, ImplB> {
   using Result = array_impl_t<ImplA, ImplB>;
@@ -362,7 +362,7 @@ min(const Array<ImplA>& a, const Array<ImplB>& b) noexcept
  *         elements.
  */
 template <typename Impl, typename T, array_enable_t<Impl> = 0>
-ripple_host_device constexpr auto
+ripple_all constexpr auto
 min(const Array<Impl>& a, T b) noexcept -> Impl {
   using Result = Impl;
   Result r;
@@ -378,7 +378,7 @@ min(const Array<Impl>& a, T b) noexcept -> Impl {
  * \return The minimum element in the array,
  */
 template <typename Impl, array_enable_t<Impl> = 0>
-ripple_host_device constexpr auto
+ripple_all constexpr auto
 min(const Array<Impl>& a) noexcept -> typename array_traits_t<Impl>::Value {
   using Result = typename array_traits_t<Impl>::Value;
   Result r     = a[0];
@@ -399,7 +399,7 @@ min(const Array<Impl>& a) noexcept -> typename array_traits_t<Impl>::Value {
  * \return The max of a and b.
  */
 template <typename T, non_array_enable_t<T> = 0>
-ripple_host_device constexpr auto max(const T& a, const T& b) noexcept -> T {
+ripple_all constexpr auto max(const T& a, const T& b) noexcept -> T {
   return std::max(a, b);
 }
 
@@ -413,7 +413,7 @@ ripple_host_device constexpr auto max(const T& a, const T& b) noexcept -> T {
  *         elements.
  */
 template <typename ImplA, typename ImplB, array_enable_t<ImplA> = 0>
-ripple_host_device constexpr auto
+ripple_all constexpr auto
 max(const Array<ImplA>& a, const Array<ImplB>& b) noexcept
   -> array_impl_t<ImplA, ImplB> {
   using Result = array_impl_t<ImplA, ImplB>;
@@ -433,7 +433,7 @@ max(const Array<ImplA>& a, const Array<ImplB>& b) noexcept
  *         elements.
  */
 template <typename Impl, typename T, array_enable_t<Impl> = 0>
-ripple_host_device constexpr auto
+ripple_all constexpr auto
 max(const Array<Impl>& a, T b) noexcept -> Impl {
   using Result = Impl;
   Result r;
@@ -449,7 +449,7 @@ max(const Array<Impl>& a, T b) noexcept -> Impl {
  * \return The maximum element in the array,
  */
 template <typename Impl, array_enable_t<Impl> = 0>
-ripple_host_device constexpr auto
+ripple_all constexpr auto
 max(const Array<Impl>& a) noexcept -> typename array_traits_t<Impl>::Value {
   using Result = typename array_traits_t<Impl>::Value;
   Result r     = a[0];
@@ -472,7 +472,7 @@ max(const Array<Impl>& a) noexcept -> typename array_traits_t<Impl>::Value {
  *        greater than hi, otherwise a referene to v.
  */
 template <typename Impl, typename T>
-ripple_host_device auto
+ripple_all auto
 clamp(const T& v, const T& lo, const T& hi) noexcept -> const T& {
   return std::clamp(v, lo, hi);
 }
@@ -486,7 +486,7 @@ clamp(const T& v, const T& lo, const T& hi) noexcept -> const T& {
  * \tparam T     The type of the bounds.
  */
 template <typename Impl, typename T>
-ripple_host_device auto
+ripple_all auto
 clamp(Array<Impl>& a, const T& lo, const T& hi) noexcept -> void {
   unrolled_for<array_traits_t<Impl>::size>(
     [&](auto i) { a[i] = std::clamp(a[i], lo, hi); });
@@ -504,7 +504,7 @@ clamp(Array<Impl>& a, const T& lo, const T& hi) noexcept -> void {
  * \return The dot product of the arrays.
  */
 template <typename ImplA, typename ImplB>
-ripple_host_device constexpr auto
+ripple_all constexpr auto
 dot(const Array<ImplA>& a, const Array<ImplB>& b) noexcept ->
   typename array_traits_t<ImplA>::Value {
   using Traits = array_traits_t<ImplA>;
@@ -522,7 +522,7 @@ dot(const Array<ImplA>& a, const Array<ImplB>& b) noexcept ->
  * \return The dot product of the array with itself.
  */
 template <typename Impl>
-ripple_host_device constexpr auto
+ripple_all constexpr auto
 dot2(const Array<Impl>& a) noexcept -> typename array_traits_t<Impl>::Value {
   using Traits = array_traits_t<Impl>;
   using Value  = typename Traits::Value;
@@ -546,7 +546,7 @@ template <
   typename ImplB,
   array_size_enable_t<ImplA, 2> = 0,
   array_size_enable_t<ImplB, 2> = 0>
-ripple_host_device constexpr auto
+ripple_all constexpr auto
 cross(const Array<ImplA>& a, const Array<ImplB>& b) noexcept ->
   typename array_traits_t<ImplA>::Value {
   return a[0] * b[1] - b[0] * a[1];
@@ -567,7 +567,7 @@ template <
   typename ImplB,
   array_size_enable_t<ImplA, 3> = 0,
   array_size_enable_t<ImplB, 3> = 0>
-ripple_host_device constexpr auto
+ripple_all constexpr auto
 cross(const Array<ImplA>& a, const Array<ImplB>& b) noexcept
   -> array_impl_t<ImplA, ImplB> {
   using Result = array_impl_t<ImplA, ImplB>;
@@ -584,7 +584,7 @@ cross(const Array<ImplA>& a, const Array<ImplB>& b) noexcept
  * \return The length of the array.
  */
 template <typename Impl>
-ripple_host_device auto
+ripple_all auto
 length(const Array<Impl>& a) noexcept -> typename array_traits_t<Impl>::Value {
   using Value = typename array_traits_t<Impl>::Value;
   Value r{0};

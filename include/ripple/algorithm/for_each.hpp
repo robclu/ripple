@@ -37,11 +37,11 @@ namespace ripple {
  * \tparam FuncArgs  Additional arguments for the functor.
  */
 template <typename Functor, typename... Args, typename... FuncArgs>
-ripple_host_device constexpr auto for_each(
+ripple_all constexpr auto for_each(
   Tuple<Args...>& tuple, Functor&& functor, FuncArgs&&... func_args) noexcept
   -> void {
   constexpr size_t num_args = sizeof...(Args);
-  unrolled_for<num_args>([&] ripple_host_device(auto i) -> void {
+  unrolled_for<num_args>([&] ripple_all(auto i) -> void {
     functor(get<i>(tuple), ripple_forward(func_args)...);
   });
 }
@@ -59,12 +59,12 @@ ripple_host_device constexpr auto for_each(
  * \tparam FuncArgs  Additional arguments for the functor.
  */
 template <typename Functor, typename... Args, typename... FuncArgs>
-ripple_host_device constexpr auto for_each(
+ripple_all constexpr auto for_each(
   const Tuple<Args...>& tuple,
   Functor&&             functor,
   FuncArgs&&... func_args) noexcept -> void {
   constexpr size_t num_args = sizeof...(Args);
-  unrolled_for<num_args>([&] ripple_host_device(auto i) -> void {
+  unrolled_for<num_args>([&] ripple_all(auto i) -> void {
     functor(get<i>(tuple), ripple_forward(func_args)...);
   });
 }
@@ -82,11 +82,11 @@ ripple_host_device constexpr auto for_each(
  * \tparam FuncArgs  Additional arguments for the functor.
  */
 template <typename Functor, typename... Args, typename... FuncArgs>
-ripple_host_device constexpr auto for_each(
+ripple_all constexpr auto for_each(
   Tuple<Args...>&& tuple, Functor&& functor, FuncArgs&&... func_args) noexcept
   -> void {
   constexpr size_t num_args = sizeof...(Args);
-  unrolled_for<num_args>([&] ripple_host_device(auto i) -> void {
+  unrolled_for<num_args>([&] ripple_all(auto i) -> void {
     functor(ripple_move(get<i>(tuple)), ripple_forward(func_args)...);
   });
 }
@@ -102,7 +102,7 @@ ripple_host_device constexpr auto for_each(
  * \tparam Args      The type of the arguments.
  */
 template <typename Functor, typename... Args>
-ripple_host_device constexpr auto
+ripple_all constexpr auto
 for_each(Functor&& functor, Args&&... args) -> void {
   using TupleType = Tuple<Args&&...>;
   for_each(TupleType{ripple_forward(args)...}, ripple_forward(functor));

@@ -79,7 +79,7 @@ class IndexedIterator : public BlockIterator<T, Space> {
    * Constuctor to copy a BlockIterator \p block_iter into this iterator.
    * \param block_iter The block iterator to use to set this iterator.
    */
-  ripple_host_device IndexedIterator(BlockIter block_iter) noexcept
+  ripple_all IndexedIterator(BlockIter block_iter) noexcept
   : BlockIter{block_iter} {}
 
   /*==--- [interface] ------------------------------------------------------==*/
@@ -93,7 +93,7 @@ class IndexedIterator : public BlockIterator<T, Space> {
    * \return A new iterator to the offset location.
    */
   template <typename Dim>
-  ripple_host_device constexpr auto
+  ripple_all constexpr auto
   offset(Dim&& dim, int amount = 1) const noexcept -> IndexedIterator {
     auto res = IndexedIterator{BlockIter::offset(ripple_forward(dim), amount)};
     res.block_start_indices_ = block_start_indices_;
@@ -110,7 +110,7 @@ class IndexedIterator : public BlockIterator<T, Space> {
    *         iterate from.
    */
   template <typename Dim>
-  ripple_host_device auto block_start_index(Dim&& dim) const noexcept -> Index {
+  ripple_all auto block_start_index(Dim&& dim) const noexcept -> Index {
     return block_start_indices_.component(ripple_forward(dim));
   }
 
@@ -122,7 +122,7 @@ class IndexedIterator : public BlockIterator<T, Space> {
    * \tparam Dim   The type of the dimension specifier.
    */
   template <typename Dim>
-  ripple_host_device auto
+  ripple_all auto
   set_block_start_index(Dim&& dim, Index index) noexcept -> void {
     block_start_indices_.component(ripple_forward(dim)) = index;
   }
@@ -136,7 +136,7 @@ class IndexedIterator : public BlockIterator<T, Space> {
    *         which this iterator belongs.
    */
   template <typename Dim>
-  ripple_host_device auto global_size(Dim&& dim) const noexcept -> Index {
+  ripple_all auto global_size(Dim&& dim) const noexcept -> Index {
     return global_sizes_[dim];
   }
 
@@ -148,7 +148,7 @@ class IndexedIterator : public BlockIterator<T, Space> {
    * \tparam Dim  The type of the dimension specifier.
    */
   template <typename Dim>
-  ripple_host_device auto
+  ripple_all auto
   set_global_size(Dim&& dim, Index size) noexcept -> void {
     global_sizes_[dim] = size;
   }
@@ -161,7 +161,7 @@ class IndexedIterator : public BlockIterator<T, Space> {
    * \return The index of this iterator in the global space.
    */
   template <typename Dim>
-  ripple_host_device auto global_idx(Dim&& dim) const noexcept -> size_t {
+  ripple_all auto global_idx(Dim&& dim) const noexcept -> size_t {
     return ::ripple::global_idx(ripple_forward(dim)) +
            static_cast<size_t>(block_start_indices_[dim]);
   }
@@ -176,7 +176,7 @@ class IndexedIterator : public BlockIterator<T, Space> {
    *
    */
   template <typename Dim>
-  ripple_host_device auto normalized_idx(Dim&& dim) const noexcept -> double {
+  ripple_all auto normalized_idx(Dim&& dim) const noexcept -> double {
     return static_cast<double>(global_idx(ripple_forward(dim))) /
            global_sizes_[dim];
   }
@@ -189,7 +189,7 @@ class IndexedIterator : public BlockIterator<T, Space> {
    * \return true if the iterator is valid for the dimension.
    */
   template <typename Dim>
-  ripple_host_device auto is_valid(Dim&& dim) const noexcept -> bool {
+  ripple_all auto is_valid(Dim&& dim) const noexcept -> bool {
     // const auto global_idx_in_block = ::ripple::global_idx(dim);
     const size_t global_idx_in_block = ::ripple::global_idx(dim);
     return (global_idx_in_block < (BlockIter::size(dim) + 2)) &&
@@ -205,7 +205,7 @@ class IndexedIterator : public BlockIterator<T, Space> {
    * \return true if the iterator is valid for the dimension.
    */
   template <typename Dim>
-  ripple_host_device auto
+  ripple_all auto
   is_valid(Dim&& dim, Index extra) const noexcept -> bool {
     // const auto global_idx_in_block = ::ripple::global_idx(dim);
     const size_t global_idx_in_block = ::ripple::global_idx(dim);
@@ -224,7 +224,7 @@ class IndexedIterator : public BlockIterator<T, Space> {
    * Gets the co-ordinates of the iterator in the global space.
    * \return The co-ordinates of the iterator in the global space.
    */
-  ripple_host_device auto coord() noexcept -> Coordinate {
+  ripple_all auto coord() noexcept -> Coordinate {
     return make_coord(std::make_index_sequence<dims>());
   }
 
@@ -233,7 +233,7 @@ class IndexedIterator : public BlockIterator<T, Space> {
    * 0 -> 1 range.
    * \return The co-ordinates of the iterator in the global space.
    */
-  ripple_host_device auto norm_coord() noexcept -> Coordinatef {
+  ripple_all auto norm_coord() noexcept -> Coordinatef {
     return make_norm_coord(std::make_index_sequence<dims>());
   }
 
@@ -242,7 +242,7 @@ class IndexedIterator : public BlockIterator<T, Space> {
    * by the \p sizes.
    * \param sizes The sizes of the dimensions for the iteration space.
    */
-  ripple_host_device auto
+  ripple_all auto
   scaled_norm_coord(Coordinatef sizes) noexcept -> Coordinatef {
     return norm_coord() * sizes;
   }
@@ -252,7 +252,7 @@ class IndexedIterator : public BlockIterator<T, Space> {
    * the first valid iterator in each dimensions of the space.
    * \return true if this is the first iterator in the global space.
    */
-  ripple_host_device auto first_in_global_space() const noexcept -> bool {
+  ripple_all auto first_in_global_space() const noexcept -> bool {
     for (size_t dim = 0; dim < dims; ++dim) {
       if (global_idx(dim) != 0) {
         return false;
@@ -266,7 +266,7 @@ class IndexedIterator : public BlockIterator<T, Space> {
    * the last valid iterator in each dimensions of the space.
    * \return true if this is the last iterator in the global space.
    */
-  ripple_host_device auto last_in_global_space() const noexcept -> bool {
+  ripple_all auto last_in_global_space() const noexcept -> bool {
     for (size_t dim = 0; dim < dims; ++dim) {
       if (global_idx(dim) != (global_sizes_[dim] - 1)) {
         return false;
@@ -285,7 +285,7 @@ class IndexedIterator : public BlockIterator<T, Space> {
    * \return The coordinates of the iterator.
    */
   template <size_t... I>
-  ripple_host_device auto
+  ripple_all auto
   make_coord(std::index_sequence<I...>) const noexcept -> Coordinate {
     return Coordinate{global_idx(Dimension<I>())...};
   }
@@ -296,7 +296,7 @@ class IndexedIterator : public BlockIterator<T, Space> {
    * \return The coordinates of the iterator.
    */
   template <size_t... I>
-  ripple_host_device auto
+  ripple_all auto
   make_norm_coord(std::index_sequence<I...>) const noexcept -> Coordinatef {
     return Coordinatef{normalized_idx(Dimension<I>())...};
   }

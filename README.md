@@ -111,7 +111,7 @@ which is as simple as the following:
   // tensor. The arguments to the functors are iterators which point to the
   // cell in the tensor at the global thread indices.
   ripple::Graph graph;
-  graph.split([] ripple_host_device (auto a, auto b, auto c, float x) {
+  graph.split([] ripple_all (auto a, auto b, auto c, float x) {
     // Set a and b to thread indices:
     *a = a.global_idx(ripple::dimx());
     *b = b.global_idx(ripple::dimx());

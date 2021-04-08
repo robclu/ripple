@@ -57,7 +57,7 @@ struct DynamicExecParams : public ExecParams<DynamicExecParams<Shared>> {
   /**
    * Default constructor to create a space with default sizes.
    */
-  ripple_host_device constexpr DynamicExecParams() noexcept
+  ripple_all constexpr DynamicExecParams() noexcept
   : space_{1024, 1, 1} {}
 
   /**
@@ -66,7 +66,7 @@ struct DynamicExecParams : public ExecParams<DynamicExecParams<Shared>> {
    * \tparam Sizes The types of the sizes of the execution space.
    */
   template <typename... Sizes, all_arithmetic_size_enable_t<3, Sizes...> = 0>
-  ripple_host_device constexpr DynamicExecParams(Sizes&&... sizes) noexcept
+  ripple_all constexpr DynamicExecParams(Sizes&&... sizes) noexcept
   : space_{static_cast<Step>(sizes)...} {}
 
   /**
@@ -81,7 +81,7 @@ struct DynamicExecParams : public ExecParams<DynamicExecParams<Shared>> {
    * \tparam Sizes   The types of the sizes.
    */
   template <typename... Sizes, all_arithmetic_size_enable_t<3, Sizes...> = 0>
-  ripple_host_device constexpr DynamicExecParams(
+  ripple_all constexpr DynamicExecParams(
     uint32_t padding, Sizes&&... sizes) noexcept
   : space_{padding, static_cast<Step>(sizes)...} {}
 
@@ -94,7 +94,7 @@ struct DynamicExecParams : public ExecParams<DynamicExecParams<Shared>> {
    * \return The number of elements for Dims dimensions.
    */
   template <size_t Dims>
-  ripple_host_device constexpr auto size() const noexcept -> Step {
+  ripple_all constexpr auto size() const noexcept -> Step {
     static_assert(
       Dims <= 3, "Execution space can't be more than 3 dimensions!");
     Step total_size = space_.size(dimx());
@@ -116,7 +116,7 @@ struct DynamicExecParams : public ExecParams<DynamicExecParams<Shared>> {
    * \return The total number of elements, including padding.
    */
   template <size_t Dims>
-  ripple_host_device constexpr auto
+  ripple_all constexpr auto
   size(size_t padding) const noexcept -> Step {
     static_assert(
       Dims <= 3, "Execution space can't be more than 3 dimensions!");
@@ -137,7 +137,7 @@ struct DynamicExecParams : public ExecParams<DynamicExecParams<Shared>> {
    * \tparam Dim The type of the dimension specifier.
    */
   template <typename Dim>
-  ripple_host_device constexpr auto size(Dim&& dim) const noexcept -> size_t {
+  ripple_all constexpr auto size(Dim&& dim) const noexcept -> size_t {
     return space_.internal_size(static_cast<Dim&&>(dim));
   }
 
@@ -149,7 +149,7 @@ struct DynamicExecParams : public ExecParams<DynamicExecParams<Shared>> {
    *
    * \return The amount of padding for the space.
    */
-  ripple_host_device constexpr auto padding() const noexcept -> size_t {
+  ripple_all constexpr auto padding() const noexcept -> size_t {
     return space_.padding();
   }
 
@@ -162,7 +162,7 @@ struct DynamicExecParams : public ExecParams<DynamicExecParams<Shared>> {
    * \return A block iterator over a space defined by this space.
    */
   template <size_t Dims, typename T>
-  ripple_host_device auto iterator(T* data) const noexcept
+  ripple_all auto iterator(T* data) const noexcept
     -> BlockIterator<Value, MakeSpaceType<Dims>> {
     using SpaceType = MakeSpaceType<Dims>;
     using Iter      = BlockIterator<Value, SpaceType>;
@@ -182,7 +182,7 @@ struct DynamicExecParams : public ExecParams<DynamicExecParams<Shared>> {
    *         data.
    */
   template <size_t Dims>
-  ripple_host_device constexpr auto allocation_size() const noexcept -> size_t {
+  ripple_all constexpr auto allocation_size() const noexcept -> size_t {
     return Allocator::allocation_size(size<Dims>());
   }
 
@@ -197,7 +197,7 @@ struct DynamicExecParams : public ExecParams<DynamicExecParams<Shared>> {
  * \tparam Shared  The type of the shared memory for the parameters.
  */
 template <size_t Dims, typename Shared = VoidShared>
-ripple_host_device auto
+ripple_all auto
 dynamic_params(size_t padding = 0) noexcept -> DynamicExecParams<Shared> {
   constexpr auto size_x = (Dims == 1 ? 512 : Dims == 2 ? 32 : 8);
   constexpr auto size_y = (Dims == 1 ? 1 : Dims == 2 ? 16 : 8);

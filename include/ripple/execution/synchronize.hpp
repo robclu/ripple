@@ -31,7 +31,7 @@ namespace ripple {
  *       Not sure if this might cause errors since sm_70 can have divergent
  *       branches.
  */
-ripple_host_device inline auto syncthreads() noexcept -> void {
+ripple_all inline auto syncthreads() noexcept -> void {
 /*
  * For newer architectures, __syncthreads is called on each thread in a block,
  * so if one thread has returned and __syncthreads is called then there will
@@ -56,7 +56,7 @@ ripple_host_device inline auto syncthreads() noexcept -> void {
 /**
  * Does nothing on the host, for now.
  */
-// ripple_host_device inline auto syncthreads() noexcept -> void {}
+// ripple_all inline auto syncthreads() noexcept -> void {}
 
 } // namespace ripple
 

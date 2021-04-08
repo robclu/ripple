@@ -42,7 +42,7 @@ namespace ripple::detail {
  */
 template <
   typename It, size_t Dims, typename Loader, typename Dim, typename... Args>
-ripple_host_device auto load_global_padding_for_dim(
+ripple_all auto load_global_padding_for_dim(
   It&&                    it,
   const GhostIndex<Dims>& indices,
   Dim&&                   dim,
@@ -79,7 +79,7 @@ ripple_host_device auto load_global_padding_for_dim(
  * \tparam Args     The type of additional arguments.
  */
 template <typename It, size_t Dims, typename Loader, typename... Args>
-ripple_host_device auto load_global_padding(
+ripple_all auto load_global_padding(
   DimX                    dim,
   It&&                    it,
   const GhostIndex<Dims>& indices,
@@ -109,7 +109,7 @@ ripple_host_device auto load_global_padding(
  * \tparam Args     The type of additional arguments.
  */
 template <typename It, size_t Dims, typename Loader, typename... Args>
-ripple_host_device auto load_global_padding(
+ripple_all auto load_global_padding(
   DimY                    dim,
   It&&                    it,
   const GhostIndex<Dims>& indices,
@@ -158,7 +158,7 @@ ripple_host_device auto load_global_padding(
  * \tparam Args     The type of additional arguments.
  */
 template <typename It, size_t Dims, typename Loader, typename... Args>
-ripple_host_device auto load_global_padding(
+ripple_all auto load_global_padding(
   DimZ                    dim,
   It&&                    it,
   const GhostIndex<Dims>& indices,

@@ -47,7 +47,7 @@ struct StaticMultidimSpace
    * Constructor to set the padding for the space.
    * \param padding The amount of padding for the space.
    */
-  ripple_host_device constexpr StaticMultidimSpace(size_t padding) noexcept
+  ripple_all constexpr StaticMultidimSpace(size_t padding) noexcept
   : padding_{padding} {}
 
   /**
@@ -55,7 +55,7 @@ struct StaticMultidimSpace
    * of the space.
    * \return The amount of padding for the space.
    */
-  ripple_host_device constexpr auto padding() noexcept -> size_t& {
+  ripple_all constexpr auto padding() noexcept -> size_t& {
     return padding_;
   }
 
@@ -64,7 +64,7 @@ struct StaticMultidimSpace
    * the space.
    * \return The amount of padding for the space.
    */
-  ripple_host_device constexpr auto padding() const noexcept -> size_t {
+  ripple_all constexpr auto padding() const noexcept -> size_t {
     return padding_;
   }
 
@@ -76,7 +76,7 @@ struct StaticMultidimSpace
    *
    * \return The total padding amount for both sides of the dimension.
    */
-  ripple_host_device constexpr auto dim_padding() const noexcept -> size_t {
+  ripple_all constexpr auto dim_padding() const noexcept -> size_t {
     return padding_ * 2;
   }
 
@@ -84,7 +84,7 @@ struct StaticMultidimSpace
    * Gets the number of dimensions for the space.
    * \return The number of dimensions for the space.
    */
-  ripple_host_device constexpr auto dimensions() const noexcept -> size_t {
+  ripple_all constexpr auto dimensions() const noexcept -> size_t {
     return dims;
   }
 
@@ -96,7 +96,7 @@ struct StaticMultidimSpace
    *
    * \return the total number of elements in the space including padding.
    */
-  ripple_host_device constexpr auto size() const noexcept -> size_t {
+  ripple_all constexpr auto size() const noexcept -> size_t {
     return ((Sizes + dim_padding()) * ... * size_t{1});
   }
 
@@ -107,7 +107,7 @@ struct StaticMultidimSpace
    * \return The number of elements in the dimension, including padding.
    */
   template <typename Dim>
-  ripple_host_device constexpr auto size(Dim&& dim) const noexcept -> size_t {
+  ripple_all constexpr auto size(Dim&& dim) const noexcept -> size_t {
     constexpr size_t sizes[dims] = {Sizes...};
     return sizes[dim] + dim_padding();
   }
@@ -118,7 +118,7 @@ struct StaticMultidimSpace
    * \tparam Dim  The type of the dimension.
    */
   template <typename Dim>
-  ripple_host_device constexpr auto
+  ripple_all constexpr auto
   internal_size(Dim&& dim) const noexcept -> size_t {
     constexpr size_t sizes[dims] = {Sizes...};
     return sizes[dim];
@@ -129,7 +129,7 @@ struct StaticMultidimSpace
    * is the total number of computable elements in the space.
    * \return The total number of elements in the space, excluding padding.
    */
-  ripple_host_device constexpr auto internal_size() const noexcept -> size_t {
+  ripple_all constexpr auto internal_size() const noexcept -> size_t {
     return (Sizes * ... * size_t{1});
   }
 
@@ -141,7 +141,7 @@ struct StaticMultidimSpace
    * \return The step size between two elements in the dimension.
    */
   template <typename Dim>
-  ripple_host_device constexpr auto step(Dim&& dim) const noexcept -> size_t {
+  ripple_all constexpr auto step(Dim&& dim) const noexcept -> size_t {
     constexpr size_t sizes[dims] = {Sizes...};
     size_t           res         = 1;
     for (size_t i = 0; i < static_cast<size_t>(dim); ++i) {

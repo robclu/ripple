@@ -31,7 +31,7 @@ class PaddingLoader {
    * Gets a const pointer to the implementation type.
    * \return A const pointer to the implementation.
    */
-  ripple_host_device constexpr auto impl() const noexcept -> const Impl* {
+  ripple_all constexpr auto impl() const noexcept -> const Impl* {
     return static_cast<const Impl*>(this);
   }
 
@@ -41,7 +41,7 @@ class PaddingLoader {
    * \tparam Iterator The iterator to check is an iterator.
    */
   template <typename Iterator>
-  ripple_host_device auto
+  ripple_all auto
   static_assert_iterator(Iterator&&) const noexcept -> void {
     static_assert(
       is_iterator_v<Iterator>,
@@ -61,7 +61,7 @@ class PaddingLoader {
    * \tparam Args     The types of the additional arguments.
    */
   template <typename Iterator, typename Dim, typename... Args>
-  ripple_host_device constexpr auto
+  ripple_all constexpr auto
   load_front(Iterator&& it, int index, Dim&& dim, Args&&... args) const noexcept
     -> void {
     impl()->load_front(
@@ -80,7 +80,7 @@ class PaddingLoader {
    * \tparam Args     The types of the additional arguments.
    */
   template <typename Iterator, typename Dim, typename... Args>
-  ripple_host_device constexpr auto
+  ripple_all constexpr auto
   load_back(Iterator&& it, int index, Dim&& dim, Args&&... args) const noexcept
     -> void {
     impl()->load_back(

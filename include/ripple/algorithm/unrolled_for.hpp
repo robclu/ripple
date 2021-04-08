@@ -55,7 +55,7 @@ namespace ripple {
  * \tparam Args      The type of the functor arguments.
  */
 template <size_t Amount, typename Functor, typename... Args>
-ripple_host_device constexpr inline auto
+ripple_all constexpr inline auto
 unrolled_for(Functor&& functor, Args&&... args) noexcept -> void {
   detail::Unroll<Amount> unrolled(
     ripple_forward(functor), ripple_forward(args)...);
@@ -88,7 +88,7 @@ template <
   typename    Functor,
   typename... Args,
   unroll_enabled_t<Amount> = 0>
-ripple_host_device constexpr inline auto
+ripple_all constexpr inline auto
 unrolled_for_bounded(Functor&& functor, Args&&... args) noexcept -> void {
   unrolled_for<Amount>(ripple_forward(functor), ripple_forward(args)...);
 }
@@ -119,7 +119,7 @@ template <
   typename    Functor,
   typename... Args,
   unroll_disabled_t<Amount> = 0>
-ripple_host_device constexpr inline auto
+ripple_all constexpr inline auto
 unrolled_for_bounded(Functor&& functor, Args&&... args) noexcept -> void {
   for (size_t i = 0; i < Amount; ++i) {
     functor(i, ripple_forward(args)...);

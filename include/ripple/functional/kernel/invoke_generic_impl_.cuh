@@ -103,7 +103,7 @@ struct SharedMemInfo {
    * \tparam ParamsImpl  The type of the execution params implementation.
    */
   template <typename ParamsImpl>
-  ripple_host_device auto
+  ripple_all auto
   set_space(const ExecParams<ParamsImpl>& exec_params) noexcept -> void {
     unrolled_for<Dims>([&](auto dim) { space[dim] = exec_params.size(dim); });
     space.padding() = padding;
@@ -117,7 +117,7 @@ struct SharedMemInfo {
    * \return An iterator over the space.
    */
   template <typename T>
-  ripple_host_device auto make_iterator(T* data) const noexcept -> Iter {
+  ripple_all auto make_iterator(T* data) const noexcept -> Iter {
     return Iter{
       Alloc::create(
         static_cast<void*>(static_cast<char*>(data) + offset), space),
@@ -528,7 +528,7 @@ template <
   typename Shared,
   typename Global,
   both_iters_enable_t<Shared, Global> = 0>
-ripple_host_device auto offset_if_iterator(
+ripple_all auto offset_if_iterator(
   Shared&&       shared,
   Global&        global,
   int            overlap,
@@ -582,7 +582,7 @@ template <
   typename Shared,
   typename Other,
   only_first_iter_enable_t<Shared, Other> = 0>
-ripple_host_device auto offset_if_iterator(
+ripple_all auto offset_if_iterator(
   Shared&&       shared,
   Other&&        other,
   int            overlap,
@@ -625,7 +625,7 @@ template <
   typename Void,
   typename Global,
   only_second_iter_enable_t<Void, Global> = 0>
-ripple_host_device auto offset_if_iterator(
+ripple_all auto offset_if_iterator(
   Void&          v,
   Global&        global,
   int            expansion,
@@ -673,7 +673,7 @@ template <
   typename Void,
   typename Other,
   neither_iters_enable_t<Void, Other> = 0>
-ripple_host_device auto offset_if_iterator(
+ripple_all auto offset_if_iterator(
   Void&          v,
   Other&&        other,
   int            overlap,

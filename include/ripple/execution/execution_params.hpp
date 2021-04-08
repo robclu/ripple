@@ -40,7 +40,7 @@ struct ExecParams {
    * Gets a const pointer to the implementation.
    * \return A const pointer to the implementation.
    */
-  ripple_host_device constexpr auto impl() const noexcept -> const Impl* {
+  ripple_all constexpr auto impl() const noexcept -> const Impl* {
     return static_cast<const Impl*>(this);
   }
 
@@ -48,7 +48,7 @@ struct ExecParams {
    * Gets a pointer to the implementation.
    * \return A pointer to the implementation.
    */
-  ripple_host_device constexpr auto impl() noexcept -> Impl* {
+  ripple_all constexpr auto impl() noexcept -> Impl* {
     return static_cast<Impl*>(this);
   }
 
@@ -60,7 +60,7 @@ struct ExecParams {
    * \return The total number of elements in the execution space.
    */
   template <size_t Dims>
-  ripple_host_device constexpr auto size() const noexcept {
+  ripple_all constexpr auto size() const noexcept {
     return impl()->template size<Dims>();
   }
 
@@ -75,7 +75,7 @@ struct ExecParams {
    * \return The total number of elements, including padding.
    */
   template <size_t Dims>
-  ripple_host_device constexpr auto size(size_t padding) const noexcept {
+  ripple_all constexpr auto size(size_t padding) const noexcept {
     return impl()->template size<Dims>(padding);
   }
 
@@ -86,7 +86,7 @@ struct ExecParams {
    * \return The size of the given dimension.
    */
   template <typename Dim>
-  ripple_host_device constexpr auto size(Dim&& dim) const noexcept -> size_t {
+  ripple_all constexpr auto size(Dim&& dim) const noexcept -> size_t {
     return impl()->size(ripple_forward(dim));
   }
 
@@ -95,7 +95,7 @@ struct ExecParams {
    * dimension.
    * \return The amount of padding for a side of a dimension in the space.
    */
-  ripple_host_device constexpr auto padding() const noexcept -> size_t {
+  ripple_all constexpr auto padding() const noexcept -> size_t {
     return impl()->padding();
   }
 
@@ -109,7 +109,7 @@ struct ExecParams {
    *        of the given type.
    */
   template <size_t Dims, typename T>
-  ripple_host_device decltype(auto) iterator(T* data) const noexcept {
+  ripple_all decltype(auto) iterator(T* data) const noexcept {
     return impl()->template iterator<Dims>(data);
   }
 
@@ -119,7 +119,7 @@ struct ExecParams {
    * \tparam Dims The number of dimensions to allocate for.
    */
   template <size_t Dims>
-  ripple_host_device constexpr auto allocation_size() const noexcept -> size_t {
+  ripple_all constexpr auto allocation_size() const noexcept -> size_t {
     return impl()->template allocation_size<Dims>();
   }
 };

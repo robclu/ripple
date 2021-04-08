@@ -42,14 +42,14 @@ class Invocable {
    * \tparam F The type of the functor.
    */
   template <typename F>
-  ripple_host_device Invocable(F&& functor) noexcept
+  ripple_all Invocable(F&& functor) noexcept
   : functor_{ripple_forward(functor)} {}
 
   /**
    * Takes a functor and copies it into this invocable.
    * \param functor The functor to store.
    */
-  ripple_host_device Invocable(const Functor& functor) noexcept
+  ripple_all Invocable(const Functor& functor) noexcept
   : functor_{functor} {}
 
   /**
@@ -57,7 +57,7 @@ class Invocable {
    * into this one.
    * \param other The other invocable object to copy.
    */
-  ripple_host_device Invocable(const Invocable& other) noexcept
+  ripple_all Invocable(const Invocable& other) noexcept
   : functor_{other.functor_} {}
 
   /**
@@ -65,7 +65,7 @@ class Invocable {
    * one.
    * \param other The other invocable object to move.
    */
-  ripple_host_device Invocable(Invocable&& other) noexcept
+  ripple_all Invocable(Invocable&& other) noexcept
   : functor_{ripple_move(other._functor)} {}
 
   /**
@@ -74,7 +74,7 @@ class Invocable {
    * \param other The other invocable to copy from.
    * \return A reference to the modified invocable.
    */
-  ripple_host_device auto
+  ripple_all auto
   operator=(const Invocable& other) noexcept -> Invocable& {
     functor_ = other.functor_;
     return *this;
@@ -86,7 +86,7 @@ class Invocable {
    * \param other The other invocable to move into this one.
    * \return A reference to the modified invocable.
    */
-  ripple_host_device auto operator=(Invocable&& other) noexcept -> Invocable& {
+  ripple_all auto operator=(Invocable&& other) noexcept -> Invocable& {
     if (&other != this) {
       functor_ = ripple_move(other.functor_);
     }
@@ -108,7 +108,7 @@ class Invocable {
    * \tparam Args The types of the additional arguments.
    */
   template <typename... Args>
-  ripple_host_device auto operator()(Args&&... args) const noexcept -> void {
+  ripple_all auto operator()(Args&&... args) const noexcept -> void {
     functor_(ripple_forward(args)...);
   }
 
@@ -125,7 +125,7 @@ class Invocable {
    * \tparam Args The types of the additional arguments.
    */
   template <typename... Args>
-  ripple_host_device auto operator()(Args&&... args) noexcept -> void {
+  ripple_all auto operator()(Args&&... args) noexcept -> void {
     functor_(ripple_forward(args)...);
   }
 
@@ -149,7 +149,7 @@ class Invocable {
  * \return A newly created invocable.
  */
 template <typename Functor>
-ripple_host_device decltype(auto) make_invocable(Functor&& functor) noexcept {
+ripple_all decltype(auto) make_invocable(Functor&& functor) noexcept {
   return Invocable<std::decay_t<Functor>>{ripple_forward(functor)};
 }
 

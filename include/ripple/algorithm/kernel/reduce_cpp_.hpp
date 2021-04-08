@@ -58,7 +58,7 @@ class Reducer<0> {
     typename Iterator2,
     typename Pred,
     typename... Args>
-  ripple_host_device static auto reduce(
+  ripple_all static auto reduce(
     Iterator1&& it, Iterator2&& result, Pred&& pred, Args&&... args) noexcept
     -> void {
     static_assert(is_iterator_v<Iterator1>, "Reduction requires an iterator!");
@@ -119,7 +119,7 @@ class Reducer {
     typename Iterator2,
     typename Pred,
     typename... Args>
-  ripple_host_device static auto reduce(
+  ripple_all static auto reduce(
     Iterator1&& it, Iterator2&& result, Pred&& pred, Args&&... args) noexcept
     -> void {
     static_assert(is_iterator_v<Iterator1>, "Reduction requires an iterator!");

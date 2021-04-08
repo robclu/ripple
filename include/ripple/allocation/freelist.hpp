@@ -38,12 +38,12 @@ class Freelist {
 
  public:
   /** Default constructor. */
-  ripple_host_device Freelist() noexcept : head_{nullptr} {}
+  ripple_all Freelist() noexcept : head_{nullptr} {}
 
   /**
    * Destructor, resets the head pointer if it's not a nullptr.
    */
-  ripple_host_device ~Freelist() noexcept {
+  ripple_all ~Freelist() noexcept {
     if (head_ != nullptr) {
       head_ = nullptr;
     }
@@ -57,7 +57,7 @@ class Freelist {
    * \param element_size The size of the elements in the freelist.
    * \param alignment    The alignment of the elements.
    */
-  ripple_host_device Freelist(
+  ripple_all Freelist(
     const void* start,
     const void* end,
     size_t      element_size,
@@ -90,7 +90,7 @@ class Freelist {
    * to it.
    * \return A pointer to the most recently added element.
    */
-  ripple_host_device auto pop_front() noexcept -> void* {
+  ripple_all auto pop_front() noexcept -> void* {
     Node* const popped_head = head_;
     head_                   = popped_head ? popped_head->next : nullptr;
     return static_cast<void*>(popped_head);
@@ -100,7 +100,7 @@ class Freelist {
    * Pushes a new element onto the front of the list.
    * \param ptr The pointer to the element to push onto the list.
    */
-  ripple_host_device auto push_front(void* ptr) noexcept -> void {
+  ripple_all auto push_front(void* ptr) noexcept -> void {
     if (ptr == nullptr) {
       return;
     }
@@ -120,7 +120,7 @@ class Freelist {
    * \param element_size The size of the elements in the freelist.
    * \param alignment    The alignment of the elements.
    */
-  ripple_host_device static auto initialize(
+  ripple_all static auto initialize(
     const void* start, const void* end, size_t element_size, size_t alignment)
     -> Node* {
     // Create the first and second elements:

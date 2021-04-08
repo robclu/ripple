@@ -71,7 +71,7 @@ struct DefaultStorage {
      * \return The number of bytes required to allocate the given number of
      *         elements.
      */
-    ripple_host_device static constexpr auto
+    ripple_all static constexpr auto
     allocation_size(size_t elements) noexcept -> size_t {
       return sizeof(T) * elements;
     }
@@ -86,7 +86,7 @@ struct DefaultStorage {
      *         elements.
      */
     template <size_t Elements>
-    ripple_host_device static constexpr auto
+    ripple_all static constexpr auto
     allocation_size() noexcept -> size_t {
       return sizeof(T) * Elements;
     }
@@ -104,7 +104,7 @@ struct DefaultStorage {
      * \return A new DefaultStorage offset by the given amount.
      */
     template <typename SpaceImpl, typename Dim, diff_enable_t<Dim, int> = 0>
-    ripple_host_device static auto offset(
+    ripple_all static auto offset(
       const Storage&                  storage,
       const MultidimSpace<SpaceImpl>& space,
       Dim&&                           dim,
@@ -125,7 +125,7 @@ struct DefaultStorage {
      * \tparam Dim       The type of the dimension.
      */
     template <typename SpaceImpl, typename Dim>
-    ripple_host_device static auto shift(
+    ripple_all static auto shift(
       Storage&                        storage,
       const MultidimSpace<SpaceImpl>& space,
       Dim&&                           dim,
@@ -142,7 +142,7 @@ struct DefaultStorage {
      * \return A new DefaultStorage type pointing to the given pointer.
      */
     template <typename SpaceImpl>
-    ripple_host_device static auto
+    ripple_all static auto
     create(void* ptr, const MultidimSpace<SpaceImpl>& space) -> Storage {
       return static_cast<T*>(ptr);
     }

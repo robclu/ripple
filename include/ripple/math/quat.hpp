@@ -97,13 +97,13 @@ struct Quat : public PolymorphicLayout<Quat<T, Layout>> {
    * Default constructor for the quaternion, value of initialization for
    * elements in undefined.
    */
-  ripple_host_device constexpr Quat() noexcept {}
+  ripple_all constexpr Quat() noexcept {}
 
   /**
    * Sets all elements of the quaternion to the given value.
    * \param val The value to set all elements to.
    */
-  ripple_host_device constexpr Quat(T val) noexcept {
+  ripple_all constexpr Quat(T val) noexcept {
     unrolled_for<elements>([&](auto i) { storage.template get<0, i>() = val; });
   }
 
@@ -124,7 +124,7 @@ struct Quat : public PolymorphicLayout<Quat<T, Layout>> {
    * \tparam Values The types of the values for setting.
    */
   template <typename... Values, variadic_ge_enable_t<2, Values...> = 0>
-  ripple_host_device constexpr Quat(Values&&... values) noexcept {
+  ripple_all constexpr Quat(Values&&... values) noexcept {
     const auto       v         = Tuple<Values...>{values...};
     constexpr size_t arg_count = sizeof...(Values);
     constexpr size_t extra     = elements - arg_count;
@@ -141,21 +141,21 @@ struct Quat : public PolymorphicLayout<Quat<T, Layout>> {
    * Constructor to set the quaternion from the other storage.
    * \param other The other storage to use to set the quaternion.
    */
-  ripple_host_device constexpr Quat(Storage storage) noexcept
+  ripple_all constexpr Quat(Storage storage) noexcept
   : storage{storage} {}
 
   /**
    * Copy constructor to set the quaternion from another quaternion.
    * \param other The other quaternion to use to initialize this one.
    */
-  ripple_host_device constexpr Quat(const Quat& other) noexcept
+  ripple_all constexpr Quat(const Quat& other) noexcept
   : storage{other.storage} {}
 
   /**
    * Move constructor to set the quaternion from another quaternion.
    * \param other The other quaternion to use to initialize this one.
    */
-  ripple_host_device constexpr Quat(Quat&& other) noexcept
+  ripple_all constexpr Quat(Quat&& other) noexcept
   : storage{ripple_move(other.storage)} {}
 
   /**
@@ -165,7 +165,7 @@ struct Quat : public PolymorphicLayout<Quat<T, Layout>> {
    * \tparam OtherLayout The layout of the other storage.
    */
   template <typename OtherLayout>
-  ripple_host_device constexpr Quat(const Quat<T, OtherLayout>& other) noexcept
+  ripple_all constexpr Quat(const Quat<T, OtherLayout>& other) noexcept
   : storage{other.storage} {}
 
   /**
@@ -175,7 +175,7 @@ struct Quat : public PolymorphicLayout<Quat<T, Layout>> {
    * \tparam OtherLayout The layout of the other storage.
    */
   template <typename OtherLayout>
-  ripple_host_device constexpr Quat(Quat<T, OtherLayout>&& other) noexcept
+  ripple_all constexpr Quat(Quat<T, OtherLayout>&& other) noexcept
   : storage{ripple_move(other.storage)} {}
 
   /*==--- [operator overloads] ---------------------------------------------==*/
@@ -186,7 +186,7 @@ struct Quat : public PolymorphicLayout<Quat<T, Layout>> {
    * \param  other The other quaternion to copy from.
    * \return A references to the modified quaternion.
    */
-  ripple_host_device auto operator=(const Quat& other) noexcept -> Quat& {
+  ripple_all auto operator=(const Quat& other) noexcept -> Quat& {
     storage = other.storage;
     return *this;
   }
@@ -197,7 +197,7 @@ struct Quat : public PolymorphicLayout<Quat<T, Layout>> {
    * \param  other The other quaternion to move.
    * \return A reference to the modified quaternion.
    */
-  ripple_host_device auto operator=(Quat&& other) noexcept -> Quat& {
+  ripple_all auto operator=(Quat&& other) noexcept -> Quat& {
     storage = ripple_move(other.storage);
     return *this;
   }
@@ -210,7 +210,7 @@ struct Quat : public PolymorphicLayout<Quat<T, Layout>> {
    * \return A reference to the modified quaternion.
    */
   template <typename OtherLayout>
-  ripple_host_device auto
+  ripple_all auto
   operator=(const Quat<T, OtherLayout>& other) noexcept -> Quat& {
     unrolled_for<elements>([&](auto i) {
       storage.template get<0, i>() = other.storage.template get<0, i>();
@@ -226,7 +226,7 @@ struct Quat : public PolymorphicLayout<Quat<T, Layout>> {
    * \return A reference to the modified quaternion.
    */
   template <typename OtherLayout>
-  ripple_host_device auto
+  ripple_all auto
   operator=(Quat<T, OtherLayout>&& other) noexcept -> Quat& {
     storage = ripple_move(other.storage);
     return *this;
@@ -238,7 +238,7 @@ struct Quat : public PolymorphicLayout<Quat<T, Layout>> {
    * \param i The index of the element to get.
    * \return A reference to the element.
    */
-  ripple_host_device auto operator[](size_t i) noexcept -> Value& {
+  ripple_all auto operator[](size_t i) noexcept -> Value& {
     return storage.template get<0>(i);
   }
 
@@ -248,7 +248,7 @@ struct Quat : public PolymorphicLayout<Quat<T, Layout>> {
    * Gets the scalar part of the quaternion.
    * \return A reference to the scalar part of the quaternion.
    */
-  ripple_host_device auto scalar() noexcept -> Value& {
+  ripple_all auto scalar() noexcept -> Value& {
     return storage.template get<0, 0>();
   }
 
@@ -256,7 +256,7 @@ struct Quat : public PolymorphicLayout<Quat<T, Layout>> {
    * Gets the scalar part of the quaternion.
    * \return A const reference to the scalar part of the quaternion.
    */
-  ripple_host_device auto scalar() const noexcept -> const Value& {
+  ripple_all auto scalar() const noexcept -> const Value& {
     return storage.template get<0, 0>();
   }
 
@@ -265,7 +265,7 @@ struct Quat : public PolymorphicLayout<Quat<T, Layout>> {
    * \tparam I The index of the vector component to get.
    */
   template <size_t I>
-  ripple_host_device auto vec_component() noexcept -> Value& {
+  ripple_all auto vec_component() noexcept -> Value& {
     return storage.template get<0, I + 1>();
   }
 
@@ -274,7 +274,7 @@ struct Quat : public PolymorphicLayout<Quat<T, Layout>> {
    * \tparam I The index of the vector component to get.
    */
   template <size_t I>
-  ripple_host_device auto vec_component() const noexcept -> const Value& {
+  ripple_all auto vec_component() const noexcept -> const Value& {
     return storage.template get<0, I + 1>();
   }
 
@@ -282,7 +282,7 @@ struct Quat : public PolymorphicLayout<Quat<T, Layout>> {
    * Gets the Ith vector component from the quaternion.
    * \tparam i The index of the vector component to get.
    */
-  ripple_host_device auto vec_component(size_t i) noexcept -> Value& {
+  ripple_all auto vec_component(size_t i) noexcept -> Value& {
     return storage.template get<0>(i + 1);
   }
 
@@ -290,7 +290,7 @@ struct Quat : public PolymorphicLayout<Quat<T, Layout>> {
    * Gets the Ith vector component from the quaternion.
    * \tparam I The index of the vector component to get.
    */
-  ripple_host_device auto
+  ripple_all auto
   vec_component(size_t i) const noexcept -> const Value& {
     return storage.template get<0>(i + 1);
   }
@@ -299,7 +299,7 @@ struct Quat : public PolymorphicLayout<Quat<T, Layout>> {
    * Gets the length squared of the quaternion.
    * \return The squared length of the quaternion.
    */
-  ripple_host_device auto length_squared() const noexcept -> Value {
+  ripple_all auto length_squared() const noexcept -> Value {
     return w * w + x * x + y * y + z * z;
   }
 
@@ -307,14 +307,14 @@ struct Quat : public PolymorphicLayout<Quat<T, Layout>> {
    * Gets the length of the quaternion.
    * \return The length of the quaternion.
    */
-  ripple_host_device auto length() const noexcept -> Value {
+  ripple_all auto length() const noexcept -> Value {
     return std::sqrt(length_squared());
   }
 
   /**
    * Normalizes the quaternion.
    */
-  ripple_host_device auto normalize() noexcept -> void {
+  ripple_all auto normalize() noexcept -> void {
     const auto scale = Value{1} / length();
     w *= scale;
     x *= scale;
@@ -325,7 +325,7 @@ struct Quat : public PolymorphicLayout<Quat<T, Layout>> {
   /**
    * Inverts the quaternion.
    */
-  ripple_host_device auto invert() noexcept -> void {
+  ripple_all auto invert() noexcept -> void {
     const auto scale = Value{1} / length_squared();
     w *= scale;
     x *= -scale;
@@ -337,7 +337,7 @@ struct Quat : public PolymorphicLayout<Quat<T, Layout>> {
    * Gets the inverse of the quaternion.
    * \return A new quaternion which is the inverse of this quaternion.
    */
-  ripple_host_device auto inverse() const noexcept -> Quat<T, ContiguousOwned> {
+  ripple_all auto inverse() const noexcept -> Quat<T, ContiguousOwned> {
     const auto scale = Value{-1} / length_squared();
     return Quat<T, ContiguousOwned>{
       w * -scale, x * scale, y * scale, z * scale};
@@ -348,7 +348,7 @@ struct Quat : public PolymorphicLayout<Quat<T, Layout>> {
    * \param q The other quaterion to right multiply with.
    */
   template <typename U, typename L>
-  ripple_host_device auto
+  ripple_all auto
   operator*(const Quat<U, L>& q) const noexcept -> Quat<T, ContiguousOwned> {
     // clang-format off
     return Quat<T, ContiguousOwned>{
@@ -366,7 +366,7 @@ struct Quat : public PolymorphicLayout<Quat<T, Layout>> {
  * \return A matrix representing the rotation.
  */
 template <typename T, typename L>
-ripple_host_device auto
+ripple_all auto
 to_mat2x2(const Quat<T, L>& q) noexcept -> Mat<T, 2, 2> {
   const auto xy = q.x * q.y;
   const auto wz = q.w * q.z;
@@ -398,7 +398,7 @@ to_mat2x2(const Quat<T, L>& q) noexcept -> Mat<T, 2, 2> {
  * \return The rotated vector.
  */
 template <typename T, typename LQ, typename U, typename LV>
-ripple_host_device auto
+ripple_all auto
 rotate(const Quat<T, LQ>& q, const Vec3d<U, LV>& v) noexcept
   -> Vec3d<std::decay_t<U>, ContiguousOwned> {
   using TT = std::decay_t<U>;
@@ -439,7 +439,7 @@ rotate(const Quat<T, LQ>& q, const Vec3d<U, LV>& v) noexcept
  * \return The rotated vector.
  */
 template <typename T, typename LQ, typename U, typename LV>
-ripple_host_device auto
+ripple_all auto
 rotate(const Quat<T, LQ>& q, const Vec2d<U, LV>& v) noexcept
   -> Vec2d<std::decay_t<U>, ContiguousOwned> {
   using TT = std::decay_t<U>;
@@ -475,7 +475,7 @@ rotate(const Quat<T, LQ>& q, const Vec2d<U, LV>& v) noexcept
  * \return A quaternion which represents the rotation between the vectors.
  */
 template <typename T, typename U, typename L1, typename L2>
-ripple_host_device auto
+ripple_all auto
 create_quat(const Vec3d<T, L1>& v1, const Vec3d<U, L2>& v2) noexcept
   -> Quat<std::decay_t<T>> {
   using TT         = std::decay_t<T>;
@@ -528,7 +528,7 @@ create_quat(const Vec3d<T, L1>& v1, const Vec3d<U, L2>& v2) noexcept
  * \return A quaternion which represents the rotation between the vectors.
  */
 template <typename T, typename U, typename L1, typename L2>
-ripple_host_device auto
+ripple_all auto
 create_quat(const Vec2d<T, L1>& v1, const Vec2d<U, L2>& v2) noexcept
   -> Quat<std::decay_t<T>> {
   using TT         = std::decay_t<T>;

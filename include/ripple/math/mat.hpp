@@ -108,13 +108,13 @@ struct MatImpl : public PolymorphicLayout<MatImpl<T, Rows, Cols, Layout>> {
   /*==--- [construction] ---------------------------------------------------==*/
 
   /** Default constructor for the matrix. */
-  ripple_host_device constexpr MatImpl() noexcept {}
+  ripple_all constexpr MatImpl() noexcept {}
 
   /**
    * Sets all elements of the matrix to the given value.
    * \param val The value to set all elements to.
    */
-  ripple_host_device constexpr MatImpl(T val) noexcept {
+  ripple_all constexpr MatImpl(T val) noexcept {
     unrolled_for<elements>(
       [&](auto i) { storage_.template get<0, i>() = val; });
   }
@@ -131,7 +131,7 @@ struct MatImpl : public PolymorphicLayout<MatImpl<T, Rows, Cols, Layout>> {
    * \tparam Values The types of the values for setting.
    */
   template <typename... Values, variadic_size_enable_t<elements, Values...> = 0>
-  ripple_host_device constexpr MatImpl(Values&&... values) noexcept {
+  ripple_all constexpr MatImpl(Values&&... values) noexcept {
     const auto v = Tuple<Values...>{values...};
     unrolled_for<elements>(
       [&](auto i) { storage_.template get<0, i>() = get<i>(v); });
@@ -141,21 +141,21 @@ struct MatImpl : public PolymorphicLayout<MatImpl<T, Rows, Cols, Layout>> {
    * Constructor to set the matrix from other \p storage.
    * \param other The other storage to use to set the matrix.
    */
-  ripple_host_device constexpr MatImpl(Storage storage) noexcept
+  ripple_all constexpr MatImpl(Storage storage) noexcept
   : storage_{storage} {}
 
   /**
    * Copy constructor to set the matrix from another matrix.
    * \param other The other matrix to use to initialize this one.
    */
-  ripple_host_device constexpr MatImpl(const MatImpl& other) noexcept
+  ripple_all constexpr MatImpl(const MatImpl& other) noexcept
   : storage_{other.storage_} {}
 
   /**
    * Move constructor to set the matrix from another matrix.
    * \param other The other matrix to use to initialize this one.
    */
-  ripple_host_device constexpr MatImpl(MatImpl&& other) noexcept
+  ripple_all constexpr MatImpl(MatImpl&& other) noexcept
   : storage_{ripple_move(other.storage_)} {}
 
   /**
@@ -165,7 +165,7 @@ struct MatImpl : public PolymorphicLayout<MatImpl<T, Rows, Cols, Layout>> {
    * \tparam OtherLayout The layout of the other storage.
    */
   template <typename OtherLayout>
-  ripple_host_device constexpr MatImpl(
+  ripple_all constexpr MatImpl(
     const MatImpl<T, Rows, Cols, OtherLayout>& other) noexcept
   : storage_{other.storage_} {}
 
@@ -176,7 +176,7 @@ struct MatImpl : public PolymorphicLayout<MatImpl<T, Rows, Cols, Layout>> {
    * \tparam OtherLayout The layout of the other storage.
    */
   template <typename OtherLayout>
-  ripple_host_device constexpr MatImpl(
+  ripple_all constexpr MatImpl(
     MatImpl<T, Rows, Cols, OtherLayout>&& other)
   : storage_{ripple_move(other.storage_)} {}
 
@@ -188,7 +188,7 @@ struct MatImpl : public PolymorphicLayout<MatImpl<T, Rows, Cols, Layout>> {
    * \param  other The other matrix to copy from.
    * \return A references to the modified matrix.
    */
-  ripple_host_device auto operator=(const MatImpl& other) noexcept -> MatImpl& {
+  ripple_all auto operator=(const MatImpl& other) noexcept -> MatImpl& {
     storage_ = other.storage_;
     return *this;
   }
@@ -199,7 +199,7 @@ struct MatImpl : public PolymorphicLayout<MatImpl<T, Rows, Cols, Layout>> {
    * \param  other The other matrix to move.
    * \return A reference to the modified vector.
    */
-  ripple_host_device auto operator=(MatImpl&& other) noexcept -> MatImpl& {
+  ripple_all auto operator=(MatImpl&& other) noexcept -> MatImpl& {
     storage_ = ripple_move(other.storage_);
     return *this;
   }
@@ -212,7 +212,7 @@ struct MatImpl : public PolymorphicLayout<MatImpl<T, Rows, Cols, Layout>> {
    * \return A reference to the modified matrix.
    */
   template <typename OtherLayout>
-  ripple_host_device auto
+  ripple_all auto
   operator=(const MatImpl<T, Rows, Cols, OtherLayout>& other) noexcept
     -> MatImpl& {
     unrolled_for<elements>([&](auto i) {
@@ -229,7 +229,7 @@ struct MatImpl : public PolymorphicLayout<MatImpl<T, Rows, Cols, Layout>> {
    * \return A reference to the modified matrix.
    */
   template <typename OtherLayout>
-  ripple_host_device auto
+  ripple_all auto
   operator=(MatImpl<T, Rows, Cols, OtherLayout>&& other) noexcept -> MatImpl& {
     storage_ = ripple_move(other.storage_);
     return *this;
@@ -241,7 +241,7 @@ struct MatImpl : public PolymorphicLayout<MatImpl<T, Rows, Cols, Layout>> {
    * \param col The column of the element.
    * \return A reference to the element.
    */
-  ripple_host_device auto
+  ripple_all auto
   operator()(size_t row, size_t col) noexcept -> Value& {
     return storage_.template get<0>(to_index(row, col));
   }
@@ -252,7 +252,7 @@ struct MatImpl : public PolymorphicLayout<MatImpl<T, Rows, Cols, Layout>> {
    * \param col The column of the element.
    * \return A const reference to the element.
    */
-  ripple_host_device auto
+  ripple_all auto
   operator()(size_t row, size_t col) const noexcept -> const Value& {
     return storage_.template get<0>(to_index(row, col));
   }
@@ -263,7 +263,7 @@ struct MatImpl : public PolymorphicLayout<MatImpl<T, Rows, Cols, Layout>> {
    * Gets the number of columns for the matrix.
    * \return The number of columns for the matrix.
    */
-  ripple_host_device constexpr auto columns() const noexcept -> size_t {
+  ripple_all constexpr auto columns() const noexcept -> size_t {
     return Cols::value;
   }
 
@@ -271,7 +271,7 @@ struct MatImpl : public PolymorphicLayout<MatImpl<T, Rows, Cols, Layout>> {
    * Gets the number of rows for the matrix.
    * \return The number of rows for the matrix.
    */
-  ripple_host_device constexpr auto rows() const noexcept -> size_t {
+  ripple_all constexpr auto rows() const noexcept -> size_t {
     return Rows::value;
   }
 
@@ -284,7 +284,7 @@ struct MatImpl : public PolymorphicLayout<MatImpl<T, Rows, Cols, Layout>> {
    * \return A const reference to the element at position I.
    */
   template <size_t Row, size_t Col>
-  ripple_host_device constexpr auto at() const noexcept -> const Value& {
+  ripple_all constexpr auto at() const noexcept -> const Value& {
     static_assert((Row < rows()), "Compile time row index out of range!");
     static_assert((Col < columns()), "Compile time col index out of range!");
     constexpr size_t i = to_index(Row, Col);
@@ -300,7 +300,7 @@ struct MatImpl : public PolymorphicLayout<MatImpl<T, Rows, Cols, Layout>> {
    * \return A reference to the element at position I.
    */
   template <size_t Row, size_t Col>
-  ripple_host_device constexpr auto at() const noexcept -> Value& {
+  ripple_all constexpr auto at() const noexcept -> Value& {
     static_assert((Row < rows()), "Compile time row index out of range!");
     static_assert((Col < columns()), "Compile time col index out of range!");
     constexpr size_t i = to_index(Row, Col);
@@ -311,7 +311,7 @@ struct MatImpl : public PolymorphicLayout<MatImpl<T, Rows, Cols, Layout>> {
    * Gets the number of elements in the matrix.
    * \return The number of elements in the matrix.
    */
-  ripple_host_device constexpr auto size() const noexcept -> size_t {
+  ripple_all constexpr auto size() const noexcept -> size_t {
     return elements;
   }
 
@@ -322,7 +322,7 @@ struct MatImpl : public PolymorphicLayout<MatImpl<T, Rows, Cols, Layout>> {
    * \param  c The index of the column for the element.
    * \return The index of the element.
    */
-  ripple_host_device constexpr auto
+  ripple_all constexpr auto
   to_index(size_t r, size_t c) const noexcept -> size_t {
     return r * columns() + c;
   }
@@ -349,7 +349,7 @@ using mat_vec_result_t =
  * \return A new vector type which is the result of the multiplication.
  */
 template <typename T, typename R, typename C, typename L, typename Impl>
-ripple_host_device auto
+ripple_all auto
 operator*(const MatImpl<T, R, C, L>& m, const Array<Impl>& v) noexcept
   -> mat_vec_result_t<Impl, R::value> {
   constexpr size_t rows = R::value;
@@ -393,7 +393,7 @@ template <
   typename C2,
   typename L1,
   typename L2>
-ripple_host_device auto operator*(
+ripple_all auto operator*(
   const MatImpl<T1, R1, C1R2, L1>& a,
   const MatImpl<T2, C1R2, C2, L2>& b) noexcept
   -> MatImpl<T1, R1, C2, ContiguousOwned> {

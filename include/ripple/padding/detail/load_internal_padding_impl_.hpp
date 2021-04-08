@@ -36,7 +36,7 @@ namespace ripple::detail {
  */
 template <
   size_t Dims, typename ItFrom, typename ItTo, dim_1d_enable_t<Dims> = 0>
-ripple_host_device auto
+ripple_all auto
   load_internal(ItFrom&& from, ItTo&& to) noexcept -> void {
   // clang-format on
   const int pad      = static_cast<int>(to.padding());
@@ -71,7 +71,7 @@ ripple_host_device auto
  */
 template <
   size_t Dims, typename ItFrom, typename ItTo, not_dim_1d_enable_t<Dims> = 0>
-ripple_host_device auto
+ripple_all auto
 load_internal(ItFrom&& from, ItTo&& to) noexcept -> void {
   // clang-format on
   // Has to be 2d or 3d:

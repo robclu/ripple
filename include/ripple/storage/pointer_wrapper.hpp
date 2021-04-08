@@ -33,7 +33,7 @@ struct PointerWrapper {
    * Constructor to create the wrapper.
    * \param data The data to wrap as a pointer.
    */
-  ripple_host_device PointerWrapper(T data) noexcept : data_{data} {}
+  ripple_all PointerWrapper(T data) noexcept : data_{data} {}
 
   // clang-format off
   /**
@@ -41,7 +41,7 @@ struct PointerWrapper {
    * syntax.
    * \return A pointer to the wrapped type.
    */
-  ripple_host_device auto operator->() noexcept -> T* {
+  ripple_all auto operator->() noexcept -> T* {
     return &data_;
   }
 
@@ -50,7 +50,7 @@ struct PointerWrapper {
    * like access.
    * \return A const pointer to the wrapped type.
    */
-  ripple_host_device auto operator->() const noexcept -> const T* {
+  ripple_all auto operator->() const noexcept -> const T* {
     return &data_;
   }
 

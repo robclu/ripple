@@ -71,7 +71,7 @@ struct Dimension {
    * Overload of operator size_t to convert a dimension to a size_t.
    * \return The value of the dimension.
    */
-  ripple_host_device constexpr operator size_t() const {
+  ripple_all constexpr operator size_t() const {
     return static_cast<size_t>(Value);
   }
 };

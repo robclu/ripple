@@ -51,13 +51,13 @@ class StackArena {
    * \param size The size of the arena.
    *
    */
-  ripple_host_device StackArena(size_t size = 0) noexcept {}
+  ripple_all StackArena(size_t size = 0) noexcept {}
 
   /**
    * Gets a pointer to the beginning of the arena.
    * \return A pointer to the beginning of the arena.
    */
-  ripple_nodiscard ripple_host_device auto begin() const noexcept -> ConstPtr {
+  ripple_nodiscard ripple_all auto begin() const noexcept -> ConstPtr {
     return static_cast<ConstPtr>(&buffer_[0]);
   }
 
@@ -65,7 +65,7 @@ class StackArena {
    * Gets a pointer to the end of the arena.
    * \return A pointer to the end of the arena.
    */
-  ripple_nodiscard ripple_host_device auto end() const noexcept -> ConstPtr {
+  ripple_nodiscard ripple_all auto end() const noexcept -> ConstPtr {
     return static_cast<ConstPtr>(&buffer_[stack_size]);
   }
 
@@ -73,7 +73,7 @@ class StackArena {
    * Gets the size of the arena.
    * \return The size of the arena.
    */
-  ripple_nodiscard ripple_host_device constexpr auto
+  ripple_nodiscard ripple_all constexpr auto
   size() const noexcept -> size_t {
     return stack_size;
   }

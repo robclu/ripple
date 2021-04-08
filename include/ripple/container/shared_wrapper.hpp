@@ -49,7 +49,7 @@ struct SharedWrapper {
    * Determines if the wrapper is padded or not.
    * \return true if the padding is valid, otherwise false.
    */
-  ripple_host_device auto padded() const noexcept -> bool {
+  ripple_all auto padded() const noexcept -> bool {
     return padding != invalid_padding;
   }
 
@@ -57,7 +57,7 @@ struct SharedWrapper {
    * Gets the amount of offset based on the expansion and overlap.
    * \return The amount of offset when creating an iterator.
    */
-  ripple_host_device auto offset_amount() const noexcept -> ExpType {
+  ripple_all auto offset_amount() const noexcept -> ExpType {
     return overlap != 0 ? overlap : expansion;
   }
 };
@@ -77,7 +77,7 @@ struct ExpansionWrapper {
    * Gets the amount of offset based on the expansion and overlap.
    * \return The amount of offset when creating an iterator.
    */
-  ripple_host_device auto offset_amount() const noexcept -> ExpType {
+  ripple_all auto offset_amount() const noexcept -> ExpType {
     return overlap != 0 ? overlap : expansion;
   }
 };

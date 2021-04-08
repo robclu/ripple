@@ -36,7 +36,7 @@ struct Num {
   static constexpr auto value = size_t{Value};
 
   /** Conversion to size_t so that the number can be used as a size type. */
-  ripple_host_device constexpr operator size_t() const noexcept {
+  ripple_all constexpr operator size_t() const noexcept {
     return Value;
   }
 };
@@ -55,7 +55,7 @@ struct Int64 {
   static constexpr auto value = int64_t{Value};
 
   /** Conversion to int64_t so that the number can be used as a size type. */
-  ripple_host_device constexpr operator int64_t() const noexcept {
+  ripple_all constexpr operator int64_t() const noexcept {
     return Value;
   }
 };

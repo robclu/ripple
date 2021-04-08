@@ -45,7 +45,7 @@ struct MultidimSpace {
    * Gets a const pointer to the implementation.
    * \return A const pointer to the implementation.
    */
-  ripple_host_device constexpr auto impl() const noexcept -> const Impl* {
+  ripple_all constexpr auto impl() const noexcept -> const Impl* {
     return static_cast<const Impl*>(this);
   }
 
@@ -53,7 +53,7 @@ struct MultidimSpace {
    * Gets a pointer to the implemenation.
    * \return A pointer to the implementation.
    */
-  ripple_host_device constexpr auto impl() noexcept -> Impl* {
+  ripple_all constexpr auto impl() noexcept -> Impl* {
     return static_cast<Impl*>(this);
   }
 
@@ -63,7 +63,7 @@ struct MultidimSpace {
    * dimension in the space.
    * \return A reference to the amount of padding for a side of the dimension.
    */
-  ripple_host_device constexpr auto padding() noexcept -> size_t& {
+  ripple_all constexpr auto padding() noexcept -> size_t& {
     return impl()->padding();
   }
 
@@ -72,7 +72,7 @@ struct MultidimSpace {
    * space.
    * \return The amount of padding per side of the size.
    */
-  ripple_host_device constexpr auto padding() const noexcept -> size_t {
+  ripple_all constexpr auto padding() const noexcept -> size_t {
     return impl()->padding();
   }
 
@@ -81,7 +81,7 @@ struct MultidimSpace {
    * of the padding on each side of the dimension.
    * \return The amount of padding per dimension.
    */
-  ripple_host_device constexpr auto dim_padding() const noexcept -> size_t {
+  ripple_all constexpr auto dim_padding() const noexcept -> size_t {
     return impl()->dim_padding();
   }
 
@@ -89,7 +89,7 @@ struct MultidimSpace {
    * Gets the number of dimensions in the space.
    * \return The number of dimensions in the space.
    */
-  ripple_host_device constexpr auto dimensions() const noexcept -> size_t {
+  ripple_all constexpr auto dimensions() const noexcept -> size_t {
     return SpaceTraits<Impl>::dimensions;
   }
 
@@ -100,7 +100,7 @@ struct MultidimSpace {
    * \return The total number of elements in the dimension, including padding.
    */
   template <typename Dim>
-  ripple_host_device constexpr auto size(Dim&& dim) const noexcept -> size_t {
+  ripple_all constexpr auto size(Dim&& dim) const noexcept -> size_t {
     return impl()->size(ripple_forward(dim));
   }
 
@@ -110,7 +110,7 @@ struct MultidimSpace {
    * \return The total number of elements in the space, including padding
    *         elements.
    */
-  ripple_host_device constexpr auto size() const noexcept -> size_t {
+  ripple_all constexpr auto size() const noexcept -> size_t {
     return impl()->size();
   }
 
@@ -122,7 +122,7 @@ struct MultidimSpace {
    *         elements.
    */
   template <typename Dim>
-  ripple_host_device constexpr auto
+  ripple_all constexpr auto
   internal_size(Dim&& dim) const noexcept -> size_t {
     return impl()->internal_size(ripple_forward(dim));
   }
@@ -131,7 +131,7 @@ struct MultidimSpace {
    * Gets the total internal size of the N dimensional space i.e the total
    * number of elements in the space, exluding any padding elements.
    */
-  ripple_host_device constexpr auto internal_size() const noexcept -> size_t {
+  ripple_all constexpr auto internal_size() const noexcept -> size_t {
     return impl()->internal_size();
   }
 
@@ -143,7 +143,7 @@ struct MultidimSpace {
    * \return The step size between successive elements in the same dimension.
    */
   template <typename Dim>
-  ripple_host_device constexpr auto step(Dim&& dim) const noexcept -> size_t {
+  ripple_all constexpr auto step(Dim&& dim) const noexcept -> size_t {
     return impl()->step(ripple_forward(dim));
   }
 };

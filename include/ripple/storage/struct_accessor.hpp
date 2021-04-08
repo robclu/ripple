@@ -58,7 +58,7 @@ struct StructAccessor : public Storage {
   /**
    * Overload of conversion operator.
    */
-  ripple_host_device operator T() const noexcept {
+  ripple_all operator T() const noexcept {
     if constexpr (is_accessor) {
       return get_accessor<Index>();
     } else {
@@ -69,7 +69,7 @@ struct StructAccessor : public Storage {
   /**
    * Overload of conversion to reference operator.
    */
-  ripple_host_device operator T&() noexcept {
+  ripple_all operator T&() noexcept {
     if constexpr (is_accessor) {
       return get_accessor<Index>();
     } else {
@@ -81,7 +81,7 @@ struct StructAccessor : public Storage {
    * Overload of equal operator to set the value to \p v.
    * \param v The value to set the accessor to.
    */
-  ripple_host_device auto operator=(T v) noexcept -> StructAccessor& {
+  ripple_all auto operator=(T v) noexcept -> StructAccessor& {
     if constexpr (is_accessor) {
       get_accessor<Index>() = v;
     } else {
@@ -101,7 +101,7 @@ struct StructAccessor : public Storage {
    * \return A const reference to the element at the index.
    */
   template <size_t I>
-  ripple_host_device auto get_accessor() const noexcept -> const T& {
+  ripple_all auto get_accessor() const noexcept -> const T& {
     static_assert(
       I < Storage::template nth_element_components_v<0>,
       "Invalid index for accessor!");
@@ -118,7 +118,7 @@ struct StructAccessor : public Storage {
    * \return A const reference to the element at the index.
    */
   template <size_t I>
-  ripple_host_device auto get_nonaccessor() const noexcept -> const T& {
+  ripple_all auto get_nonaccessor() const noexcept -> const T& {
     return Storage::operator[](I);
   }
 
@@ -132,7 +132,7 @@ struct StructAccessor : public Storage {
    * \return A const reference to the element at the index.
    */
   template <size_t I>
-  ripple_host_device auto get_accessor() noexcept -> T& {
+  ripple_all auto get_accessor() noexcept -> T& {
     static_assert(
       I < Storage::template nth_element_components_v<0>,
       "Invalid index for accessor!");
@@ -149,7 +149,7 @@ struct StructAccessor : public Storage {
    * \return A const reference to the element at the index.
    */
   template <size_t I>
-  ripple_host_device auto get_nonaccessor() noexcept -> T& {
+  ripple_all auto get_nonaccessor() noexcept -> T& {
     return Storage::operator[](I);
   }
 };

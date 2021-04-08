@@ -25,7 +25,7 @@ namespace ripple {
  * \param width The width of the bitmask.
  * \return A mask for the given number of bits.
  */
-ripple_host_device static inline auto bitmask(int width) -> uint64_t {
+ripple_all static inline auto bitmask(int width) -> uint64_t {
   return (uint64_t{1} << width) - 1;
 }
 
@@ -38,7 +38,7 @@ ripple_host_device static inline auto bitmask(int width) -> uint64_t {
  * \return The value of the bits between the given [start, end] range.
  */
 template <typename T>
-ripple_host_device static inline auto bits(T val, int start, int end) -> T {
+ripple_all static inline auto bits(T val, int start, int end) -> T {
   return static_cast<T>((val >> start) & bitmask(end - start + 1));
 }
 

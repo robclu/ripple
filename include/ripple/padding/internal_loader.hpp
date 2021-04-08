@@ -31,7 +31,7 @@ namespace ripple {
 template <typename Impl>
 class InternalLoader {
   /** Returns a const pointer to the implementation. */
-  ripple_host_device constexpr auto impl() const -> const Impl* {
+  ripple_all constexpr auto impl() const -> const Impl* {
     return static_cast<const Impl*>(this);
   }
 
@@ -41,7 +41,7 @@ class InternalLoader {
    * \tparam Iterator The iterator to check is an iterator.
    */
   template <typename Iterator>
-  ripple_host_device auto
+  ripple_all auto
   static_assert_iterator(Iterator&&) const noexcept -> void {
     static_assert(
       is_iterator_v<Iterator>,
@@ -60,7 +60,7 @@ class InternalLoader {
    * \tparam Args         The types of the additional arguments.
    */
   template <typename IteratorFrom, typename IteratorTo, typename... Args>
-  ripple_host_device constexpr auto
+  ripple_all constexpr auto
   load(IteratorFrom&& from, IteratorTo&& to, Args&&... args) const noexcept
     -> void {
     impl()->load(

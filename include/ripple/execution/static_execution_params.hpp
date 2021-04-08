@@ -94,7 +94,7 @@ struct StaticExecParams
    * \return The total number of elements in the space, including padding.
    */
   template <size_t Dims>
-  ripple_host_device constexpr auto size() const noexcept -> size_t {
+  ripple_all constexpr auto size() const noexcept -> size_t {
     constexpr size_t dim_pad     = Padding * 2;
     constexpr size_t dim_1d_size = SizeX + dim_pad;
     constexpr size_t dim_2d_size = dim_1d_size * (SizeY + dim_pad);
@@ -112,7 +112,7 @@ struct StaticExecParams
    * \return The number of elements in the dimension, including padding.
    */
   template <typename Dim>
-  ripple_host_device constexpr auto size(Dim&& dim) const noexcept -> size_t {
+  ripple_all constexpr auto size(Dim&& dim) const noexcept -> size_t {
     return size_impl(ripple_forward(dim));
   }
 
@@ -121,7 +121,7 @@ struct StaticExecParams
    * \return The amount of padding of a single size of a single dimension in
    *         the space.
    */
-  ripple_host_device constexpr auto padding() const noexcept -> size_t {
+  ripple_all constexpr auto padding() const noexcept -> size_t {
     return Padding;
   }
 
@@ -135,7 +135,7 @@ struct StaticExecParams
    * \return An iterator over the memory space.
    */
   template <size_t Dims, typename T>
-  ripple_host_device auto
+  ripple_all auto
   iterator(T* data) const noexcept -> BlockIterator<Value, Space<Dims>> {
     using SpaceType      = Space<Dims>;
     using Iterator       = BlockIterator<Value, SpaceType>;
@@ -149,7 +149,7 @@ struct StaticExecParams
    * \return The number of bytes required to allocate data for the space.
    */
   template <size_t Dims>
-  ripple_host_device constexpr auto allocation_size() const noexcept -> size_t {
+  ripple_all constexpr auto allocation_size() const noexcept -> size_t {
     return Allocator::allocation_size(size<Dims>());
   }
 
@@ -159,7 +159,7 @@ struct StaticExecParams
    * dimension.
    * \return The size of the space in the x dimension.
    */
-  ripple_host_device constexpr auto size_impl(DimX) const noexcept -> size_t {
+  ripple_all constexpr auto size_impl(DimX) const noexcept -> size_t {
     return SizeX;
   }
 
@@ -168,7 +168,7 @@ struct StaticExecParams
    * dimension.
    * \return The size of the space in the y dimension.
    */
-  ripple_host_device constexpr auto size_impl(DimY) const noexcept -> size_t {
+  ripple_all constexpr auto size_impl(DimY) const noexcept -> size_t {
     return SizeY;
   }
 
@@ -177,7 +177,7 @@ struct StaticExecParams
    * dimension.
    * \return The size of the space in the z dimension.
    */
-  ripple_host_device constexpr auto size_impl(DimZ) const noexcept -> size_t {
+  ripple_all constexpr auto size_impl(DimZ) const noexcept -> size_t {
     return SizeZ;
   }
 };
@@ -189,7 +189,7 @@ struct StaticExecParams
  * \tparam Pad     The padding for the space.
  */
 template <size_t Dims, typename Shared = VoidShared, size_t Pad = 0>
-ripple_host_device auto
+ripple_all auto
 static_params() noexcept -> default_shared_exec_params_t<Dims, Shared, Pad> {
   return default_shared_exec_params_t<Dims, Shared, Pad>();
 }

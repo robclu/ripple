@@ -55,7 +55,7 @@ int main(int argc, char** argv) {
   // then execute and wait until finished:
   ripple::Graph init;
   init.split(
-    [] ripple_host_device(auto&& x_iter, Eos eos) {
+    [] ripple_all(auto&& x_iter, Eos eos) {
       x_iter->rho() = 1.0;
       x_iter->set_pressure(1.0, eos);
 
@@ -71,7 +71,7 @@ int main(int argc, char** argv) {
   // Create the graph to do the flux calculation:
   ripple::Graph flux;
   flux.split(
-    [] ripple_host_device(auto&& xit, Eos eos, auto dtdh) {
+    [] ripple_all(auto&& xit, Eos eos, auto dtdh) {
       using namespace ripple;
       constexpr auto flux = Force();
 

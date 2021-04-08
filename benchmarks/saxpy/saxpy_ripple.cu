@@ -40,7 +40,7 @@ int main(int argc, char** argv) {
   // clang-format off
   ripple::Graph init;
   init.split(
-    [] ripple_host_device (auto&& xit, auto&& yit, Real xval, Real yval) {
+    [] ripple_all (auto&& xit, auto&& yit, Real xval, Real yval) {
       *xit = xval;
       *yit = yval;
   }, x, y, xval, yval);
@@ -49,7 +49,7 @@ int main(int argc, char** argv) {
 
   ripple::Graph saxpy;
   saxpy.split(
-    [] ripple_host_device (auto&& xit, auto&& yit, Real a) {
+    [] ripple_all (auto&& xit, auto&& yit, Real a) {
       *yit = a * (*xit) + (*yit);
   }, x, y, aval);
   // clang-format on

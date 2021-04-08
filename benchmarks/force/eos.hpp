@@ -35,26 +35,26 @@ struct IdealGas {
   /**
    * Default constructor.
    */
-  ripple_host_device constexpr IdealGas() = default;
+  ripple_all constexpr IdealGas() = default;
 
   /**
    * Constructor to set the adiabatic index.
    * \param adi_index The adiabatic index.
    */
-  ripple_host_device constexpr IdealGas(ValueType adi_index) noexcept
+  ripple_all constexpr IdealGas(ValueType adi_index) noexcept
   : adi_index_{adi_index} {}
 
   /**
    * Returns a reference to the adiabatic index for the ideal gas.
    */
-  ripple_host_device constexpr auto adi() noexcept -> ValueType& {
+  ripple_all constexpr auto adi() noexcept -> ValueType& {
     return adi_index_;
   }
 
   /**
    * Returns a const reference to the adiabatic index for the ideal gas.
    */
-  ripple_host_device constexpr auto adi() const noexcept -> ValueType {
+  ripple_all constexpr auto adi() const noexcept -> ValueType {
     return adi_index_;
   }
 
@@ -70,7 +70,7 @@ struct IdealGas {
    * \tparam State The type of the state.
    */
   template <typename State>
-  ripple_host_device constexpr auto
+  ripple_all constexpr auto
   eos(const State& state) const noexcept -> ValueType {
     return state.pressure(*this) / ((adi_index_ - ValueType(1)) * state.rho());
   }
@@ -88,7 +88,7 @@ struct IdealGas {
    * \tparam State   The type of the state.
    */
   template <typename State>
-  ripple_host_device constexpr auto
+  ripple_all constexpr auto
   sound_speed(const State& state) const noexcept -> ValueType {
     return std::sqrt(adi_index_ * state.pressure(*this) / state.rho());
   }

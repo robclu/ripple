@@ -94,7 +94,7 @@ class OwnedStorage : public StorageAccessor<OwnedStorage<Ts...>> {
    * \tparam Impl The implementation type of the StorageAccessor interface.
    */
   template <typename Impl>
-  ripple_host_device constexpr OwnedStorage(
+  ripple_all constexpr OwnedStorage(
     const StorageAccessor<Impl>& from) noexcept {
     copy(static_cast<const Impl&>(from));
   }
@@ -110,7 +110,7 @@ class OwnedStorage : public StorageAccessor<OwnedStorage<Ts...>> {
    * \return A reference to the OwnedStorage with the copied data.
    */
   template <typename Impl>
-  ripple_host_device constexpr auto
+  ripple_all constexpr auto
   operator=(const StorageAccessor<Impl>& from) noexcept -> OwnedStorage& {
     copy(static_cast<const Impl&>(from));
     return *this;
@@ -126,7 +126,7 @@ class OwnedStorage : public StorageAccessor<OwnedStorage<Ts...>> {
    * \tparam Other The type of the other storage to copy from.
    */
   template <typename Other>
-  ripple_host_device constexpr auto copy(const Other& other) noexcept -> void {
+  ripple_all constexpr auto copy(const Other& other) noexcept -> void {
     static_assert(
       is_storage_accessor_v<Other>, "Argument type isn't a StorageAccessor!");
     unrolled_for<num_types>([&](auto i) {
@@ -159,7 +159,7 @@ class OwnedStorage : public StorageAccessor<OwnedStorage<Ts...>> {
    * \return The number of components in the Ith type.
    */
   template <size_t I>
-  ripple_host_device constexpr auto components_of() const noexcept -> size_t {
+  ripple_all constexpr auto components_of() const noexcept -> size_t {
     return Helper::components[I];
   }
 
@@ -177,7 +177,7 @@ class OwnedStorage : public StorageAccessor<OwnedStorage<Ts...>> {
     size_t I,
     typename T                  = nth_element_t<I, Ts...>,
     non_vec_element_enable_t<T> = 0>
-  ripple_host_device constexpr auto get() noexcept -> element_value_t<T>& {
+  ripple_all constexpr auto get() noexcept -> element_value_t<T>& {
     constexpr size_t offset = offsets[I];
     return *static_cast<element_value_t<T>*>(
       static_cast<void*>(static_cast<char*>(data_) + offset));
@@ -197,7 +197,7 @@ class OwnedStorage : public StorageAccessor<OwnedStorage<Ts...>> {
     size_t I,
     typename T                  = nth_element_t<I, Ts...>,
     non_vec_element_enable_t<T> = 0>
-  ripple_host_device constexpr auto
+  ripple_all constexpr auto
   get() const noexcept -> const element_value_t<T>& {
     constexpr size_t offset = offsets[I];
     return *reinterpret_cast<const element_value_t<T>*>(
@@ -221,7 +221,7 @@ class OwnedStorage : public StorageAccessor<OwnedStorage<Ts...>> {
     size_t J,
     typename T              = nth_element_t<I, Ts...>,
     vec_element_enable_t<T> = 0>
-  ripple_host_device constexpr auto get() noexcept -> element_value_t<T>& {
+  ripple_all constexpr auto get() noexcept -> element_value_t<T>& {
     static_assert(
       J < element_components<T>, "Out of range acess for storage element!");
     constexpr size_t offset = offsets[I];
@@ -246,7 +246,7 @@ class OwnedStorage : public StorageAccessor<OwnedStorage<Ts...>> {
     size_t J,
     typename T              = nth_element_t<I, Ts...>,
     vec_element_enable_t<T> = 0>
-  ripple_host_device constexpr auto
+  ripple_all constexpr auto
   get() const noexcept -> const element_value_t<T>& {
     static_assert(
       J < element_components<T>, "Out of range acess for storage element!");
@@ -271,7 +271,7 @@ class OwnedStorage : public StorageAccessor<OwnedStorage<Ts...>> {
     size_t I,
     typename T              = nth_element_t<I, Ts...>,
     vec_element_enable_t<T> = 0>
-  ripple_host_device constexpr auto
+  ripple_all constexpr auto
   get(size_t j) noexcept -> element_value_t<T>& {
     constexpr size_t offset = offsets[I];
     return static_cast<element_value_t<T>*>(
@@ -294,7 +294,7 @@ class OwnedStorage : public StorageAccessor<OwnedStorage<Ts...>> {
     size_t I,
     typename T              = nth_element_t<I, Ts...>,
     vec_element_enable_t<T> = 0>
-  ripple_host_device constexpr auto
+  ripple_all constexpr auto
   get(size_t j) const noexcept -> const element_value_t<T>& {
     constexpr size_t offset = offsets[I];
     return reinterpret_cast<const element_value_t<T>*>(

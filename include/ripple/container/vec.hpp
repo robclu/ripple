@@ -105,13 +105,13 @@ struct VecImpl : public PolymorphicLayout<VecImpl<T, Size, Layout>>,
   /*==--- [construction] ---------------------------------------------------==*/
 
   /** Default constructor for the vector. */
-  ripple_host_device constexpr VecImpl() noexcept {}
+  ripple_all constexpr VecImpl() noexcept {}
 
   /**
    * Sets all elements of the vector to the value \p val.
    * \param val The value to set all elements to.
    */
-  ripple_host_device constexpr VecImpl(T val) noexcept {
+  ripple_all constexpr VecImpl(T val) noexcept {
     unrolled_for<elements>(
       [&](auto i) { storage_.template get<0, i>() = val; });
   }
@@ -128,7 +128,7 @@ struct VecImpl : public PolymorphicLayout<VecImpl<T, Size, Layout>>,
    * \tparam Values The types of the values for setting.
    */
   template <typename... Values, variadic_size_enable_t<elements, Values...> = 0>
-  ripple_host_device constexpr VecImpl(Values&&... values) noexcept {
+  ripple_all constexpr VecImpl(Values&&... values) noexcept {
     const auto v = Tuple<Values...>{values...};
     unrolled_for<elements>(
       [&](auto i) { storage_.template get<0, i>() = get<i>(v); });
@@ -138,21 +138,21 @@ struct VecImpl : public PolymorphicLayout<VecImpl<T, Size, Layout>>,
    * Constructor to set the vector from other \p storage.
    * \param other The other storage to use to set the vector.
    */
-  ripple_host_device constexpr VecImpl(Storage storage) noexcept
+  ripple_all constexpr VecImpl(Storage storage) noexcept
   : storage_{storage} {}
 
   /**
    * Copy constructor to set the vector from another vector.
    * \param other The other vector to use to initialize this one.
    */
-  ripple_host_device constexpr VecImpl(const VecImpl& other) noexcept
+  ripple_all constexpr VecImpl(const VecImpl& other) noexcept
   : storage_{other.storage_} {}
 
   /**
    * Move constructor to set the vector from another vector.
    * \param other The other vector to use to initialize this one.
    */
-  ripple_host_device constexpr VecImpl(VecImpl&& other) noexcept
+  ripple_all constexpr VecImpl(VecImpl&& other) noexcept
   : storage_{std::move(other.storage_)} {}
 
   /**
@@ -162,7 +162,7 @@ struct VecImpl : public PolymorphicLayout<VecImpl<T, Size, Layout>>,
    * \tparam OtherLayout The layout of the other storage.
    */
   template <typename OtherLayout>
-  ripple_host_device constexpr VecImpl(
+  ripple_all constexpr VecImpl(
     const VecImpl<T, Size, OtherLayout>& other) noexcept
   : storage_{other.storage_} {}
 
@@ -173,7 +173,7 @@ struct VecImpl : public PolymorphicLayout<VecImpl<T, Size, Layout>>,
    * \tparam OtherLayout The layout of the other storage.
    */
   template <typename OtherLayout>
-  ripple_host_device constexpr VecImpl(VecImpl<T, Size, OtherLayout>&& other)
+  ripple_all constexpr VecImpl(VecImpl<T, Size, OtherLayout>&& other)
   : storage_{other.storage_} {}
 
   /**
@@ -183,7 +183,7 @@ struct VecImpl : public PolymorphicLayout<VecImpl<T, Size, Layout>>,
    * \tparam Impl The implementation of the array interface.
    */
   template <typename Impl>
-  ripple_host_device constexpr VecImpl(const Array<Impl>& arr) {
+  ripple_all constexpr VecImpl(const Array<Impl>& arr) {
     unrolled_for<elements>(
       [&](auto i) { storage_.template get<0, i>() = arr[i]; });
   }
@@ -196,7 +196,7 @@ struct VecImpl : public PolymorphicLayout<VecImpl<T, Size, Layout>>,
    * \param  other The other vector to copy from.
    * \return A references to the modified vector.
    */
-  ripple_host_device auto operator=(const VecImpl& other) noexcept -> VecImpl& {
+  ripple_all auto operator=(const VecImpl& other) noexcept -> VecImpl& {
     storage_ = other.storage_;
     return *this;
   }
@@ -207,7 +207,7 @@ struct VecImpl : public PolymorphicLayout<VecImpl<T, Size, Layout>>,
    * \param  other The other vector to move.
    * \return A references to the modified vector.
    */
-  ripple_host_device auto operator=(VecImpl&& other) noexcept -> VecImpl& {
+  ripple_all auto operator=(VecImpl&& other) noexcept -> VecImpl& {
     storage_ = std::move(other.storage_);
     return *this;
   }
@@ -220,7 +220,7 @@ struct VecImpl : public PolymorphicLayout<VecImpl<T, Size, Layout>>,
    * \return A references to the modified vector.
    */
   template <typename OtherLayout>
-  ripple_host_device auto
+  ripple_all auto
   operator=(const VecImpl<T, Size, OtherLayout>& other) noexcept -> VecImpl& {
     unrolled_for<elements>(
       [&](auto i) { storage_.template get<0, i>() = other[i]; });
@@ -235,7 +235,7 @@ struct VecImpl : public PolymorphicLayout<VecImpl<T, Size, Layout>>,
    * \return A references to the modified vector.
    */
   template <typename Impl>
-  ripple_host_device auto
+  ripple_all auto
   operator=(const Array<Impl>& arr) noexcept -> VecImpl& {
     unrolled_for<elements>(
       [&](auto i) { storage_.template get<0, i>() = arr[i]; });
@@ -250,7 +250,7 @@ struct VecImpl : public PolymorphicLayout<VecImpl<T, Size, Layout>>,
    * \return A references to the modified vector.
    */
   template <typename OtherLayout>
-  ripple_host_device auto
+  ripple_all auto
   operator=(VecImpl<T, Size, OtherLayout>&& other) noexcept -> VecImpl& {
     storage_ = other.storage_;
     return *this;
@@ -261,7 +261,7 @@ struct VecImpl : public PolymorphicLayout<VecImpl<T, Size, Layout>>,
    * \param i The index of the element to get.
    * \return A const reference to the element at position i.
    */
-  ripple_host_device constexpr auto
+  ripple_all constexpr auto
   operator[](size_t i) const noexcept -> const Value& {
     return storage_.template get<0>(i);
   }
@@ -271,7 +271,7 @@ struct VecImpl : public PolymorphicLayout<VecImpl<T, Size, Layout>>,
    * \param i The index of the element to get.
    * \return A reference to the element at position i.
    */
-  ripple_host_device constexpr auto operator[](size_t i) noexcept -> Value& {
+  ripple_all constexpr auto operator[](size_t i) noexcept -> Value& {
     return storage_.template get<0>(i);
   }
 
@@ -283,7 +283,7 @@ struct VecImpl : public PolymorphicLayout<VecImpl<T, Size, Layout>>,
    * \return A reference to the component to get.
    */
   template <typename Index>
-  ripple_host_device auto component(Index&& i) noexcept -> Value& {
+  ripple_all auto component(Index&& i) noexcept -> Value& {
     if constexpr (ripple::is_cx_number_v<Index>) {
       using Idx = std::decay_t<Index>;
       return storage_.template get<0, Idx::value>();
@@ -298,7 +298,7 @@ struct VecImpl : public PolymorphicLayout<VecImpl<T, Size, Layout>>,
    * \return A const reference to the component to get.
    */
   template <typename Index>
-  ripple_host_device auto component(Index&& i) const noexcept -> const Value& {
+  ripple_all auto component(Index&& i) const noexcept -> const Value& {
     if constexpr (ripple::is_cx_number_v<Index>) {
       using Idx = std::decay_t<Index>;
       return storage_.template get<0, Idx::value>();
@@ -311,7 +311,7 @@ struct VecImpl : public PolymorphicLayout<VecImpl<T, Size, Layout>>,
    * Gets the number of elements in the vector.
    * \return The number of elements in the vector.
    */
-  ripple_host_device constexpr auto size() const noexcept -> size_t {
+  ripple_all constexpr auto size() const noexcept -> size_t {
     return elements;
   }
 
@@ -319,7 +319,7 @@ struct VecImpl : public PolymorphicLayout<VecImpl<T, Size, Layout>>,
    * Gets the squared length of the vector.
    * \return The squared length of the vector.
    */
-  ripple_host_device constexpr auto length_squared() const noexcept -> Value {
+  ripple_all constexpr auto length_squared() const noexcept -> Value {
     Value result = 0;
     unrolled_for<elements>(
       [&](auto i) { result += component(i) * component(i); });
@@ -330,14 +330,14 @@ struct VecImpl : public PolymorphicLayout<VecImpl<T, Size, Layout>>,
    * Gets the length of the vector (L2 norm).
    * \return The length of the vector.
    */
-  ripple_host_device constexpr auto length() const noexcept -> Value {
+  ripple_all constexpr auto length() const noexcept -> Value {
     return std::sqrt(length_squared());
   }
 
   /**
    * Normalizes the vector.
    */
-  ripple_host_device constexpr auto normalize() noexcept -> void {
+  ripple_all constexpr auto normalize() noexcept -> void {
     const auto scale = Value{1} / length();
     unrolled_for<elements>(
       [&](auto i) { storage_.template get<0, i>() *= scale; });

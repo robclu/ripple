@@ -50,7 +50,7 @@
   /** Defines a specifier for a device only function. */
   #define ripple_device         __device__
   /** Defines a speficier for a host and device function. */
-  #define ripple_host_device    __host__ __device__
+  #define ripple_all    __host__ __device__
   /** Defines a specifier for a global kernel function. */
   #define ripple_global         __global__
   /* Defines valid code if cuda is available. */
@@ -73,7 +73,7 @@
   /** Defines a specifier for a device only function. */
   #define ripple_device
   /** Defines a speficier for a host and device function. */
-  #define ripple_host_device
+  #define ripple_all
   /** Defines a specifier for a global kernel function. */
   #define ripple_global
   /** Removes the code defined in the argument. */

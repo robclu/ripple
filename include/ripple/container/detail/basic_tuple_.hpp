@@ -42,7 +42,7 @@ struct Element {
    * \tparam E       The type of the element.
    */
   template <typename E>
-  ripple_host_device constexpr Element(E&& element) noexcept
+  ripple_all constexpr Element(E&& element) noexcept
   : value{static_cast<T&&>(element)} {}
 
   T value; //!< The value of the element.
@@ -60,7 +60,7 @@ struct Element {
  * \tparam T       The type to extract from the element.
  */
 template <size_t I, typename T>
-ripple_host_device constexpr inline auto
+ripple_all constexpr inline auto
 type_extractor(Element<I, T> e) noexcept -> T {
   return T{};
 }
@@ -73,7 +73,7 @@ type_extractor(Element<I, T> e) noexcept -> T {
  * \return A const rvalue reference to the element.
  */
 template <size_t I, typename T>
-ripple_host_device constexpr inline auto
+ripple_all constexpr inline auto
 get_impl(const Element<I, T>&& e) noexcept
   -> const std::remove_reference_t<T>&& {
   return e.value;
@@ -87,7 +87,7 @@ get_impl(const Element<I, T>&& e) noexcept
  * \return A const reference to the element.
  */
 template <size_t I, typename T>
-ripple_host_device constexpr inline auto
+ripple_all constexpr inline auto
 get_impl(const Element<I, T>& e) noexcept -> const std::remove_reference_t<T>& {
   return e.value;
 }
@@ -100,7 +100,7 @@ get_impl(const Element<I, T>& e) noexcept -> const std::remove_reference_t<T>& {
  * \return A reference to the element.
  */
 template <size_t I, typename T>
-ripple_host_device constexpr inline auto
+ripple_all constexpr inline auto
 get_impl(Element<I, T>& e) noexcept -> std::remove_reference_t<T>& {
   return e.value;
 }
@@ -113,7 +113,7 @@ get_impl(Element<I, T>& e) noexcept -> std::remove_reference_t<T>& {
  * \return An rvalue reference to the element.
  */
 template <size_t I, typename T>
-ripple_host_device constexpr inline auto
+ripple_all constexpr inline auto
 get_impl(Element<I, T>&& e) noexcept -> std::remove_reference_t<T>&& {
   using DataType = decltype(e.value);
   return ripple_move(e.value);
@@ -168,7 +168,7 @@ struct TupleStorage<std::index_sequence<Is...>, Ts...> : Element<Is, Ts>... {
    * \tparam Types     The types of the elements.
    */
   template <typename... Types>
-  ripple_host_device constexpr TupleStorage(Types&&... elements) noexcept
+  ripple_all constexpr TupleStorage(Types&&... elements) noexcept
   : Element<Is, Ts>{ripple_forward(elements)}... {}
 
   /**
@@ -181,7 +181,7 @@ struct TupleStorage<std::index_sequence<Is...>, Ts...> : Element<Is, Ts>... {
    * \tparam Types    The types of the elements.
    */
   template <typename... Types>
-  ripple_host_device TupleStorage(const Types&... elements) noexcept
+  ripple_all TupleStorage(const Types&... elements) noexcept
   : Element<Is, Ts>{static_cast<const Ts&>(elements)}... {}
 };
 
@@ -224,7 +224,7 @@ struct BasicTuple
    * \tparam Types     The types of the elements for the tuple.
    */
   template <typename... Types>
-  ripple_host_device explicit constexpr BasicTuple(Types&&... elements) noexcept
+  ripple_all explicit constexpr BasicTuple(Types&&... elements) noexcept
   : Base{ripple_move(elements)...} {}
 
   /**
@@ -237,7 +237,7 @@ struct BasicTuple
    * \tparam Types    The types of the elements for the BasicTuple.
    */
   template <typename... Types>
-  ripple_host_device constexpr explicit BasicTuple(
+  ripple_all constexpr explicit BasicTuple(
     const Types&... elements) noexcept
   : Base{static_cast<const Ts&>(elements)...} {}
 };

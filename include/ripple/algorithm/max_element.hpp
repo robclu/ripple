@@ -32,7 +32,7 @@ namespace detail {
  * \return The element.
  */
 template <typename T>
-ripple_host_device constexpr auto
+ripple_all constexpr auto
 max_element_impl(T&& element) noexcept -> T&& {
   return ripple_forward(element);
 }
@@ -48,7 +48,7 @@ max_element_impl(T&& element) noexcept -> T&& {
  * \tparam Ts          The type of the rest of the elements.
  */
 template <typename T, typename Next, typename... Ts>
-ripple_host_device constexpr decltype(auto)
+ripple_all constexpr decltype(auto)
 max_element_impl(T&& current_max, Next&& next, Ts&&... rest) noexcept {
   return max_element_impl(
     std::max(ripple_forward(current_max), ripple_forward(next)),
@@ -69,7 +69,7 @@ max_element_impl(T&& current_max, Next&& next, Ts&&... rest) noexcept {
  * \return The max of the pack.
  */
 template <typename T, typename... Ts>
-ripple_host_device constexpr decltype(auto)
+ripple_all constexpr decltype(auto)
 max_element(T&& first, Ts&&... rest) noexcept {
   return detail::max_element_impl(
     ripple_forward(first), ripple_forward(rest)...);

@@ -82,7 +82,7 @@ class Range {
      * \param value   The value for the iterator.
      * \param step    The size of the steps for the iterator.
      */
-    ripple_host_device constexpr IteratorImpl(
+    ripple_all constexpr IteratorImpl(
       IterValue value, IterValue step) noexcept
     : value_(value), step_(step) {}
 
@@ -91,7 +91,7 @@ class Range {
      * size. This overload is for the postfix operator and returns the old
      * value of the iterator.
      */
-    ripple_host_device constexpr auto operator++() noexcept -> Self {
+    ripple_all constexpr auto operator++() noexcept -> Self {
       Self i = *this;
       value_ += step_;
       return i;
@@ -102,18 +102,18 @@ class Range {
      * size. This overload is for the prefix operator and returns the updated
      * iterator.
      */
-    ripple_host_device constexpr auto operator++(int) noexcept -> Self {
+    ripple_all constexpr auto operator++(int) noexcept -> Self {
       value_ += step_;
       return *this;
     }
 
     /** Returns a reference to the value of the iterator. */
-    ripple_host_device constexpr auto operator*() noexcept -> Reference {
+    ripple_all constexpr auto operator*() noexcept -> Reference {
       return value_;
     }
 
     /** Returns a pointer to the value of the iterator. */
-    ripple_host_device constexpr auto operator->() noexcept -> Pointer {
+    ripple_all constexpr auto operator->() noexcept -> Pointer {
       return &value_;
     }
 
@@ -126,7 +126,7 @@ class Range {
      *
      * \param other The other iterator to compare with.
      */
-    ripple_host_device constexpr auto
+    ripple_all constexpr auto
     operator==(const Self& other) noexcept -> bool {
       return value_ >= other.value_;
     }
@@ -140,7 +140,7 @@ class Range {
      *
      * \param other The other iterator to compare with.
      */
-    ripple_host_device constexpr auto
+    ripple_all constexpr auto
     operator!=(const Self& other) noexcept -> bool {
       return value_ < other.value_;
     }
@@ -167,26 +167,26 @@ class Range {
    * \param max  The maximum (end) value for the range.
    * \param step The step size for the range.
    */
-  ripple_host_device constexpr Range(Value min, Value max, Value step) noexcept
+  ripple_all constexpr Range(Value min, Value max, Value step) noexcept
   : min_(min), max_(max), step_(step) {}
 
   /** Gets a non constant iterator to the beginning of the range. */
-  ripple_host_device constexpr auto begin() noexcept -> Iterator {
+  ripple_all constexpr auto begin() noexcept -> Iterator {
     return Iterator{min_, step_};
   }
 
   /** Gets a non constant iterator to the end of the range. */
-  ripple_host_device constexpr auto end() noexcept -> Iterator {
+  ripple_all constexpr auto end() noexcept -> Iterator {
     return Iterator{max_, step_};
   }
 
   /** Gets a constant iterator to the beginning of the range. */
-  ripple_host_device constexpr auto begin() const -> ConstIterator {
+  ripple_all constexpr auto begin() const -> ConstIterator {
     return ConstIterator{min_, step_};
   }
 
   /** Gets a non constant iterator to the end of the range. */
-  ripple_host_device constexpr auto end() const -> ConstIterator {
+  ripple_all constexpr auto end() const -> ConstIterator {
     return ConstIterator{max_, step_};
   }
 };
@@ -199,7 +199,7 @@ class Range {
  * \tparam T   The type of the range data.
  */
 template <typename T>
-ripple_host_device constexpr inline auto range(T end) noexcept -> Range<T> {
+ripple_all constexpr inline auto range(T end) noexcept -> Range<T> {
   return Range<T>(T{0}, static_cast<T>(end), T{1});
 }
 
@@ -211,7 +211,7 @@ ripple_host_device constexpr inline auto range(T end) noexcept -> Range<T> {
  * \tparam T     The type of the range data.
  */
 template <typename T>
-ripple_host_device constexpr inline auto
+ripple_all constexpr inline auto
 range(T start, T end, T step = T{1}) noexcept -> Range<T> {
   return Range<T>(start, end, step);
 }

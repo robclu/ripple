@@ -39,7 +39,7 @@ namespace ripple {
  * \tparam Args     The types of the arguments.
  */
 template <typename Iterator, typename Loader, typename... Args>
-ripple_host_device auto
+ripple_all auto
 load_boundary(Iterator&& it, Loader&& loader, Args&&... args) noexcept -> void {
   static_assert(
     is_iterator_v<Iterator>,
@@ -82,7 +82,7 @@ struct LoadPadding {
    * \tparam Args     The types of the arguments.
    */
   template <typename Iterator, typename Loader, typename... Args>
-  ripple_host_device auto
+  ripple_all auto
   operator()(Iterator&& it, Loader&& loader, Args&&... args) const noexcept
     -> void {
     static_assert(
@@ -127,7 +127,7 @@ struct LoadMultiPadding {
    * \tparam Args     The types of the arguments.
    */
   template <typename ItA, typename ItB, typename Loader, typename... Args>
-  ripple_host_device auto operator()(
+  ripple_all auto operator()(
     ItA&& it_a, ItB&& it_b, Loader&& loader, Args&&... args) const noexcept
     -> void {
     static_assert(
@@ -185,7 +185,7 @@ struct LoadMultiPadding {
  * \tparam ItTo    The type of the to iterator.
  */
 template <size_t Dims, typename ItFrom, typename ItTo>
-ripple_host_device auto
+ripple_all auto
 load_internal_boundary(ItFrom&& from, ItTo&& to) noexcept -> void {
   static_assert(
     is_iterator_v<ItFrom>,

@@ -41,7 +41,7 @@ struct FOExtrapLoader : public PaddingLoader<FOExtrapLoader> {
    * \tparam Dim      The type of the dimension specifier.
    */
   template <typename Iterator, typename Dim>
-  ripple_host_device constexpr auto
+  ripple_all constexpr auto
   load_front(Iterator&& it, int index, Dim&& dim) const noexcept -> void {
     static_assert_iterator(it);
     *it = *it.offset(dim, index);
@@ -57,7 +57,7 @@ struct FOExtrapLoader : public PaddingLoader<FOExtrapLoader> {
    * \tparam Dim      The type of the dimension specifier.
    */
   template <typename Iterator, typename Dim>
-  ripple_host_device constexpr auto
+  ripple_all constexpr auto
   load_back(Iterator&& it, int index, Dim&& dim) const noexcept -> void {
     static_assert_iterator(it);
     *it = *it.offset(dim, index);

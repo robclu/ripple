@@ -264,7 +264,7 @@ class DeviceBlock {
    * \return An iterator pointing to the element defined by the indices.
    */
   template <typename... Indices>
-  ripple_host_device auto operator()(Indices&&... is) noexcept -> Iter {
+  ripple_all auto operator()(Indices&&... is) noexcept -> Iter {
     return Iter{
       Allocator::create(
         data_, space_, ripple_forward(is) + space_.padding()...),
@@ -280,7 +280,7 @@ class DeviceBlock {
    * \return A const iterator pointing to the element defined by the indices.
    */
   template <typename... Indices>
-  ripple_host_device auto
+  ripple_all auto
   operator()(Indices&&... is) const noexcept -> ConstIter {
     return ConstIter{
       Allocator::create(
@@ -316,7 +316,7 @@ class DeviceBlock {
    *
    * \return An iterator to the first element in the block.
    */
-  ripple_host_device auto begin(int padding_mod = 0) noexcept -> Iter {
+  ripple_all auto begin(int padding_mod = 0) noexcept -> Iter {
     // Modify the iteration space based on the padding parameter:
     auto space = space_;
     if (padding_mod != 0) {
@@ -344,7 +344,7 @@ class DeviceBlock {
    *
    * \return A constant iterator to the first element in the block.
    */
-  ripple_host_device auto
+  ripple_all auto
   begin(int padding_mod = 0) const noexcept -> ConstIter {
     // Modify the iteration space based on the padding parameter:
     auto space = space_;

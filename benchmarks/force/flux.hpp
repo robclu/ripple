@@ -63,7 +63,7 @@ struct LaxFriedrichs {
     typename Dim,
     typename T,
     ripple::non_iterator_enable_t<StateImplL> = 0>
-  ripple_host_device auto operator()(
+  ripple_all auto operator()(
     const StateImplL& l,
     const StateImplR& r,
     const EosImpl&    eos,
@@ -124,7 +124,7 @@ struct Richtmyer {
     typename Dim,
     typename T,
     ripple::non_iterator_enable_t<StateImplL> = 0>
-  ripple_host_device auto operator()(
+  ripple_all auto operator()(
     const StateImplL& l,
     const StateImplR& r,
     const EosImpl&    eos,
@@ -175,7 +175,7 @@ struct Force {
     typename EosImpl,
     typename Dim,
     typename T>
-  ripple_host_device auto operator()(
+  ripple_all auto operator()(
     const StateImplL& l,
     const StateImplR& r,
     const EosImpl&    eos,

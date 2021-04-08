@@ -43,7 +43,7 @@ namespace ripple {
  * \return The size of the block for the dimension (number of threads).
  */
 template <typename Dim>
-ripple_host_device inline auto block_size(Dim&& dim) noexcept -> size_t {
+ripple_all inline auto block_size(Dim&& dim) noexcept -> size_t {
   return detail::block_size(ripple_forward(dim));
 }
 
@@ -61,7 +61,7 @@ ripple_host_device inline auto block_size(Dim&& dim) noexcept -> size_t {
  * \return The size of the grid in the given dimension (number of blocks).
  */
 template <typename Dim>
-ripple_host_device inline auto grid_size(Dim&& dim) noexcept -> size_t {
+ripple_all inline auto grid_size(Dim&& dim) noexcept -> size_t {
   return detail::grid_size(ripple_forward(dim));
 }
 
@@ -80,7 +80,7 @@ ripple_host_device inline auto grid_size(Dim&& dim) noexcept -> size_t {
  *         threads).
  */
 template <typename Dim>
-ripple_host_device inline auto global_size(Dim&& dim) noexcept -> size_t {
+ripple_all inline auto global_size(Dim&& dim) noexcept -> size_t {
   return detail::grid_size(dim) * detail::block_size(dim);
 }
 
@@ -99,7 +99,7 @@ ripple_host_device inline auto global_size(Dim&& dim) noexcept -> size_t {
  * \return The index of the thread in the given dimension for the block its in.
  */
 template <typename Dim>
-ripple_host_device inline auto thread_idx(Dim&& dim) noexcept -> size_t {
+ripple_all inline auto thread_idx(Dim&& dim) noexcept -> size_t {
   return detail::thread_idx(ripple_forward(dim));
 }
 
@@ -116,7 +116,7 @@ ripple_host_device inline auto thread_idx(Dim&& dim) noexcept -> size_t {
  * \return The index of the thread in the given dimension.
  */
 template <typename Dim>
-ripple_host_device inline auto block_idx(Dim&& dim) noexcept -> size_t {
+ripple_all inline auto block_idx(Dim&& dim) noexcept -> size_t {
   return detail::block_idx(ripple_forward(dim));
 }
 
@@ -133,7 +133,7 @@ ripple_host_device inline auto block_idx(Dim&& dim) noexcept -> size_t {
  * \return The global index of the thread in the given dimension.
  */
 template <typename Dim>
-ripple_host_device inline auto global_idx(Dim&& dim) noexcept -> size_t {
+ripple_all inline auto global_idx(Dim&& dim) noexcept -> size_t {
   return detail::global_idx(ripple_forward(dim));
 }
 
@@ -150,7 +150,7 @@ ripple_host_device inline auto global_idx(Dim&& dim) noexcept -> size_t {
  * \return The global normalized index of the thread in the given dimension.
  */
 template <typename Dim>
-ripple_host_device inline auto global_norm_idx(Dim&& dim) noexcept -> float {
+ripple_all inline auto global_norm_idx(Dim&& dim) noexcept -> float {
   return (static_cast<float>(global_idx(dim)) + 0.5) /
          static_cast<float>(detail::global_elements(dim));
 }
@@ -165,7 +165,7 @@ ripple_host_device inline auto global_norm_idx(Dim&& dim) noexcept -> float {
  * \return The normalized index of the thread in block for the given dimension.
  */
 template <typename Dim>
-ripple_host_device inline auto block_norm_idx(Dim&& dim) noexcept -> float {
+ripple_all inline auto block_norm_idx(Dim&& dim) noexcept -> float {
   return static_cast<float>(block_idx(dim)) /
          static_cast<float>(block_size(dim));
 }
@@ -180,7 +180,7 @@ ripple_host_device inline auto block_norm_idx(Dim&& dim) noexcept -> float {
  * \return true if the executing thread is the first thread in the block.
  */
 template <typename Dim>
-ripple_host_device inline auto
+ripple_all inline auto
 first_thread_in_block(Dim&& dim) noexcept -> bool {
   return detail::thread_idx(ripple_forward(dim)) == size_t{0};
 }
@@ -190,7 +190,7 @@ first_thread_in_block(Dim&& dim) noexcept -> bool {
  * its the first thread in each dimension.
  * \return true if the executing thread is the first thread in the block.
  */
-ripple_host_device inline auto first_thread_in_block() noexcept -> bool {
+ripple_all inline auto first_thread_in_block() noexcept -> bool {
   return first_thread_in_block(dimx()) && first_thread_in_block(dimy()) &&
          first_thread_in_block(dimz());
 }
@@ -203,7 +203,7 @@ ripple_host_device inline auto first_thread_in_block() noexcept -> bool {
  * \return true if this is the last thread in the block.
  */
 template <typename Dim>
-ripple_host_device inline auto
+ripple_all inline auto
 last_thread_in_block(Dim&& dim) noexcept -> bool {
   return detail::thread_idx(ripple_forward(dim)) ==
          (detail::block_size(ripple_forward(dim)) - 1);
@@ -217,7 +217,7 @@ last_thread_in_block(Dim&& dim) noexcept -> bool {
  * \tparam Dim The type of the dimension specifier.
  *  \return true if this is the last thread in the block.
  */
-ripple_host_device inline auto last_thread_in_block() noexcept -> bool {
+ripple_all inline auto last_thread_in_block() noexcept -> bool {
   return last_thread_in_block(dimx()) && last_thread_in_block(dimy()) &&
          last_thread_in_block(dimz());
 }
@@ -229,7 +229,7 @@ ripple_host_device inline auto last_thread_in_block() noexcept -> bool {
  * \return true if this is the first thread in the grid for the given dimension.
  */
 template <typename Dim>
-ripple_host_device inline auto
+ripple_all inline auto
 first_thread_in_grid(Dim&& dim) noexcept -> bool {
   return detail::global_idx(ripple_forward(dim)) == size_t{0};
 }
@@ -239,7 +239,7 @@ first_thread_in_grid(Dim&& dim) noexcept -> bool {
  * device it is executing on.
  * \return true if this is the first thread in the grid.
  */
-ripple_host_device inline auto first_thread_in_grid() noexcept -> bool {
+ripple_all inline auto first_thread_in_grid() noexcept -> bool {
   return first_thread_in_grid(dimx()) && first_thread_in_grid(dimy()) &&
          first_thread_in_grid(dimz());
 }
@@ -251,7 +251,7 @@ ripple_host_device inline auto first_thread_in_grid() noexcept -> bool {
  * \return true if this is the first thread in the grid for the given dimension.
  */
 template <typename Dim>
-ripple_host_device inline auto last_thread_in_grid(Dim&& dim) noexcept -> bool {
+ripple_all inline auto last_thread_in_grid(Dim&& dim) noexcept -> bool {
   return detail::global_idx(ripple_forward(dim)) ==
          (detail::global_elements(ripple_forward(dim)) - 1);
 }
@@ -260,7 +260,7 @@ ripple_host_device inline auto last_thread_in_grid(Dim&& dim) noexcept -> bool {
  * Determines if this is the last thread in the grid.
  * \return true if this is the first thread in the grid.
  */
-ripple_host_device inline auto last_thread_in_grid() noexcept -> bool {
+ripple_all inline auto last_thread_in_grid() noexcept -> bool {
   return last_thread_in_grid(dimx()) && last_thread_in_grid(dimy()) &&
          last_thread_in_grid(dimz());
 }

@@ -95,7 +95,7 @@ struct GhostIndex {
    * \tparam Iterator   The type of the iterator.
    */
   template <typename Iterator, typename Dim>
-  ripple_host_device constexpr auto init_dim(
+  ripple_all constexpr auto init_dim(
     Iterator&& it,
     size_t     idx,
     Dim&&      dim,
@@ -138,7 +138,7 @@ struct GhostIndex {
    * \return true if one of the indicies for a dimension is valid.
    */
   template <typename Iterator>
-  ripple_host_device constexpr auto
+  ripple_all constexpr auto
   init_as_global(Iterator&& it) noexcept -> bool {
     bool loader_cell = false;
     unrolled_for<Dimensions>([&](auto d) {
@@ -161,7 +161,7 @@ struct GhostIndex {
    * \return true if one of the indicies for a dimension is valid.
    */
   template <typename Iterator, typename Space>
-  ripple_host_device constexpr auto
+  ripple_all constexpr auto
   init_as_block(Iterator&& it, Space&& space) noexcept -> bool {
     bool loader_cell = false;
     unrolled_for<Dimensions>([&](auto d) {
@@ -176,7 +176,7 @@ struct GhostIndex {
    * Gets the number of dimensions for the ghost indices.
    * \return The number of dimensions of ghost indices.
    */
-  ripple_host_device constexpr auto dimensions() const noexcept -> size_t {
+  ripple_all constexpr auto dimensions() const noexcept -> size_t {
     return Dimensions;
   }
 
@@ -189,7 +189,7 @@ struct GhostIndex {
    * \return The index in the dimension dim.
    */
   template <typename Dim>
-  ripple_host_device constexpr auto index(Dim&& dim) const noexcept -> Value {
+  ripple_all constexpr auto index(Dim&& dim) const noexcept -> Value {
     return values_[dim];
   }
 
@@ -200,7 +200,7 @@ struct GhostIndex {
    * \return An reference to the index for dimension dim.
    */
   template <typename Dim>
-  ripple_host_device constexpr auto index(Dim&& dim) noexcept -> Value& {
+  ripple_all constexpr auto index(Dim&& dim) noexcept -> Value& {
     return values_[dim];
   }
 
@@ -211,7 +211,7 @@ struct GhostIndex {
    * \return The abs value of the index in dimension dim.
    */
   template <typename Dim>
-  ripple_host_device constexpr auto
+  ripple_all constexpr auto
   abs_index(Dim&& dim) const noexcept -> Value {
     return math::sign(values_[dim]) * values_[dim];
   }
@@ -223,7 +223,7 @@ struct GhostIndex {
    * \return true if the index is at the front of the dimension.
    */
   template <typename Dim>
-  ripple_host_device constexpr auto is_front(Dim&& dim) const noexcept -> bool {
+  ripple_all constexpr auto is_front(Dim&& dim) const noexcept -> bool {
     return values_[dim] > Value{0};
   }
 
@@ -234,7 +234,7 @@ struct GhostIndex {
    * \return true if the index is at the back of the dimension.
    */
   template <typename Dim>
-  ripple_host_device constexpr auto is_back(Dim&& dim) const noexcept -> bool {
+  ripple_all constexpr auto is_back(Dim&& dim) const noexcept -> bool {
     return values_[dim] < Value{0};
   }
 
@@ -245,7 +245,7 @@ struct GhostIndex {
    * \return true if the index is neither front nor back.
    */
   template <typename Dim>
-  ripple_host_device constexpr auto is_void(Dim&& dim) const noexcept -> bool {
+  ripple_all constexpr auto is_void(Dim&& dim) const noexcept -> bool {
     return values_[dim] == void_value;
   }
 
@@ -255,7 +255,7 @@ struct GhostIndex {
    * \tparam Dim The type of the dimension specifier
    */
   template <typename Dim>
-  ripple_host_device constexpr auto set_as_void(Dim&& dim) noexcept -> void {
+  ripple_all constexpr auto set_as_void(Dim&& dim) noexcept -> void {
     values_[dim] = void_value;
   }
 

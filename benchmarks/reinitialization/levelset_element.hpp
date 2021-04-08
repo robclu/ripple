@@ -48,20 +48,20 @@ struct LevelsetElement
    * Constructor to set the element from another element.
    * \param e The other element to set from.
    */
-  ripple_host_device LevelsetElement(const LevelsetElement& e) noexcept
+  ripple_all LevelsetElement(const LevelsetElement& e) noexcept
   : storage(e.storage) {}
 
   /**
    * Constructor to set the element from the storage.
    * \param s The storage to set the element from.
    */
-  ripple_host_device LevelsetElement(const Storage& s) noexcept : storage(s) {}
+  ripple_all LevelsetElement(const Storage& s) noexcept : storage(s) {}
 
   /**
    * Overload of assignment operator which copies the storage.
    * \param other The other element to set this one from.
    */
-  ripple_host_device auto
+  ripple_all auto
   operator=(const LevelsetElement& other) noexcept -> LevelsetElement& {
     storage = other.storage;
     return *this;
@@ -72,7 +72,7 @@ struct LevelsetElement
    * given value.
    * \param value The value to set the element to.
    */
-  ripple_host_device auto operator=(T val) noexcept -> LevelsetElement& {
+  ripple_all auto operator=(T val) noexcept -> LevelsetElement& {
     value() = val;
     return *this;
   }
@@ -80,28 +80,28 @@ struct LevelsetElement
   /**
    * Returns the value of the levelset element.
    */
-  ripple_host_device auto value() noexcept -> T& {
+  ripple_all auto value() noexcept -> T& {
     return storage.template get<0>();
   }
 
   /**
    * Returns the value of the element.
    */
-  ripple_host_device auto value() const noexcept -> const T& {
+  ripple_all auto value() const noexcept -> const T& {
     return storage.template get<0>();
   }
 
   /**
    * Returns the state of the element.
    */
-  ripple_host_device auto state() -> State& {
+  ripple_all auto state() -> State& {
     return storage.template get<1>();
   }
 
   /**
    * Returns the state of the element.
    */
-  ripple_host_device auto state() const -> const State& {
+  ripple_all auto state() const -> const State& {
     return storage.template get<1>();
   }
 };

@@ -128,7 +128,7 @@ which is as simple as the following:
   // tensor. The arguments to the functors are iterators which point to the
   // cell in the tensor at the global thread indices.
   ripple::Graph graph;
-  graph.split([] ripple_host_device (auto a, auto b, auto c, float x) {
+  graph.split([] ripple_all (auto a, auto b, auto c, float x) {
     // Set a and b to thread indices:
     *a = a.global_idx(ripple::dimx());
     *b = b.global_idx(ripple::dimx());
@@ -301,7 +301,7 @@ and then the central difference.
   // Step 1: Intialize all data to have a thread index sum:
   graph.split(
     ripple::ExecutionKind::Gpu,
-    [] ripple_host_device (auto x) {
+    [] ripple_all (auto x) {
       x->x() = x.global_idx(ripple::dimx());
       x->y() = y.global_idx(ripple::dimy());
     }, soa_x);
@@ -310,7 +310,7 @@ and then the central difference.
   // This must be submitted after the previous operation, hence then_split
   graph.then_split(
     ripple::ExecutionKind::Gpu,
-    [] ripple_host_device (auto x, auto y) {
+    [] ripple_all (auto x, auto y) {
     const float dot = x->dot(*x);
       y->x() = dot;
       y->y() = dot;
@@ -322,7 +322,7 @@ and then the central difference.
   // neighbour dot product result computed on any adjacent cells on a different 
   // gpu:
   graph.then_split(ripple::ExecutionKind::Gpu,
-    [] ripple_host_device (auto x, auto y) {
+    [] ripple_all (auto x, auto y) {
     x->x() = y.offset(ripple::dimx(), -1) + y.offset(ripple::dimx(), 1);
     x->y() = y.offset(ripple::dimy(), -1) + y.offset(ripple::dimy(), 1);
   }, soa_x, ripple::concurrent_padded_access(soa_y));

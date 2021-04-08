@@ -84,7 +84,7 @@ int main(int argc, char** argv) {
    *       generic templates, i,e
    *
    *          template <typename It>
-   *          ripple_host_device auto operator()(It&& it) const -> void {}
+   *          ripple_all auto operator()(It&& it) const -> void {}
    *
    *       But for a simple case like this, the lamdas are nice.
    */
@@ -96,7 +96,7 @@ int main(int argc, char** argv) {
   ripple::Graph init(ripple::ExecutionKind::gpu);
   init
     .split(
-      [] ripple_host_device(Iterator it) {
+      [] ripple_all(Iterator it) {
         constexpr size_t source_loc = 5;
         bool             is_source  = true;
         ripple::unrolled_for<dims>([&](auto dim) {
@@ -123,7 +123,7 @@ int main(int argc, char** argv) {
   Real          dh = 0.1;
   solve.memcopy_padding(ripple::exclusive_padded_access(data))
     .then_split(
-      [] ripple_host_device(Iterator it, Real dh, size_t iters) {
+      [] ripple_all(Iterator it, Real dh, size_t iters) {
         constexpr auto fim_solve = FimSolver();
         fim_solve(it, dh, iters);
       },

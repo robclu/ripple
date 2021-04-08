@@ -34,7 +34,7 @@ struct FimSolver {
    * \tparam T        The data type for  the resilution.
    */
   template <typename Iterator, typename T>
-  ripple_host_device auto
+  ripple_all auto
   operator()(Iterator it, T dh, size_t iters) const noexcept -> void {
     static constexpr size_t dims =
       ripple::iterator_traits_t<Iterator>::dimensions;
