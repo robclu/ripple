@@ -8,16 +8,26 @@
 //
 //==------------------------------------------------------------------------==//
 //
-/// \file  particle_update.cu
-/// \brief This file defines a benchmark for a 3D particle update.
-//
-//==------------------------------------------------------------------------==//
+
+/**=--- ripple/benchmarks/particle_update.cu --------------- -*- C++ -*- ---==**
+ *
+ *                                  Ripple
+ *
+ *                      Copyright (c) 2019 - 2021 Rob Clucas.
+ *
+ *  This file is distributed under the MIT License. See LICENSE for details.
+ *
+ *==-------------------------------------------------------------------------==*
+ *
+ * \file  particle_update.cu
+ * \brief This file defines a benchmark for a 3D particle update.
+ *
+ *==------------------------------------------------------------------------==*/
 
 #include <iostream>
-#include <ripple/core/container/tensor.hpp>
-#include <ripple/core/execution/executor.hpp>
-#include <ripple/core/utility/timer.hpp>
-#include <cuda_profiler_api.h>
+#include <ripple/container/tensor.hpp>
+#include <ripple/execution/executor.hpp>
+#include <ripple/utility/timer.hpp>
 #include "particle.hpp"
 
 /*
@@ -37,15 +47,18 @@ int main(int argc, char** argv) {
     elements = std::atol(argv[1]);
   }
 
+  // Single gpu, add paritions to increase number of gpus.
   Tensor x({1}, elements);
 
+  // By deefault graph runs on the gpu, for cpu, specify CPU executor:
+  // ripple:::Graph init(ripple::ExecutionKind::cpu);
   ripple::Graph init;
   init.split(
     [] ripple_host_device(auto&& it) {
-      ripple::unrolled_for<dims>([&](auto dim) {
+      for (const auto dim : ripple::range(dims)) {
         it->x(dim) = it.global_idx(ripple::dimx());
-        it->v(dim) = 1.4f * static_cast<Real>(dim);
-      });
+        it->v(dim) = 1.4f * dim;
+      }
     },
     x);
   ripple::execute(init);
@@ -58,7 +71,7 @@ int main(int argc, char** argv) {
 
   ripple::Timer timer;
   ripple::execute(update);
-  ripple::fence();
+  ripple::barrier();
 
   double elapsed = timer.elapsed_msec();
   std::cout << "Elements : " << elements << " : Time: " << elapsed << " ms\n";

@@ -8,17 +8,27 @@
 //
 //==------------------------------------------------------------------------==//
 //
-/// \file  particle.hpp
-/// \brief This file defines an example particle class for bencmarks.
-//
-//==------------------------------------------------------------------------==//
+
+/**=--- ripple/benchmarks/particle.hpp --------------------- -*- C++ -*- ---==**
+ *
+ *                                  Ripple
+ *
+ *                      Copyright (c) 2019 - 2021 Rob Clucas.
+ *
+ *  This file is distributed under the MIT License. See LICENSE for details.
+ *
+ *==-------------------------------------------------------------------------==*
+ *
+ * \file  particle.hpp
+ * \brief This file defines an example particle class for bencmarks.
+ *
+ *==------------------------------------------------------------------------==*/
 
 #ifndef RIPPLE_BENCHMARK_PARTICLE_HPP
 #define RIPPLE_BENCHMARK_PARTICLE_HPP
 
-#include <ripple/core/storage/storage_descriptor.hpp>
-#include <ripple/core/storage/storage_traits.hpp>
-#include <chrono>
+#include <ripple/storage/storage_descriptor.hpp>
+#include <ripple/storage/storage_traits.hpp>
 
 using Real = double;
 

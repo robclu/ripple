@@ -9,7 +9,7 @@
  *==-------------------------------------------------------------------------==*
  *
  * \file  saxpy.cu
- * \brief This file implements a saxpy bechhmark using ripple.s
+ * \brief This file implements a saxpy bechhmark using ripple.
  *
  *==------------------------------------------------------------------------==*/
 

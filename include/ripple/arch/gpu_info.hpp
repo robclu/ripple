@@ -113,8 +113,6 @@ struct GpuInfo {
    * Destructor which cleans up the streams.
    */
   ~GpuInfo() noexcept {
-    // Currently causing a segfault, so we can't clean up the streams ...
-    // cudaSetDevice(index);
     gpu::set_device(index);
     for (auto& stream : streams) {
       stream.destroy();
