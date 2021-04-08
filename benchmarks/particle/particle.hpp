@@ -1,14 +1,3 @@
-//==--- ripple/benchmarks/particle.hpp --------------------- -*- C++ -*- ---==//
-//
-//                                Ripple
-//
-//                      Copyright (c) 2019, 2020 Rob Clucas.
-//
-//  This file is distributed under the MIT License. See LICENSE for details.
-//
-//==------------------------------------------------------------------------==//
-//
-
 /**=--- ripple/benchmarks/particle.hpp --------------------- -*- C++ -*- ---==**
  *
  *                                  Ripple
