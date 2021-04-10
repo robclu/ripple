@@ -1,25 +1,25 @@
-//==--- ripple/benchmarks/reinitialization/fim_solver.hpp -- -*- C++ -*- ---==//
-//
-//                                Ripple
-//
-//                      Copyright (c) 2019, 2020 Rob Clucas.
-//
-//  This file is distributed under the MIT License. See LICENSE for details.
-//
-//==------------------------------------------------------------------------==//
-//
-/// \file  fim_solver.hpp
-/// \brief This file defines an implementation of an eikonal solver using the
-///        fast iterative method.
-//
-//==------------------------------------------------------------------------==//
+/**=--- ripple/benchmarks/reinitialization/fim_solver.hpp -- -*- C++ -*- ---==**
+ *
+ *                                  Ripple
+ *
+ *                      Copyright (c) 2019 - 2021 Rob Clucas.
+ *
+ *  This file is distributed under the MIT License. See LICENSE for details.
+ *
+ *==-------------------------------------------------------------------------==*
+ *
+ * \file  fim_solver.hpp
+ * \brief This file defines an implementation of an eikonal solver using the
+ *        fast iterative method.
+ *
+ *==------------------------------------------------------------------------==*/
 
 #ifndef RIPPLE_BENCHMARK_REINITIALIZATION_FIM_SOLVER_HPP
 #define RIPPLE_BENCHMARK_REINITIALIZATION_FIM_SOLVER_HPP
 
 #include "upwinder.hpp"
-#include <ripple/core/execution/synchronize.hpp>
-#include <ripple/core/iterator/iterator_traits.hpp>
+#include <ripple/execution/synchronize.hpp>
+#include <ripple/iterator/iterator_traits.hpp>
 
 /**
  * Struct to perform reinitialization using the fast iterative method.

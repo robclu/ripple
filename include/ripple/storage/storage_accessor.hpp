@@ -18,6 +18,7 @@
 #define RIPPLE_STORAGE_STORAGE_ACCESSOR_HPP
 
 #include "storage_traits.hpp"
+#include <ripple/algorithm/unrolled_for.hpp>
 
 namespace ripple {
 

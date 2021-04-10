@@ -1,4 +1,4 @@
-/**=--- ripple/benchmarks/force.cu ------------------------- -*- C++ -*- ---==**
+/**=--- ripple/benchmarks/force/force.cu ------------------- -*- C++ -*- ---==**
  *
  *                                  Ripple
  *

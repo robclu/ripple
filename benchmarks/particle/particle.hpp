@@ -1,4 +1,4 @@
-/**=--- ripple/benchmarks/particle.hpp --------------------- -*- C++ -*- ---==**
+/**=--- ripple/benchmarks/particle/particle.hpp ------------ -*- C++ -*- ---==**
  *
  *                                  Ripple
  *
@@ -44,8 +44,7 @@ struct Particle : ripple::PolymorphicLayout<Particle<T, Dims, Layout>> {
    * Constructor from another particle.
    * \param p The other particle to set this one from.
    */
-  ripple_all Particle(const Particle& p) noexcept
-  : storage_{p.storage_} {}
+  ripple_all Particle(const Particle& p) noexcept : storage_{p.storage_} {}
 
   /**
    * Constructor for particle of a different layout.

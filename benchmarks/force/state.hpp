@@ -1,4 +1,4 @@
-/**=--- ripple/benchmarks/state.hpp ------------------------ -*- C++ -*- ---==**
+/**=--- ripple/benchmarks/force/state.hpp ------------------ -*- C++ -*- ---==**
  *
  *                                  Ripple
  *
@@ -151,8 +151,7 @@ class State : public ripple::PolymorphicLayout<State<T, Dims, Layout>>,
    * \param  other The other fluid state to create this one from.
    * \tparam OtherLayout The storage layout of the other type.
    */
-  ripple_all State(const State& other) noexcept
-  : storage_{other.storage_} {}
+  ripple_all State(const State& other) noexcept : storage_{other.storage_} {}
 
   /**
    * Constructor to create the state from another fluid type with a potentially
@@ -237,8 +236,7 @@ class State : public ripple::PolymorphicLayout<State<T, Dims, Layout>>,
    * returns a constant reference to the \p ith stored element.
    * \param i The index of the element to return.
    */
-  ripple_all auto
-  operator[](size_t i) const noexcept -> const ValueType& {
+  ripple_all auto operator[](size_t i) const noexcept -> const ValueType& {
     return storage_.template get<0>(i);
   }
 
@@ -388,8 +386,7 @@ class State : public ripple::PolymorphicLayout<State<T, Dims, Layout>>,
    * \tparam EosImpl The implementation of the equation of state interface.
    */
   template <typename EosImpl>
-  ripple_all auto
-  pressure(const EosImpl& eos) const noexcept -> ValueType {
+  ripple_all auto pressure(const EosImpl& eos) const noexcept -> ValueType {
     const auto v_sq = v_squared_sum();
     return (eos.adi() - one) * (energy() - ValueType{0.5} * rho() * v_sq);
   }
@@ -447,8 +444,7 @@ class State : public ripple::PolymorphicLayout<State<T, Dims, Layout>>,
    * \tparam EosImpl The implemenation of the equation of state interface.
    */
   template <typename EosImpl>
-  ripple_all auto
-  wavespeed(const EosImpl& eos) const noexcept -> ValueType {
+  ripple_all auto wavespeed(const EosImpl& eos) const noexcept -> ValueType {
     ValueType s = std::abs(rho_v<ripple::dimx()>());
     ripple::unrolled_for<dims - 1>([&](auto d) {
       constexpr auto dim = size_t{d} + 1;

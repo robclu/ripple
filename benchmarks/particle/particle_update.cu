@@ -1,15 +1,4 @@
-//==--- ripple/benchmarks/position_update.cu --------------- -*- C++ -*- ---==//
-//
-//                                Ripple
-//
-//                      Copyright (c) 2019 Rob Clucas.
-//
-//  This file is distributed under the MIT License. See LICENSE for details.
-//
-//==------------------------------------------------------------------------==//
-//
-
-/**=--- ripple/benchmarks/particle_update.cu --------------- -*- C++ -*- ---==**
+/**=--- ripple/benchmarks/particle/particle_update.cu ------ -*- C++ -*- ---==**
  *
  *                                  Ripple
  *
@@ -66,8 +55,7 @@ int main(int argc, char** argv) {
 
   const Real    dt = 0.1;
   ripple::Graph update;
-  update.split(
-    [] ripple_all(auto&& it, Real dt) { it->update(dt); }, x, dt);
+  update.split([] ripple_all(auto&& it, Real dt) { it->update(dt); }, x, dt);
 
   ripple::Timer timer;
   ripple::execute(update);

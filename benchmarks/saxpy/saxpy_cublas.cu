@@ -1,4 +1,4 @@
-/**=--- ripple/benchmarks/saxpy_cublas.cu ------------------ -*- C++ -*- ---==**
+/**=--- ripple/benchmarks/saxpy/saxpy_cublas.cu ------------ -*- C++ -*- ---==**
  *
  *                                  Ripple
  *

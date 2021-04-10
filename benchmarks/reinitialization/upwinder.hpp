@@ -1,22 +1,22 @@
-//==--- ripple/benchmarks/reinitialization/upwinder.hpp ---- -*- C++ -*- ---==//
-//
-//                                Ripple
-//
-//                      Copyright (c) 2019, 2020 Rob Clucas.
-//
-//  This file is distributed under the MIT License. See LICENSE for details.
-//
-//==------------------------------------------------------------------------==//
-//
-/// \file  upwinder.hpp
-/// \brief This file defines an implementation of upwinding.
-//
-//==------------------------------------------------------------------------==//
+/**=--- ripple/benchmarks/reinitialization/upwinder.hpp ---- -*- C++ -*- ---==**
+ *
+ *                                  Ripple
+ *
+ *                      Copyright (c) 2019 - 2021 Rob Clucas.
+ *
+ *  This file is distributed under the MIT License. See LICENSE for details.
+ *
+ *==-------------------------------------------------------------------------==*
+ *
+ * \file  upwinder.hpp
+ * \brief This file defines an implementation of upwinding.
+ *
+ *==------------------------------------------------------------------------==*/
 
 #ifndef RIPPLE_BENCHMARK_REINITIALIZATION_UPWINDER_HPP
 #define RIPPLE_BENCHMARK_REINITIALIZATION_UPWINDER_HPP
 
-#include "levelset_element.hpp"
+#include "element.hpp"
 
 /**
  * Forward declaration of upwinding class.

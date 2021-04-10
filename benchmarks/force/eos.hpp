@@ -1,4 +1,4 @@
-/**=--- ripple/benchmarks/force.hpp ------------------------ -*- C++ -*- ---==**
+/**=--- ripple/benchmarks/force/eos.hpp -------------------- -*- C++ -*- ---==**
  *
  *                                  Ripple
  *
