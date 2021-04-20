@@ -132,7 +132,6 @@ class Executor {
                                                                  : cpu_queue;
       while (!queue.try_push(&(*node))) {
         // Spin .. this should never happen ...
-        printf("Error\n");
       }
       total_nodes_.fetch_add(1, std::memory_order_relaxed);
     }

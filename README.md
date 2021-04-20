@@ -1,11 +1,15 @@
 # Ripple
 
 Ripple is a framework designed to make parallelization of large-scale 
-heterogeneous applications simple, with a focus on multiple gpus systems. 
+heterogeneous applications simple, with a focus on multiple gpus systems, but
+in the longer this will change to make heterogeneous computing easy across
+any system with accelerators.
+
 It is designed to reduce the difficulty of programming on systems with 
-many architectures, such as is the case for modern supercomputers. The
-main idea for rippe is to write once, and run on any hardware, efficiently
-and in parallel, if desired.
+many architectures, such as is the case for modern supercomputers, but also
+locally to easily access all the compute available on your system. The
+main idea for ripple is to write once, and run on any hardware, efficiently
+and in parallel, with minimal effort.
 
 Currently it will use all available computational resources on a node (any
 number of CPUs and/or GPUs) and is currently being extended to support 
@@ -19,10 +23,10 @@ Ripple uses a number of abstractions to facilitate the above, which allow for
 simple, expressive code to run in parallel across many large systems (it has 
 been used to run physics simulations on grids consisting of billions of cells).
 
-The interface for specifying computational flow is the graph interface, which
+The means for specifying computational flow is the graph interface, which
 allows computational operations and dependencies to be specified expressively 
 and concisely, and from which ripple can determine efficient parallelization. 
-The graph interface scales well, and can scale up to 7.3x for 8 V100 GPUs for
+The graph interface scales well, with up to 7.3x for 8 V100 GPUs for
 non-trivial real-world problems
 
 Up to date documentation can be found here: [ripple docs](https://robclu.github.io/ripple_docs/)
@@ -62,9 +66,9 @@ specified:
 ```
 mkdir build && cd build
 cmake  \
+  -DCUDA_PATH=<path to cuda toolkit root>       \
   -DCMAKE_CUDA_COMPILER=<path to cuda compiler> \
   -DCMAKE_CXX_COMPILER=<path to cxx compiler>   \
-  -DCUDA_PATH=<path to cuda toolkit root>       \
   -DCMAKE_BUILD_TYPE=Release                    \
   -DCUDA_ARCHS=80;86                            \     
   .
@@ -88,6 +92,9 @@ cmake  \
   Ripple will print out the complete build configuration at the end of the
   cmake command, so you can verify that the chosen parameters are correct.
 
+This process is trying to be made simpler, but with current Cmake, this is the
+simplest process to ensure that the build is correct.
+
 ## Getting Started
 
 The shortest code to help with getting started is the SAXPY example,
@@ -102,6 +109,7 @@ which is as simple as the following:
   // Create the tensors. Partitions is always a vector, with each component
   // specifying the number of partitions in the {x, y, z} dimension. Each
   // partition will be reside and therefore execute on a separate gpu.
+  // It's as simple as that for multi-GPU programming
   Tensor a{{partitions}, size_x};
   Tensor b{{partitions}, size_x};
   Tensor c{{partitions}, size_x};
@@ -127,7 +135,7 @@ which is as simple as the following:
   } 
 ```
 
-Ripple has a lot more functionality, and the next best wat to explore some of
+Ripple has a lot more functionality, and the next best way to explore some of
 it is to have a look through the benchmarks, which can be found in 
 `benchmarks/`. If you want to build the benchmarks, then add
 `-DRIPPLE_BUILD_BENCHMARKS=ON` to the cmake configuration.
@@ -135,5 +143,17 @@ it is to have a look through the benchmarks, which can be found in
 ## Current Support
 
 Currently, ripple will work with Intel or AMD CPUs, and NVIDIA GPUs. Over time
-it is intended that ripple will support all GPUs, but that's a bit of a way off
-at the moment.
+it is intended that ripple will support all GPUs, as well as any new types of
+accelerators, but we are not there yet.
+
+If you are interested in using ripple, and have any specfic examlpes which would
+help with getting started, please raise an issue and it will be added.
+
+## Publications
+
+Robert Clucas, Philip Blakely, Nikolaos Nikiforakis (2021). RRipple : 
+Simplified Large-Scale Computation on Heterogeneous Architectures with 
+Polymorphic Data Layout [arXiv:2104.08571](https://arxiv.org/abs/2104.08571)
+
+Submitted to the Journal of Parallel and Distributed programming, to be
+updated shortly
