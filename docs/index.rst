@@ -31,10 +31,10 @@ Ripple uses a number of abstractions to facilitate the above, which allow for
 simple, expressive code to run in parallel across many large systems (it has 
 been used to run physics simulations on grids consisting of billions of cells).
 
-The interface for specifying computational flow is the graph interface, which
+The means for specifying computational flow is the graph interface, which
 allows computational operations and dependencies to be specified expressively 
 and concisely, and from which ripple can determine efficient parallelization. 
-The graph interface scales well, and can scale up to 7.3x for 8 V100 GPUs for
+The graph interface scales well, and with up to 7.3x for 8 V100 GPUs for
 non-trivial real-world problems
 
 The documentation contains the API, main features, examples, and tutorials.
@@ -103,6 +103,9 @@ specified:
 .. note::
   Ripple will print out the complete build configuration at the end of the
   cmake command, so you can verify that the chosen parameters are correct.
+
+This process is trying to be made simpler, but with current Cmake, this is the
+simplest process to ensure that the build is correct.
 
 Getting Started
 -------------------
