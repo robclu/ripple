@@ -31,13 +31,16 @@ using Part   = Particle<Real, ripple::Num<dims>, ripple::StridedView>;
 using Tensor = ripple::Tensor<Part, 1>;
 
 int main(int argc, char** argv) {
-  size_t elements = 100;
+  size_t elements = 100, devices = 1;
   if (argc > 1) {
     elements = std::atol(argv[1]);
   }
+  if (argc > 2) {
+    devices = std::atol(argv[2]);
+  }
 
   // Single gpu, add paritions to increase number of gpus.
-  Tensor x({1}, elements);
+  Tensor x({static_cast<unsigned int>(devices)}, elements);
 
   // By deefault graph runs on the gpu, for cpu, specify CPU executor:
   // ripple:::Graph init(ripple::ExecutionKind::cpu);
