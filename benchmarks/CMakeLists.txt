@@ -18,6 +18,17 @@ add_executable(
   force ${ripple_SOURCE_DIR}/benchmarks/force/force.cu)
 target_link_libraries(force ripple::ripple)
 
+if (RIPPLE_BUILD_WITH_KOKKOS)
+  add_executable(
+    force_kokkos
+    ${ripple_SOURCE_DIR}/benchmarks/force/force_kokkos.cpp)
+  target_link_libraries(
+    force_kokkos
+    Kokkos::kokkos 
+    -lcudart
+    ${MPI_CXX_LIBRARIES})
+endif()
+
 #=--- [particle update] -----------------------------------------------------==#
 
 add_executable(
@@ -26,22 +37,13 @@ target_link_libraries(particle_update ripple::ripple -latomic)
 
 if (RIPPLE_BUILD_WITH_KOKKOS)
   add_executable(
-    particle_update_kokkos_mpi
-    ${ripple_SOURCE_DIR}/benchmarks/particle/particle_update_kokkos_mpi.cpp)
+    particle_update_kokkos
+    ${ripple_SOURCE_DIR}/benchmarks/particle/particle_update_kokkos.cpp)
   target_link_libraries(
-    particle_update_kokkos_mpi
+    particle_update_kokkos
     Kokkos::kokkos 
     -lcudart
     ${MPI_CXX_LIBRARIES})
-
-    add_executable(
-      particle_update_kokkos_thread
-      ${ripple_SOURCE_DIR}/benchmarks/particle/particle_update_kokkos_threads.cpp)
-    target_link_libraries(
-      particle_update_kokkos_thread
-      Kokkos::kokkos 
-      -lcudart
-      -pthread)
 endif()
 
 #=--- [reinitialization] ----------------------------------------------------==#

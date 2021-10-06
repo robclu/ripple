@@ -38,18 +38,23 @@ using Tensor    = ripple::Tensor<StateType, dims>;
 int main(int argc, char** argv) {
   size_t elements = 100;
   size_t padding  = 1;
+  size_t devices  = 1;
   Real   dt = 0.1, dh = 0.2;
 
   if (argc > 1) {
     elements = std::atol(argv[1]);
     dt /= dh;
   }
+  if (argc > 2) {
+    devices = std::atol(argv[2]);
+  }
 
   /* Create a tensor with (elements + padding) x (elements x padding) elements/
    * We need the padding because the flux computation uses neighbours, and we
    * want to avoid branching at the start and end of the domain. */
-  Tensor x({1, 1}, padding, elements, elements);
-  Eos    eos;
+  Tensor x(
+    {1, static_cast<unsigned int>(devices)}, padding, elements, elements);
+  Eos eos;
 
   // Create the graph and initialize all elements,
   // then execute and wait until finished:
