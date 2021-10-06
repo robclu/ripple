@@ -20,6 +20,11 @@
 #include "../portability.hpp"
 #include <type_traits>
 
+#if ripple_clang
+#else
+  #include <tuple>
+#endif
+
 namespace ripple::detail {
 
 /**
