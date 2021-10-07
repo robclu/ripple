@@ -101,7 +101,7 @@ template <typename T, typename... Offsets, any_block_enable_t<T> = 0>
 decltype(auto)
 shift_if_iterator(SharedWrapper<T>& wrapper, Offsets&&... offsets) noexcept {
   auto iter = get_iterator(wrapper.wrapped);
-  auto offs = make_tupler(ripple_forward(offsets)...);
+  auto offs = make_tuple(ripple_forward(offsets)...);
   unrolled_for<sizeof...(Offsets)>(
     [&](auto i) { iter.shift(Dimension<i>(), get<i>(offs)); });
   return iter;

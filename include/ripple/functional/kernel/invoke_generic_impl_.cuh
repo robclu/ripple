@@ -535,7 +535,7 @@ ripple_all auto offset_if_iterator(
   const Indices& indices,
   uint8_t&       iter_count,
   uint8_t&       valid_count) noexcept -> Tuple<Shared, Global&> {
-  printf("Shared, wrong!\n");
+  //  printf("Shared, wrong!\n");
   iter_count++;
   bool             valid = true;
   constexpr size_t dims  = iterator_traits_t<Shared>::dimensions;
@@ -643,6 +643,7 @@ ripple_all auto offset_if_iterator(
 
     // if (!global.is_valid(dim, static_cast<int32_t>(overlap *
     // block_idx(dim)))) {
+
     if (!global.is_valid(dim, expansion)) {
       valid = false;
     }
