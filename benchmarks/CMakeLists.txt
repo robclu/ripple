@@ -21,7 +21,7 @@ target_link_libraries(force ripple::ripple)
 if (RIPPLE_BUILD_WITH_KOKKOS)
   add_executable(
     force_kokkos
-    ${ripple_SOURCE_DIR}/benchmarks/force/force_kokkos.cpp)
+    ${ripple_SOURCE_DIR}/benchmarks/force/force_kokkos.cu)
   target_link_libraries(
     force_kokkos
     Kokkos::kokkos 
@@ -52,6 +52,17 @@ add_executable(
   reinitialization 
   ${ripple_SOURCE_DIR}/benchmarks/reinitialization/reinitialization.cu)
 target_link_libraries(reinitialization ripple::ripple -latomic)
+
+if (RIPPLE_BUILD_WITH_KOKKOS)
+  add_executable(
+    reinit_kokkos
+    ${ripple_SOURCE_DIR}/benchmarks/reinitialization/reinit_kokkos.cu)
+  target_link_libraries(
+    reinit_kokkos
+    Kokkos::kokkos 
+    -lcudart
+    ${MPI_CXX_LIBRARIES})
+endif()
 
 #==--- [saxpy ---------------------------------------------------------------==#
 
