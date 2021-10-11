@@ -56,23 +56,17 @@ struct LaxFriedrichs {
    * \tparam Dim        The type of the dimension specifier.
    * \tparam T          The data type for the resolutions.
    */
-  template <
-    typename StateImplL,
-    typename StateImplR,
-    typename EosImpl,
-    typename Dim,
-    typename T,
-    ripple::non_iterator_enable_t<StateImplL> = 0>
+  // clang-format off
+  template <typename SL, typename SR, typename E, typename Dim, typename T,
+    ripple::non_iterator_enable_t<SL> = 0>
   ripple_all auto operator()(
-    const StateImplL& l,
-    const StateImplR& r,
-    const EosImpl&    eos,
-    Dim&&             dim,
-    T                 sc) const noexcept -> typename StateImplL::ContigState {
+    const SL& l, const SR& r, const E& eos, Dim&& dim, T sc) const noexcept ->
+    typename SL::ContigState {
     return (l.flux(eos, ripple_forward(dim)) +
             r.flux(eos, ripple_forward(dim)) + ((l - r) * sc)) *
            T{0.5};
   }
+  // clang-format on
 };
 
 /**
@@ -117,26 +111,20 @@ struct Richtmyer {
    * \tparam Dim        The type of the dimension specifier.
    * \tparam T          The data type for the resolutions.
    */
-  template <
-    typename StateImplL,
-    typename StateImplR,
-    typename EosImpl,
-    typename Dim,
-    typename T,
-    ripple::non_iterator_enable_t<StateImplL> = 0>
+  // clang-format off
+  template <typename SL, typename SR, typename E, typename Dim, typename T,
+    ripple::non_iterator_enable_t<SL> = 0>
   ripple_all auto operator()(
-    const StateImplL& l,
-    const StateImplR& r,
-    const EosImpl&    eos,
-    Dim&&             dim,
-    T                 sc) const noexcept -> typename StateImplL::ContigState {
-    using ResultType = typename StateImplL::ContigState;
-    return ResultType{
+    const SL& l, const SR& r, const E& eos, Dim&& dim, T sc) const noexcept ->
+    typename SL::ContigState {
+    using ResultType = typename SL::ContigState;
+    auto temp        = ResultType{
       T{0.5} * (l + r +
                 sc * (l.flux(eos, ripple_forward(dim)) -
-                      r.flux(eos, ripple_forward(dim))))}
-      .flux(eos, ripple_forward(dim));
+                      r.flux(eos, ripple_forward(dim))))};
+    return temp.flux(eos, ripple_forward(dim));
   }
+  // clang-format on
 };
 
 /**
@@ -169,18 +157,10 @@ struct Force {
    * \tparam Dim        The type of the dimension specifier.
    * \tparam T          The data type for the resolutions.
    */
-  template <
-    typename StateImplL,
-    typename StateImplR,
-    typename EosImpl,
-    typename Dim,
-    typename T>
+  template <typename SL, typename SR, typename E, typename Dim, typename T>
   ripple_all auto operator()(
-    const StateImplL& l,
-    const StateImplR& r,
-    const EosImpl&    eos,
-    Dim&&             dim,
-    T                 sc) const noexcept -> typename StateImplL::ContigState {
+    const SL& l, const SR& r, const E& eos, Dim&& dim, T sc) const noexcept ->
+    typename SL::ContigState {
     constexpr auto lf = LaxFriedrichs();
     constexpr auto rm = Richtmyer();
     return T{0.5} * (lf(l, r, eos, ripple_forward(dim), sc) +

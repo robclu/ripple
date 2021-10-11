@@ -57,13 +57,10 @@ struct LaxFriedrichs {
    * \tparam Dim        The type of the dimension specifier.
    * \tparam T          The data type for the resolutions.
    */
-  template <typename EosImpl, typename T, size_t Dims>
+  template <typename E, typename T, size_t D>
   ripple_all auto operator()(
-    const State<T, Dims>& l,
-    const State<T, Dims>& r,
-    const EosImpl&        eos,
-    size_t                dim,
-    T                     sc) const noexcept -> State<T, Dims> {
+    const State<T, D>& l, const State<T, D>& r, const E& eos, size_t dim, T sc)
+    const noexcept -> State<T, D> {
     return (l.flux(eos, dim) + r.flux(eos, dim) + ((l - r) * sc)) * T{0.5};
   }
 };
@@ -110,13 +107,10 @@ struct Richtmyer {
    * \tparam Dim        The type of the dimension specifier.
    * \tparam T          The data type for the resolutions.
    */
-  template <typename EosImpl, typename T, size_t Dims>
+  template <typename E, typename T, size_t D>
   ripple_all auto operator()(
-    const State<T, Dims>& l,
-    const State<T, Dims>& r,
-    const EosImpl&        eos,
-    size_t                dim,
-    T                     sc) const noexcept -> State<T, Dims> {
+    const State<T, D>& l, const State<T, D>& r, const E& eos, size_t dim, T sc)
+    const noexcept -> State<T, D> {
     const auto temp =
       (l + r + (l.flux(eos, dim) - r.flux(eos, dim)) * sc) * T{0.5};
     return temp.flux(eos, dim);
@@ -153,13 +147,10 @@ struct Force {
    * \tparam Dim        The type of the dimension specifier.
    * \tparam T          The data type for the resolutions.
    */
-  template <typename EosImpl, typename T, size_t Dims>
+  template <typename E, typename T, size_t D>
   ripple_all auto operator()(
-    const State<T, Dims>& l,
-    const State<T, Dims>& r,
-    const EosImpl&        eos,
-    size_t                dim,
-    T                     sc) const noexcept -> State<T, Dims> {
+    const State<T, D>& l, const State<T, D>& r, const E& eos, size_t dim, T sc)
+    const noexcept -> State<T, D> {
     constexpr auto lf = LaxFriedrichs();
     constexpr auto rm = Richtmyer();
     return (lf(l, r, eos, dim, sc) + rm(l, r, eos, dim, sc)) * T{0.5};

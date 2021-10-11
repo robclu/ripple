@@ -285,10 +285,10 @@ class State : public ripple::PolymorphicLayout<State<T, Dims, Layout>>,
    * \param  dim The index of the dimension for the component for.
    * \tparam Dim The type of the dimension specifier.
    */
-  template <size_t Dim>
-  ripple_all auto rho_v() const noexcept -> ValueType {
-    return v<Dim>() * rho();
-  }
+  // template <size_t Dim>
+  // ripple_all auto rho_v() const noexcept -> ValueType {
+  //  return v<Dim>() * rho();
+  //}
 
   /**
    * Returns the velocity of the fluid in the \p dim dimension.
@@ -315,20 +315,20 @@ class State : public ripple::PolymorphicLayout<State<T, Dims, Layout>>,
    * computes the offset to the velocity component at compile time.
    * \tparam Dim The dimension to get the velocity for.
    */
-  template <size_t Dim>
-  ripple_all auto v() const noexcept -> const ValueType& {
-    return storage_.template get<0>(v_offset + static_cast<size_t>(Dim));
-  }
+  // template <size_t Dim>
+  // ripple_all auto v() const noexcept -> const ValueType& {
+  //  return storage_.template get<0>(v_offset + static_cast<size_t>(Dim));
+  //}
 
   /**
    * Returns the velocity of the fluid in the Dim dimension. This overlod
    * computes the offset to the velocity component at compile time.
    * \tparam Dim The dimension to get the velocity for.
    */
-  template <size_t Dim>
-  ripple_all auto v() noexcept -> ValueType& {
-    return storage_.template get<0>(v_offset + static_cast<size_t>(Dim));
-  }
+  // template <size_t Dim>
+  // ripple_all auto v() noexcept -> ValueType& {
+  //  return storage_.template get<0>(v_offset + static_cast<size_t>(Dim));
+  //}
 
   /**
    * Sets the velocity of the state in the \p dim dimension to \p value.
@@ -347,10 +347,10 @@ class State : public ripple::PolymorphicLayout<State<T, Dims, Layout>>,
    * \param  value The value to set the velocity to.
    * \tparam Dim   The dimension to set the velocity in.
    */
-  template <size_t Dim>
-  ripple_all auto set_v(ValueType value) noexcept -> void {
-    v<Dim>() = value;
-  }
+  // template <size_t Dim>
+  // ripple_all auto set_v(ValueType value) noexcept -> void {
+  //  v<Dim>() = value;
+  //}
 
   /**
    * Returns a vector of the velocities.
@@ -448,7 +448,7 @@ class State : public ripple::PolymorphicLayout<State<T, Dims, Layout>>,
     ValueType s = std::abs(rho_v<ripple::dimx()>());
     ripple::unrolled_for<dims - 1>([&](auto d) {
       constexpr auto dim = size_t{d} + 1;
-      s                  = std::max(s, std::abs(rho_v<dim>()));
+      s                  = std::max(s, std::abs(rho_v(dim)));
     });
     return s / rho() + eos.sound_speed(*this);
   }
@@ -461,8 +461,7 @@ class State : public ripple::PolymorphicLayout<State<T, Dims, Layout>>,
    */
   ripple_all auto rho_v_squared_sum() const noexcept -> ValueType {
     ValueType v_sq = ValueType{0};
-    ripple::unrolled_for<dims>(
-      [&](auto d) { v_sq += rho_v<d>() * rho_v<d>(); });
+    ripple::unrolled_for<dims>([&](auto d) { v_sq += rho_v(d) * rho_v(d); });
     return v_sq;
   }
 
@@ -471,7 +470,7 @@ class State : public ripple::PolymorphicLayout<State<T, Dims, Layout>>,
    */
   ripple_all auto v_squared_sum() const noexcept -> ValueType {
     ValueType v_sq = ValueType{0};
-    ripple::unrolled_for<dims>([&](auto d) { v_sq += v<d>() * v<d>(); });
+    ripple::unrolled_for<dims>([&](auto d) { v_sq += v(d) * v(d); });
     return v_sq;
   }
 
