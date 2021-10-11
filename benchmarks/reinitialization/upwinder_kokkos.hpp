@@ -63,7 +63,7 @@ struct Upwinder<2> {
    */
   template <typename V, typename T, typename F>
   ripple_all auto
-  operator()(V& v, T dh, F&& f, int i, int j) const noexcept -> T {
+  operator()(V&& v, T dh, F&& f, int i, int j) const noexcept -> T {
     using namespace ripple;
     const T a = std::min(v(i - 1, j).value, v(i + 1, j).value);
     const T b = std::min(v(i, j - 1).value, v(i, j + 1).value);

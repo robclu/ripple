@@ -30,7 +30,7 @@
 constexpr size_t dims = 2;
 
 using Real = float;
-using Elem = Element<Real, ripple::ContiguousView>;
+using Elem = Element<Real, ripple::StridedView>;
 
 /**
  * Makes a tensor with the given number of elements per dimension and padding
@@ -93,22 +93,22 @@ int main(int argc, char** argv) {
   if (argc > 2) {
     iters = std::atol(argv[2]);
   }
-  if (argc > 2) {
+  if (argc > 3) {
     expansion = std::atol(argv[3]);
   }
-  if (argc > 3) {
+  if (argc > 4) {
     partitions = std::atol(argv[4]);
   }
 
   /*
    * NOTE: NVCC does *not* allow generic extended lambdas, so we need the type
    *       of the iterator if we want to pass lanmbdas to the methods to
-   * create the graph.
+   *       create the graph.
    *
    *       This is restrictive in that we need different iterators to global
    *       and shared data, and hence if we use ripple::in_shared() on the
    *       tensor data then we *also* need to change the iterator type, which
-   * is annoying.
+   *      is annoying.
    *
    *       We can get around this by defining the lamdas as functors with
    *       generic templates, i,e
@@ -141,7 +141,9 @@ int main(int argc, char** argv) {
   solve.memcopy_padding(ripple::concurrent_padded_access(data))
     .then_split(
       FimSolver(),
-      ripple::expanded(data, expansion),
+      // ripple::expanded(data, expansion),
+      // ripple::in_shared(data),
+      data,
       ripple_move(dh),
       ripple_move(iters));
 

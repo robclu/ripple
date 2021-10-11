@@ -34,10 +34,11 @@ struct FimSolver {
   T        dh;
   size_t   iters;
   size_t   padding;
-  size_t   elements;
+  size_t   elements_x;
+  size_t   elements_y;
 
-  FimSolver(ViewType& sdf_, T dh_, size_t it, size_t p, size_t e)
-  : sdf(sdf_), dh(dh_), iters(it), padding(p), elements(e) {}
+  FimSolver(ViewType& sdf_, T dh_, size_t it, size_t p, size_t ex, size_t ey)
+  : sdf(sdf_), dh(dh_), iters(it), padding(p), elements_x(ex), elements_y(ey) {}
 
   /**
    * Solves the eikonal equation for for data at the given iterator.
@@ -55,7 +56,7 @@ struct FimSolver {
     if (i < padding || j < padding) {
       return;
     }
-    if (i > elements - padding || j > elements - padding) {
+    if (i > elements_x - padding || j > elements_y - padding) {
       return;
     }
 
@@ -68,11 +69,11 @@ struct FimSolver {
 
  private:
   ripple_all auto
-  get_element(DimSelector<1>, int i, int, int) const -> Element<T> {
+  get_element(DimSelector<1>, int i, int j = 0, int k = 0) const -> Element<T> {
     return sdf(i);
   }
   ripple_all auto
-  get_element(DimSelector<2>, int i, int j, int) const -> Element<T> {
+  get_element(DimSelector<2>, int i, int j, int k = 0) const -> Element<T> {
     return sdf(i, j);
   }
   ripple_all auto
@@ -88,7 +89,7 @@ struct FimSolver {
   ripple_all auto solve(DimSelector<2>, int i, int j, int k) const -> T {
     constexpr T f      = T{1};
     const auto  solver = Upwinder<2>();
-    return Upwinder<2>()(sdf, dh, f, i, j);
+    return solver(sdf, dh, f, i, j);
   }
   ripple_all auto solve(DimSelector<3>, int i, int j, int k) const -> T {
     constexpr T f      = T{1};
@@ -100,9 +101,9 @@ struct FimSolver {
     constexpr DimSelector<dims> dim_selector = DimSelector<dims>();
     constexpr T                 tol          = T{1e-4};
     auto                        element = get_element(dim_selector, i, j, k);
-    // if (element.state == State::source) {
-    //  return;
-    //}
+    if (element.state == State::source) {
+      return;
+    }
 
     // Init the list:
     auto p = element.value, q = solve(dim_selector, i, j, k);
@@ -131,15 +132,15 @@ struct FimSolver {
       }
       //__syncthreads();
       ripple::syncthreads();
+
+      if constexpr (dims == 3) {
+        sdf(i, j, k).value = element.value;
+      } else if (dims == 2) {
+        sdf(i, j).value = element.value;
+      }
     }
     if (element.value >= (std::numeric_limits<T>::max() - 1)) {
       element.state = State::updatable;
-    }
-
-    if constexpr (dims == 3) {
-      sdf(i, j, k) = element;
-    } else if (dims == 2) {
-      sdf(i, j) = element;
     }
   }
 };
