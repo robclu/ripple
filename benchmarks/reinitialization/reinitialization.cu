@@ -53,7 +53,8 @@ auto make_tensor(
 }
 
 /**
- * Initialization functor.
+ * Initialization functor. This sets a single cell in the domain to zero and
+ * the rest to the max value possible.
  */
 struct Initializer {
   /**
@@ -108,7 +109,7 @@ int main(int argc, char** argv) {
    *       This is restrictive in that we need different iterators to global
    *       and shared data, and hence if we use ripple::in_shared() on the
    *       tensor data then we *also* need to change the iterator type, which
-   *      is annoying.
+   *       is annoying.
    *
    *       We can get around this by defining the lamdas as functors with
    *       generic templates, i,e
@@ -116,7 +117,11 @@ int main(int argc, char** argv) {
    *          template <typename It>
    *          ripple_all auto operator()(It&& it) const -> void {}
    *
-   *       But for a simple case like this, the lamdas are nice.
+   *       But for a simple case like this, the lamdas are easier.
+   *
+   *       Another option would be to create external functors instead of
+   *       the lambda's if gcc+nvcc is desrired, which should be simple
+   *       enough.
    */
   auto data    = make_tensor<dims>(elements, padding, partitions);
   using Traits = ripple::tensor_traits_t<decltype(data)>;
@@ -135,14 +140,15 @@ int main(int argc, char** argv) {
   ripple::Graph solve;
   Real          dh = 0.1;
 
-  /* First we need to copy padding from the neighbour partition so that we
+  /* We need to copy padding from the neighbour partition so that we
    * don't need to communicate during the computation, then we can execute the
    * solver, which will run for each partition. */
   solve.memcopy_padding(ripple::concurrent_padded_access(data))
     .then_split(
       FimSolver(),
-      // ripple::expanded(data, expansion),
-      // ripple::in_shared(data),
+      /* Another option would be to use
+            ripple::in_shared(data)
+        to execute in shared memory. */
       data,
       ripple_move(dh),
       ripple_move(iters));

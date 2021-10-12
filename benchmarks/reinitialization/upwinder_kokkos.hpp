@@ -32,17 +32,17 @@ struct Upwinder<1> {
   /**
    * Invokes the upwinder on the iterator, when the solver is for a single
    * dimension.
-   * \param  it The iterator to compute the upwinding from.
+   * \param  v The view to compute the upwinding for.
    * \param  dh The resolution of the domain.
    * \param  f  The speed function for the eikonal equation.
-   * \tparam It The type of the iterator.
+   * \tparam V The type of the view.
    * \tparam T  The type of the resolution.
    * \tparam F  The type of the speed function.
    */
   template <typename V, typename T, typename F>
   ripple_all auto operator()(V&& v, T dh, F&& f, int i) const noexcept -> T {
     using namespace ripple;
-    return std::min(v(i - 1).value, v(i + 1)->value) + (f + dh);
+    return std::min(v(i - 1).value, v(i + 1).value) + (f + dh);
   }
 };
 
@@ -54,10 +54,10 @@ struct Upwinder<2> {
   /**
    * Invokes the upwinder on the iterator, when the solver is for two
    * dimensions.
-   * \param  it The iterator to compute the upwinding from.
+   * \param  v The view to compute the upwinding for.
    * \param  dh The resolution of the domain.
    * \param  f  The speed function for the eikonal equation.
-   * \tparam It The type of the iterator.
+   * \tparam V The type of the view.
    * \tparam T  The type of the resolution.
    * \tparam F  The type of the speed function.
    */
@@ -84,10 +84,10 @@ struct Upwinder<3> {
   /**
    * Invokes the upwinder on the iterator, when the solver is for three
    * dimensions.
-   * \param  it The iterator to compute the upwinding from.
+   * \param  v  The view to compute the upwinding for.
    * \param  dh The resolution of the domain.
    * \param  f  The speed function for the eikonal equation.
-   * \tparam It The type of the iterator.
+   * \tparam V  The type of the view.
    * \tparam T  The type of the resolution.
    * \tparam F  The type of the speed function.
    */

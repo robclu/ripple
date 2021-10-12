@@ -43,14 +43,17 @@ auto make_view(size_t elements, size_t elements_y) noexcept {
   if constexpr (Dims == 1) {
     return Kokkos::View<Elem*>{"data", elements};
   } else if constexpr (Dims == 2) {
-    return Kokkos::View<Elem**>{"data", elements, elements_y};
+    return Kokkos::View<Elem**, Kokkos::LayoutLeft>{
+      "data", elements, elements_y};
   } else if constexpr (Dims == 3) {
     return Kokkos::View<Elem***>{{"data", elements, elements_y, elements}};
   }
 }
 
 /**
- * Initialization functor.
+ * Initialization functor to set the source data.
+ * This sets a single cell to have a value of zero, and the other cells
+ * to have a max value.
  */
 template <typename View>
 struct Initializer {
@@ -58,10 +61,11 @@ struct Initializer {
   size_t padding;
 
   Initializer(View& view, size_t p) : v(view), padding(p) {}
+
   /**
    * Overload of operator() to call the initializer.
-   * \param  it       The iterator to initialize the data for.
-   * \tparam Iterator The type of the iterator.
+   * \param i The index in the x dimension.
+   * \param j The index in the y dimension.
    */
   ripple_all auto operator()(int i, int j) const noexcept -> void {
     const size_t source_loc = 5 + padding;
@@ -80,6 +84,12 @@ struct Initializer {
     }
   }
 
+  /**
+   * Overload of operator() to call the initializer.
+   * \param i The index in the x dimension.
+   * \param j The index in the y dimension.
+   * \param z The index in the z dimension.
+   */
   ripple_all auto operator()(int i, int j, int k) const noexcept -> void {
     constexpr size_t source_loc = 5;
     bool             is_source  = false;
@@ -107,10 +117,15 @@ struct Initializer {
  *
  * NOTE: This assumes that the data is 2D and, partitioned along the
  *       y-dimension.
+ *
+ *       It also assumes that only one cell of padding is used.
+ *
+ * \param elements The number of elements in the x-dimension.
+ * \param rank     The rank of the process doing the copying.
+ * \param world_size The number of processors in the world.
  */
 template <typename View>
-void copy_boundary_data(
-  View& states, int elements, int padding, int rank, int world_size) {
+void copy_boundary_data(View& states, int elements, int rank, int world_size) {
   if (world_size == 1) {
     return;
   }
@@ -154,7 +169,7 @@ void copy_boundary_data(
   // The same as the above processes, but from sending to a lower rank, and
   // receiving from the higher one.
   if (rank > 0) {
-    auto subview      = Kokkos::subview(states, Kokkos::ALL(), padding);
+    auto subview      = Kokkos::subview(states, Kokkos::ALL(), 1);
     auto host_subview = Kokkos::create_mirror_view(subview);
     Kokkos::deep_copy(buffer, host_subview);
     MPI_Send(
@@ -208,20 +223,25 @@ int main(int argc, char** argv) {
     auto data      = make_view<dims>(elements, elements_per_device_y);
     using ViewType = decltype(data);
 
+    // Create a range object which will be used with parallel_for to specify
+    // the domain of execution:
     const auto range = Kokkos::MDRangePolicy<Kokkos::Cuda, Kokkos::Rank<2>>(
       {0, 0}, {elements, elements_per_device_y});
+
+    // First initialize the data:
     Kokkos::parallel_for(range, Initializer<ViewType>(data, padding));
     Kokkos::fence();
 
-    // TOOD: Copy data between partitions
+    // Next, copy the boundary data between the devices, and then run the
+    // solver. For this simple benchmark, we just run a single outer loop,
+    // however, to converge the whole domain, this should be placed inside
+    // a loop so that data is shared between devices:
     const auto solver = FimSolver<ViewType, Real, dims>(
       data, dh, iters, padding, elements, elements_per_device_y);
     ripple::Timer timer;
-    copy_boundary_data(data, elements, padding, rank, world_size);
-    // for (size_t i = 0; i < iters; ++i) {
+    copy_boundary_data(data, elements, rank, world_size);
     Kokkos::parallel_for(range, solver);
     Kokkos::fence();
-    //}
 
     if (rank == 0) {
       double elapsed = timer.elapsed_msec();
@@ -229,6 +249,7 @@ int main(int argc, char** argv) {
                 << " elements, Iters: " << iters << ", Time: " << elapsed
                 << " ms\n";
 
+      // For debugging we can print the grid:
       auto m = Kokkos::create_mirror_view(data);
       Kokkos::deep_copy(m, data);
       if (elements < 30) {

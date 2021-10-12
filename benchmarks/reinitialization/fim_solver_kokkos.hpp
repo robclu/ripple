@@ -37,22 +37,27 @@ struct FimSolver {
   size_t   elements_x;
   size_t   elements_y;
 
+  /**
+   * Constructor which sets the required state for the solver to perform
+   * the solve.
+   */
   FimSolver(ViewType& sdf_, T dh_, size_t it, size_t p, size_t ex, size_t ey)
   : sdf(sdf_), dh(dh_), iters(it), padding(p), elements_x(ex), elements_y(ey) {}
 
   /**
    * Solves the eikonal equation for for data at the given iterator.
-   * \param  it       The iterator to the data to solve.
-   * \param  dh       The resolution of the domain.
-   * \param  iters    The number of iterations to solve for.
-   * \tparam Iterator The type of the iterator.
-   * \tparam T        The data type for  the resilution.
+   * \param i The index in the x dimension.
    */
   ripple_all auto operator()(int i) const -> void {
     ndim_solve_impl(i);
   }
 
-  ripple_all auto operator()(int i, int j) const -> void {
+  /**
+   * Solves the eikonal equation for for data at the given iterator.
+   * \param i The index in the x dimension.
+   * \param j The index in the y dimension.
+   */
+  ripripple_all auto operator()(int i, int j) const -> void {
     if (i < padding || j < padding) {
       return;
     }
@@ -63,40 +68,77 @@ struct FimSolver {
     ndim_solve_impl(i, j);
   }
 
+  /**
+   * Solves the eikonal equation for for data at the given iterator.
+   * \param i The index in the x dimension.
+   * \param j The index in the y dimension.
+   * \param j The index in the z dimension.
+   */
   ripple_all auto operator()(int i, int j, int k) const -> void {
     ndim_solve_impl(i, j, k);
   }
 
  private:
+  /**
+   * Gets an element at the given index when the solver is 1D. We need these
+   * overloads to have the solver implementation be N dimensional.
+   */
   ripple_all auto
   get_element(DimSelector<1>, int i, int j = 0, int k = 0) const -> Element<T> {
     return sdf(i);
   }
+
+  /**
+   * Gets an element at the given index when the solver is 1D. We need these
+   * overloads to have the solver implementation be N dimensional.
+   */
   ripple_all auto
   get_element(DimSelector<2>, int i, int j, int k = 0) const -> Element<T> {
     return sdf(i, j);
   }
+
+  /**
+   * Gets an element at the given index when the solver is 1D. We need these
+   * overloads to have the solver implementation be N dimensional.
+   */
   ripple_all auto
   get_element(DimSelector<3>, int i, int j, int k) const -> Element<T> {
     return sdf(i, j, k);
   }
 
+  /**
+   * Solves for a single iteration for a cell at the given index when the
+   * solver is 1D.
+   */
   ripple_all auto solve(DimSelector<1>, int i, int, int) const -> T {
     constexpr T f      = T{1};
     const auto  solver = Upwinder<1>();
     return solver(sdf, dh, f, i);
   }
+
+  /**
+   * Solves for a single iteration for a cell at the given index when the
+   * solver is 2D.
+   */
   ripple_all auto solve(DimSelector<2>, int i, int j, int k) const -> T {
     constexpr T f      = T{1};
     const auto  solver = Upwinder<2>();
     return solver(sdf, dh, f, i, j);
   }
+
+  /**
+   * Solves for a single iteration for a cell at the given index when the
+   * solver is 3D.
+   */
   ripple_all auto solve(DimSelector<3>, int i, int j, int k) const -> T {
     constexpr T f      = T{1};
     const auto  solver = Upwinder<3>();
     return solver(sdf, dh, f, i, j, k);
   }
 
+  /**
+   * A generic implementation of the solve step for 1, 2, or 3 dimensions.
+   */
   ripple_all void ndim_solve_impl(int i, int j = 0, int k = 0) const {
     constexpr DimSelector<dims> dim_selector = DimSelector<dims>();
     constexpr T                 tol          = T{1e-4};

@@ -30,9 +30,13 @@ enum class State : uint32_t { source = 0, converged = 1, updatable = 2 };
  */
 template <typename T>
 struct Element {
-  T     value;
-  State state;
+  T     value; //!< The value of the element.
+  State state; //!< The state of the elements.
 
+  /**
+   * This default constructor is required by Kokkos to create a view of
+   * elements.
+   */
   ripple_all Element() = default;
 
   /**
