@@ -57,7 +57,7 @@ struct FimSolver {
    * \param i The index in the x dimension.
    * \param j The index in the y dimension.
    */
-  ripripple_all auto operator()(int i, int j) const -> void {
+  ripple_all auto operator()(int i, int j) const -> void {
     if (i < padding || j < padding) {
       return;
     }
