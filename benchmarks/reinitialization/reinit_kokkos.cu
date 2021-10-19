@@ -240,6 +240,7 @@ int main(int argc, char** argv) {
       data, dh, iters, padding, elements, elements_per_device_y);
     ripple::Timer timer;
     copy_boundary_data(data, elements, rank, world_size);
+    MPI_Barrier(MPI_COMM_WORLD);
     Kokkos::parallel_for(range, solver);
     Kokkos::fence();
 
