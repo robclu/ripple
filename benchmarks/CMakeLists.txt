@@ -73,3 +73,14 @@ target_link_libraries(saxpy_cublas ripple::ripple -lcublas)
 add_executable(
   saxpy_ripple ${ripple_SOURCE_DIR}/benchmarks/saxpy/saxpy_ripple.cu)
 target_link_libraries(saxpy_ripple ripple::ripple -latomic)
+
+if (RIPPLE_BUILD_WITH_KOKKOS)
+  add_executable(
+    saxpy_kokkos
+    ${ripple_SOURCE_DIR}/benchmarks/saxpy/saxpy_kokkos.cpp)
+  target_link_libraries(
+    saxpy_kokkos
+    Kokkos::kokkos 
+    -lcudart
+    ${MPI_CXX_LIBRARIES})
+endif()
