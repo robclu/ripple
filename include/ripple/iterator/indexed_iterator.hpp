@@ -67,7 +67,7 @@ class IndexedIterator : public BlockIterator<T, Space> {
   /** Defines the type for the coordinates of the iterator. */
   using Coordinate  = Coord<dims>;
   /** Defines the type for the normalized coordinates of the iterator. */
-  using Coordinatef = Vec<Value, dims>;
+  using Coordinatef = Vec<float, dims>;
   // clang-format on
 
   /*==--- [consturction] ---------------------------------------------------==*/
@@ -148,8 +148,7 @@ class IndexedIterator : public BlockIterator<T, Space> {
    * \tparam Dim  The type of the dimension specifier.
    */
   template <typename Dim>
-  ripple_all auto
-  set_global_size(Dim&& dim, Index size) noexcept -> void {
+  ripple_all auto set_global_size(Dim&& dim, Index size) noexcept -> void {
     global_sizes_[dim] = size;
   }
 
@@ -205,8 +204,7 @@ class IndexedIterator : public BlockIterator<T, Space> {
    * \return true if the iterator is valid for the dimension.
    */
   template <typename Dim>
-  ripple_all auto
-  is_valid(Dim&& dim, Index extra) const noexcept -> bool {
+  ripple_all auto is_valid(Dim&& dim, Index extra) const noexcept -> bool {
     // const auto global_idx_in_block = ::ripple::global_idx(dim);
     const size_t global_idx_in_block = ::ripple::global_idx(dim);
     return (global_idx_in_block < (BlockIter::size(dim) + 2 * extra)) &&
@@ -242,8 +240,7 @@ class IndexedIterator : public BlockIterator<T, Space> {
    * by the \p sizes.
    * \param sizes The sizes of the dimensions for the iteration space.
    */
-  ripple_all auto
-  scaled_norm_coord(Coordinatef sizes) noexcept -> Coordinatef {
+  ripple_all auto scaled_norm_coord(Coordinatef sizes) noexcept -> Coordinatef {
     return norm_coord() * sizes;
   }
 
