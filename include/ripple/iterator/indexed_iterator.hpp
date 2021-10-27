@@ -160,9 +160,9 @@ class IndexedIterator : public BlockIterator<T, Space> {
    * \return The index of this iterator in the global space.
    */
   template <typename Dim>
-  ripple_all auto global_idx(Dim&& dim) const noexcept -> size_t {
-    return ::ripple::global_idx(ripple_forward(dim)) +
-           static_cast<size_t>(block_start_indices_[dim]);
+  ripple_all auto global_idx(Dim&& dim) const noexcept -> Index {
+    return block_start_indices_[dim] +
+           ::ripple::global_idx(ripple_forward(dim));
   }
 
   /**
@@ -270,6 +270,25 @@ class IndexedIterator : public BlockIterator<T, Space> {
       }
     }
     return true;
+  }
+
+  /**
+   * Returns true if the index of the iterator is the first in the dimension.
+   * \param dim The dimension to check if the iterator is the first in.
+   */
+  template <typename Dim>
+  ripple_host_device auto first_in_dim(Dim&& dim) const noexcept -> bool {
+    return global_idx(ripple_forward(dim)) == 0;
+  }
+
+  /**
+   * Returns true if the index of the iterator is the last in the dimension.
+   * \param dim The dimension to check if the iterator is the last in.
+   */
+  template <typename Dim>
+  ripple_host_device auto last_in_dim(Dim&& dim) const noexcept -> bool {
+    return global_idx(ripple_forward(dim)) ==
+           (global_size(ripple_forward(dim)) - 1);
   }
 
  private:
