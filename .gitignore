@@ -1,4 +1,6 @@
 build/
+build_kokkos/
+benchmarks/kokkos/
 googletest/
 lib/
 .vscode/
