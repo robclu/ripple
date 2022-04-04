@@ -53,6 +53,11 @@ add_executable(
   ${ripple_SOURCE_DIR}/benchmarks/reinitialization/reinitialization.cu)
 target_link_libraries(reinitialization ripple::ripple -latomic)
 
+add_executable(
+  reinitialization_original_fim
+  ${ripple_SOURCE_DIR}/benchmarks/reinitialization/reinit_original_fim.cu)
+target_link_libraries(reinitialization ripple::ripple -latomic)
+
 if (RIPPLE_BUILD_WITH_KOKKOS)
   add_executable(
     reinit_kokkos

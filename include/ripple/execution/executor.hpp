@@ -662,7 +662,7 @@ class Executor {
  * \return A reference to the global executor.
  */
 inline auto executor() -> Executor& {
-  static Executor exec(13, 3);
+  static Executor exec(1, 2);
   // topology().num_cores() - topology().num_gpus(), topology().num_gpus());
 
   return exec;
