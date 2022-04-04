@@ -84,7 +84,7 @@ struct Initializer {
 
 int main(int argc, char** argv) {
   size_t elements   = 10;
-  size_t padding    = 6;
+  size_t padding    = 4;
   size_t iters      = 2;
   size_t partitions = 2;
   size_t expansion  = 2;
@@ -132,7 +132,7 @@ int main(int argc, char** argv) {
    * domain (in the padding) are valid and errors are not propogated into the
    * domain.
    */
-  init.split(Initializer(), data)
+  init.split(Initializer(), ripple::expanded(data, 20))
     .then_split(ripple::LoadPadding(), data, ripple::FOExtrapLoader());
   ripple::execute(init);
   ripple::fence();
@@ -143,19 +143,21 @@ int main(int argc, char** argv) {
   /* We need to copy padding from the neighbour partition so that we
    * don't need to communicate during the computation, then we can execute the
    * solver, which will run for each partition. */
-  solve.memcopy_padding(ripple::concurrent_padded_access(data))
-    .then_split(
-      FimSolver(),
-      /* Another option would be to use
-            ripple::in_shared(data)
-        to execute in shared memory. */
-      data,
-      ripple_move(dh),
-      ripple_move(iters));
+  // solve.memcopy_padding(ripple::concurrent_padded_access(data))
+  solve.split(
+    FimSolver(),
+    /* Another option would be to use
+          ripple::in_shared(data)
+      to execute in shared memory. */
+    data,
+    ripple_move(dh),
+    ripple_move(2 /*iters*/));
 
   ripple::Timer timer;
-  ripple::execute(solve);
-  ripple::barrier();
+  for (size_t i = 0; i < iters; ++i) {
+    ripple::execute(solve);
+    ripple::barrier();
+  }
 
   double elapsed = timer.elapsed_msec();
   std::cout << "Size: " << elements << "x" << elements
